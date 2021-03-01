@@ -1,3 +1,5 @@
+mod domain;
+
 use actix_web::{HttpResponse, get, HttpServer, App};
 
 #[get("/")]
