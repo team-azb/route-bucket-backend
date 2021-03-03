@@ -9,4 +9,5 @@ edition = "2018"
 [dependencies]
 actix-rt = "1.1.0"
 actix-web = "3.3.2"
-lombok = "0.1.0"
+derive_more = "0.99.11"
+thiserror = "1.0.24"

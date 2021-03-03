@@ -871,17 +871,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lombok"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7579c52d658ba83087fc527fe53b70cefe11ad8c0ce3ef4fc86e1c6ad1f3df28"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "lru-cache"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1220,7 +1209,8 @@ version = "0.1.0"
 dependencies = [
  "actix-rt",
  "actix-web",
- "lombok",
+ "derive_more",
+ "thiserror",
 ]
 
 [[package]]
