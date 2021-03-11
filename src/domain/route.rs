@@ -1,4 +1,3 @@
-use std::vec;
 use crate::domain::coordinate::Coordinate;
 
 #[derive(Debug)]
