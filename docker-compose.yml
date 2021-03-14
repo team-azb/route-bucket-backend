@@ -1,0 +1,20 @@
+version: '3.0'
+services:
+  db:
+    image: mysql:8.0.23
+    environment:
+      MYSQL_DATABASE: 'route_bucket_db'
+      MYSQL_ROOT_PASSWORD: 'password'
+      TZ: 'Asia/Tokyo'
+    ports:
+      - '3306:3306'
+
+    # ↓の呪文がないとoperation not permittedになる
+    # https://sunday-morning.app/posts/2020-07-29-docker-mysql8-mbind-operation-not-permitted
+    cap_add:
+      - SYS_NICE
+
+    # テーブル作って初期データ入れるみたいな操作を本来ここに入れた.sqlでやる
+    # 今回はdieselにやってもらう
+    #  volumes:
+    #    - ./mysql:/docker-entrypoint-initdb.d

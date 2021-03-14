@@ -10,4 +10,7 @@ edition = "2018"
 actix-rt = "1.1.0"
 actix-web = "3.3.2"
 derive_more = "0.99.11"
+diesel = { version = "1.4.6", features = ["mysql"] }
+dotenv = "0.15.0"
+nanoid = "0.3.0"
 thiserror = "1.0.24"

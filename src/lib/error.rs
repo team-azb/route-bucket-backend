@@ -1,13 +1,13 @@
 use actix_web::{ResponseError, http::StatusCode, dev::HttpResponseBuilder, http::header, HttpResponse};
-use derive_more::{Display};
+use derive_more::Display;
 use thiserror::Error;
 
 #[derive(Debug, Display, Error)]
 pub enum ApplicationError {
-    #[display("Bad Request: {0}")]
+    #[display(fmt = "Bad Request: {}", _0)]
     BadRequest(&'static str),
 
-    #[display("Internal Server Error: {0}")]
+    #[display(fmt = "Internal Server Error: {}", _0)]
     InternalServerError(&'static str),
 }
 
