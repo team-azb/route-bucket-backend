@@ -1,16 +1,20 @@
 use crate::domain::coordinate::Coordinate;
+use crate::domain::types::RouteId;
+use crate::lib::error::ApplicationResult;
 
 #[derive(Debug)]
 pub struct Route {
+    id: RouteId,
     name: String,
     points: Vec<Coordinate>,
 }
 
 impl Route {
-    pub fn new(name: &str) -> Route {
+    pub fn new(id: RouteId, name: String, points: Vec<Coordinate>) -> Route {
         Route {
+            id,
             name: name.to_string(),
-            points: Vec::new()
+            points
         }
     }
 
