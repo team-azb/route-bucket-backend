@@ -1,6 +1,7 @@
 use crate::infrastructure::schema::routes;
 
-#[derive(Queryable, Insertable, Debug)]
+/// ルートのdto構造体
+#[derive(Identifiable, Queryable, Insertable, Debug)]
 #[table_name = "routes"]
 pub struct RouteDto {
     pub id: String,
