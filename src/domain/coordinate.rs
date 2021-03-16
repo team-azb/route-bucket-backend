@@ -1,6 +1,6 @@
 use crate::lib::error::{ApplicationError, ApplicationResult};
 
-/// A Value Class for Coordinates
+/// Value Object for Coordinates
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordinate {
     latitude: Latitude,
@@ -17,6 +17,10 @@ impl Coordinate {
     }
 }
 
+// TODO: rustc 1.51.0でconst genericsが実装される
+// これを使うと、Latitude, Longitudeそれぞれのfrom_f64はいらなくなる
+// pub trait FromF64<T, const MAX: f64>
+// これやるついでにF64じゃなくてBigDecimalに変えてもいいかも
 pub trait FromF64<T> {
     fn from_f64(val :f64) -> ApplicationResult<T>;
 }
