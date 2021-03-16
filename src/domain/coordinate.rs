@@ -1,4 +1,4 @@
-use crate::lib::error::ApplicationError;
+use crate::lib::error::{ApplicationError, ApplicationResult};
 
 /// A Value Class for Coordinates
 #[derive(Clone, Debug, PartialEq)]
@@ -8,7 +8,7 @@ pub struct Coordinate {
 }
 
 impl Coordinate {
-    pub fn create(lat :f64, lon: f64) -> Result<Coordinate, ApplicationError> {
+    pub fn create(lat :f64, lon: f64) -> ApplicationResult<Coordinate> {
         let coord = Coordinate{
             latitude: Latitude::from_f64(lat)?,
             longitude: Longitude::from_f64(lon)?,
@@ -18,14 +18,14 @@ impl Coordinate {
 }
 
 pub trait FromF64<T> {
-    fn from_f64(val :f64) -> Result<T, ApplicationError>;
+    fn from_f64(val :f64) -> ApplicationResult<T>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Latitude(f64);
 
 impl FromF64<Latitude> for Latitude {
-    fn from_f64(val :f64) -> Result<Self, ApplicationError> {
+    fn from_f64(val :f64) -> ApplicationResult<Self> {
         if val.abs() <= 90.0 {
             Ok(Latitude(val))
         } else {
@@ -39,8 +39,7 @@ pub struct Longitude(f64);
 
 
 impl FromF64<Longitude> for Longitude {
-    fn from_f64(val :f64) -> Result<Self, ApplicationError> {
-        // TODO: エラー処理を書く
+    fn from_f64(val :f64) -> ApplicationResult<Self> {
         if val.abs() <= 180.0 {
             Ok(Longitude(val))
         } else {

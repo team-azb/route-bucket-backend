@@ -2,6 +2,10 @@ use actix_web::{ResponseError, http::StatusCode, dev::HttpResponseBuilder, http:
 use derive_more::Display;
 use thiserror::Error;
 
+/// ApplicationErrorを持つResult用のエイリアス
+pub type ApplicationResult<T> = Result<T, ApplicationError>;
+
+/// actix-webを用いて直接リクエストに変換できる自作エラークラス
 #[derive(Debug, Display, Error)]
 pub enum ApplicationError {
     #[display(fmt = "Bad Request: {}", _0)]
