@@ -26,3 +26,7 @@ impl Route {
         println!("{:?}", self.points);
     }
 }
+
+pub trait RouteRepository {
+    fn find(&self, id: RouteId) -> ApplicationResult<Route>;
+}
