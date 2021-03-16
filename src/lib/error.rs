@@ -8,18 +8,18 @@ pub type ApplicationResult<T> = Result<T, ApplicationError>;
 /// actix-webを用いて直接リクエストに変換できる自作エラークラス
 #[derive(Debug, Display, Error)]
 pub enum ApplicationError {
-    #[display(fmt = "Bad Request: {}", _0)]
-    BadRequest(&'static str),
+    #[display(fmt = "ValueObjectError: {}", _0)]
+    ValueObjectError(&'static str),
 
-    #[display(fmt = "Internal Server Error: {}", _0)]
-    InternalServerError(&'static str),
+    #[display(fmt = "ResourceNotFound: {} {} not found", resource_name, id)]
+    ResourceNotFound{ resource_name: &'static str, id: String },
 }
 
 impl ResponseError for ApplicationError {
     fn status_code(&self) -> StatusCode {
         match *self {
-            ApplicationError::BadRequest(..) => StatusCode::BAD_REQUEST,
-            ApplicationError::InternalServerError(..) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::ValueObjectError(..) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::ResourceNotFound{..} => StatusCode::NOT_FOUND,
         }
     }
     fn error_response(&self) -> HttpResponse {

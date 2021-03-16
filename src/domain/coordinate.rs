@@ -29,7 +29,7 @@ impl FromF64<Latitude> for Latitude {
         if val.abs() <= 90.0 {
             Ok(Latitude(val))
         } else {
-            Err(ApplicationError::BadRequest("Absolute value of Latitude must be <= 90"))
+            Err(ApplicationError::ValueObjectError("Absolute value of Latitude must be <= 90"))
         }
     }
 }
@@ -43,7 +43,7 @@ impl FromF64<Longitude> for Longitude {
         if val.abs() <= 180.0 {
             Ok(Longitude(val))
         } else {
-            Err(ApplicationError::BadRequest("Absolute value of Longitude must be <= 180"))
+            Err(ApplicationError::ValueObjectError("Absolute value of Longitude must be <= 180"))
         }
     }
 }
