@@ -11,19 +11,14 @@ use bigdecimal::BigDecimal;
 use diesel::mysql::MysqlConnection;
 use diesel::prelude::*;
 use dotenv::dotenv;
-use nanoid::nanoid;
 
 use crate::domain::coordinate::Coordinate;
 use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
-use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::repository::route::RouteRepositoryMysql;
-use crate::infrastructure::schema;
 
 #[get("/")]
 async fn index() -> Result<HttpResponse, Error> {
-    use schema::routes::dsl::*;
-
     let conn = establish_connection();
     let repository = RouteRepositoryMysql::new(conn);
 

@@ -1,4 +1,4 @@
-use crate::lib::error::{ApplicationError, ApplicationResult};
+use crate::lib::error::ApplicationResult;
 
 use crate::domain::types::{Latitude, Longitude};
 use bigdecimal::BigDecimal;

@@ -1,11 +1,9 @@
-use bigdecimal::ToPrimitive;
 use diesel::{
     associations::HasTable, BelongingToDsl, ExpressionMethods, MysqlConnection, QueryDsl,
     RunQueryDsl,
 };
 use std::convert::TryInto;
 
-use crate::domain::coordinate::Coordinate;
 use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::coordinate::CoordinateDto;

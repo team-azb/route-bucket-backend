@@ -4,7 +4,7 @@ use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::coordinates;
 use crate::lib::error::ApplicationResult;
 
-use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
+use bigdecimal::BigDecimal;
 
 /// 座標のdto構造体
 #[derive(Identifiable, Queryable, Insertable, Associations, Debug)]
