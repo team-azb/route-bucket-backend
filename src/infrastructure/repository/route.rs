@@ -1,17 +1,20 @@
-use diesel::{MysqlConnection, QueryDsl, RunQueryDsl, BelongingToDsl, ExpressionMethods, associations::HasTable};
+use bigdecimal::ToPrimitive;
+use diesel::{
+    associations::HasTable, BelongingToDsl, ExpressionMethods, MysqlConnection, QueryDsl,
+    RunQueryDsl,
+};
+use std::convert::TryInto;
 
-use crate::domain::route::{RouteRepository, Route};
+use crate::domain::coordinate::Coordinate;
+use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
+use crate::infrastructure::dto::coordinate::CoordinateDto;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema;
 use crate::lib::error::{ApplicationError, ApplicationResult};
-use crate::infrastructure::dto::coordinate::CoordinateDto;
-use crate::domain::coordinate::Coordinate;
-use bigdecimal::ToPrimitive;
-
 
 pub struct RouteRepositoryMysql {
-    conn: MysqlConnection
+    conn: MysqlConnection,
 }
 
 impl RouteRepositoryMysql {
@@ -19,37 +22,29 @@ impl RouteRepositoryMysql {
         RouteRepositoryMysql { conn }
     }
 
-    fn dto_to_coord(coord_dto: &CoordinateDto) -> ApplicationResult<Coordinate> {
-        Ok(Coordinate::create(
-            coord_dto.latitude.to_f64().unwrap(),
-            coord_dto.longitude.to_f64().unwrap())?)
-    }
-
-    fn dtos_to_route(route_dto: &RouteDto, coord_dtos: Vec<CoordinateDto>) -> ApplicationResult<Route> {
-        Ok(
-            Route::new(
-                RouteId(route_dto.id.clone()),
-                route_dto.name.clone(),
-                coord_dtos.iter()
-                    .map(|dto| Self::dto_to_coord(dto))
-                    // Resultにcollectからのquestion
-                    // https://users.rust-lang.org/t/use-operator-inside-map-function/16230/7
-                    .collect::<ApplicationResult<Vec<_>>>()?
-            )
-        )
+    pub fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
+        let route_dto = RouteDto::from_model(route);
+        let coord_dtos = route
+            .points()
+            .iter()
+            .enumerate()
+            .map(|(index, coord)| {
+                CoordinateDto::from_model(coord, route.id(), index.try_into().unwrap())
+            })
+            .collect();
+        (route_dto, coord_dtos)
     }
 }
 
-
 impl RouteRepository for RouteRepositoryMysql {
-    fn find(&self, route_id: RouteId) -> ApplicationResult<Route> {
+    fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
         let route_dto = RouteDto::table()
             .filter(schema::routes::id.eq(&route_id.to_string()))
             .first::<RouteDto>(&self.conn)
             .or_else(|_| {
                 Err(ApplicationError::ResourceNotFound {
                     resource_name: "Route",
-                    id: route_id.to_string()
+                    id: route_id.to_string(),
                 })
             })?;
 
@@ -57,6 +52,22 @@ impl RouteRepository for RouteRepositoryMysql {
             .load(&self.conn)
             .expect("Couldn't load coords");
 
-        Ok(Self::dtos_to_route(&route_dto, coord_dtos)?)
+        Ok(route_dto.to_model(coord_dtos)?)
+    }
+
+    fn register(&self, route: &Route) -> ApplicationResult<()> {
+        let (route_dto, coord_dtos) = Self::route_to_dtos(route);
+
+        diesel::insert_into(RouteDto::table())
+            .values(route_dto)
+            .execute(&self.conn)
+            .expect("failed inserting route");
+
+        diesel::insert_into(CoordinateDto::table())
+            .values(coord_dtos)
+            .execute(&self.conn)
+            .expect("failed inserting coord");
+
+        Ok(())
     }
 }

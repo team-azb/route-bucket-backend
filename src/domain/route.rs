@@ -17,19 +17,27 @@ impl Route {
         Route {
             id,
             name: name.to_string(),
-            points
+            points,
         }
     }
 
     pub fn add_point(&mut self, point: Coordinate) {
         self.points.push(point);
     }
-
-    pub fn show_points(&self) {
-        println!("{:?}", self.points);
-    }
 }
 
 pub trait RouteRepository {
-    fn find(&self, id: RouteId) -> ApplicationResult<Route>;
+    fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
+
+    fn register(&self, route: &Route) -> ApplicationResult<()>;
+
+    fn create(&self, name: &String) -> ApplicationResult<RouteId> {
+        let route = Route {
+            id: RouteId::new(),
+            name: name.clone(),
+            points: Vec::new(),
+        };
+        self.register(&route)?;
+        Ok(route.id)
+    }
 }
