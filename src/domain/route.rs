@@ -2,7 +2,10 @@ use crate::domain::coordinate::Coordinate;
 use crate::domain::types::RouteId;
 use crate::lib::error::ApplicationResult;
 
-#[derive(Debug)]
+use getset::Getters;
+
+#[derive(Debug, Getters)]
+#[get = "pub"]
 pub struct Route {
     id: RouteId,
     name: String,

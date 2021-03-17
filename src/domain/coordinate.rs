@@ -1,7 +1,8 @@
 use crate::lib::error::{ApplicationError, ApplicationResult};
 
 /// Value Object for Coordinates
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Getters)]
+#[get = "pub"]
 pub struct Coordinate {
     latitude: Latitude,
     longitude: Longitude,
