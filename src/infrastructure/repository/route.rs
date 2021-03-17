@@ -50,7 +50,11 @@ impl RouteRepository for RouteRepositoryMysql {
 
         let coord_dtos = CoordinateDto::belonging_to(&route_dto)
             .load(&self.conn)
-            .expect("Couldn't load coords");
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to load from Coordinates!",
+                ))
+            })?;
 
         Ok(route_dto.to_model(coord_dtos)?)
     }
@@ -61,12 +65,20 @@ impl RouteRepository for RouteRepositoryMysql {
         diesel::insert_into(RouteDto::table())
             .values(route_dto)
             .execute(&self.conn)
-            .expect("failed inserting route");
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to insert into Routes!",
+                ))
+            })?;
 
         diesel::insert_into(CoordinateDto::table())
             .values(coord_dtos)
             .execute(&self.conn)
-            .expect("failed inserting coord");
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to insert into Coordinates!",
+                ))
+            })?;
 
         Ok(())
     }
