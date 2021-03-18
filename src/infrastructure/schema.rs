@@ -1,7 +1,7 @@
 table! {
     coordinates (route_id, index) {
         route_id -> Varchar,
-        index -> Integer,
+        index -> Unsigned<Integer>,
         latitude -> Decimal,
         longitude -> Decimal,
     }
