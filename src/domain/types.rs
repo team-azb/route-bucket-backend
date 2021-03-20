@@ -1,13 +1,14 @@
 use crate::lib::error::{ApplicationError, ApplicationResult};
 use bigdecimal::BigDecimal;
 use nanoid::nanoid;
+use serde::{Deserialize, Serialize, Serializer};
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい
 // ただのgenericsでSelf(val)やself.0.clone()をしようとすると怒られるので、
 // derive macro + traitでやるしかなさそう
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteId(String);
 
 impl RouteId {
@@ -46,6 +47,15 @@ impl Latitude {
     }
 }
 
+impl Serialize for Latitude {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Longitude(BigDecimal);
 
@@ -62,5 +72,14 @@ impl Longitude {
 
     pub fn value(&self) -> BigDecimal {
         self.0.clone()
+    }
+}
+
+impl Serialize for Longitude {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
     }
 }
