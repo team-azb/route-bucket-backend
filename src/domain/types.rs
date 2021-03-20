@@ -1,7 +1,8 @@
 use crate::lib::error::{ApplicationError, ApplicationResult};
 use bigdecimal::BigDecimal;
 use nanoid::nanoid;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::str::FromStr;
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい
@@ -28,8 +29,14 @@ impl RouteId {
 // (今MAX以外はimplの中身完全一致してる)
 // ↑のderive ValueObjectをベースにしたtraitなイメージ (RangedValueObjectか、ValueObjectのオプションか)
 // オプションならconst genericsいらなそう
-#[derive(Clone, Debug, PartialEq)]
-pub struct Latitude(BigDecimal);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Latitude(
+    #[serde(
+        serialize_with = "serialize_big_decimal",
+        deserialize_with = "deserialize_big_decimal"
+    )]
+    BigDecimal,
+);
 
 impl Latitude {
     pub fn from(val: BigDecimal) -> ApplicationResult<Self> {
@@ -47,17 +54,14 @@ impl Latitude {
     }
 }
 
-impl Serialize for Latitude {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.0.to_string())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Longitude(BigDecimal);
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Longitude(
+    #[serde(
+        serialize_with = "serialize_big_decimal",
+        deserialize_with = "deserialize_big_decimal"
+    )]
+    BigDecimal,
+);
 
 impl Longitude {
     pub fn from(val: BigDecimal) -> ApplicationResult<Self> {
@@ -75,11 +79,18 @@ impl Longitude {
     }
 }
 
-impl Serialize for Longitude {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.0.to_string())
-    }
+fn serialize_big_decimal<S>(target: &BigDecimal, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&target.to_string())
+}
+
+fn deserialize_big_decimal<'de, D>(deserializer: D) -> Result<BigDecimal, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let bd_string = String::deserialize(deserializer)?;
+    // TODO: ここのunwrapどうにかする
+    Ok(BigDecimal::from_str(&bd_string).unwrap())
 }
