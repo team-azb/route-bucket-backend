@@ -7,19 +7,14 @@ mod infrastructure;
 mod lib;
 
 use actix_web::middleware::Logger;
-use actix_web::{get, web, App, Error, HttpResponse, HttpServer, Result};
-use bigdecimal::BigDecimal;
+use actix_web::{App, Error, HttpServer, Result};
 use diesel::mysql::MysqlConnection;
-use diesel::prelude::*;
+use diesel::r2d2::{ConnectionManager, Pool};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 
 use crate::controller::route::{BuildService, RouteController};
-use crate::domain::coordinate::Coordinate;
-use crate::domain::route::{Route, RouteRepository};
-use crate::domain::types::RouteId;
 use crate::infrastructure::repository::route::RouteRepositoryMysql;
-use diesel::r2d2::{ConnectionManager, Pool};
 
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
     dotenv().ok();

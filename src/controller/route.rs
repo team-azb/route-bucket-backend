@@ -3,7 +3,7 @@ use getset::Getters;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::route::{Route, RouteRepository};
+use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
 
 #[derive(Clone)]
@@ -16,13 +16,13 @@ impl<Repository: RouteRepository> RouteController<Repository> {
         RouteController { repository }
     }
 
-    pub async fn get(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
+    async fn get(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
         let route = self.repository.find(id.as_ref())?;
 
         Ok(HttpResponse::Ok().json(route))
     }
 
-    pub async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
+    async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
         let route_id = self.repository.create(&req.name())?;
 
         Ok(HttpResponse::Created().json(RouteCreateResponse::new(&route_id)))
@@ -42,7 +42,7 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
 }
 
 // TODO: UseCaseを作ったらそっちに移動する
-/// response body for POST /routes/
+/// request body for POST /routes/
 #[derive(Getters, Deserialize)]
 #[get = "pub"]
 struct RouteCreateRequest {
