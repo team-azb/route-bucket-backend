@@ -10,14 +10,26 @@ use crate::infrastructure::dto::coordinate::CoordinateDto;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema;
 use crate::lib::error::{ApplicationError, ApplicationResult};
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+
+type MysqlConnectionManager = ConnectionManager<MysqlConnection>;
 
 pub struct RouteRepositoryMysql {
-    conn: MysqlConnection,
+    pool: Pool<MysqlConnectionManager>,
 }
 
 impl RouteRepositoryMysql {
-    pub fn new(conn: MysqlConnection) -> RouteRepositoryMysql {
-        RouteRepositoryMysql { conn }
+    pub fn new(pool: Pool<MysqlConnectionManager>) -> RouteRepositoryMysql {
+        RouteRepositoryMysql { pool }
+    }
+
+    pub fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
+        let conn = self.pool.get().or_else(|_| {
+            Err(ApplicationError::DataBaseError(
+                "Failed to get DB connection.",
+            ))
+        })?;
+        Ok(conn)
     }
 
     pub fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
@@ -36,9 +48,10 @@ impl RouteRepositoryMysql {
 
 impl RouteRepository for RouteRepositoryMysql {
     fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
+        let conn = self.get_connection()?;
         let route_dto = RouteDto::table()
             .filter(schema::routes::id.eq(&route_id.to_string()))
-            .first::<RouteDto>(&self.conn)
+            .first::<RouteDto>(&conn)
             .or_else(|_| {
                 Err(ApplicationError::ResourceNotFound {
                     resource_name: "Route",
@@ -47,7 +60,8 @@ impl RouteRepository for RouteRepositoryMysql {
             })?;
 
         let coord_dtos = CoordinateDto::belonging_to(&route_dto)
-            .load(&self.conn)
+            .order(schema::coordinates::index.asc())
+            .load(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
                     "Failed to load from Coordinates!",
@@ -58,11 +72,13 @@ impl RouteRepository for RouteRepositoryMysql {
     }
 
     fn register(&self, route: &Route) -> ApplicationResult<()> {
+        let conn = self.get_connection()?;
+
         let (route_dto, coord_dtos) = Self::route_to_dtos(route);
 
         diesel::insert_into(RouteDto::table())
             .values(route_dto)
-            .execute(&self.conn)
+            .execute(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
                     "Failed to insert into Routes!",
@@ -71,7 +87,7 @@ impl RouteRepository for RouteRepositoryMysql {
 
         diesel::insert_into(CoordinateDto::table())
             .values(coord_dtos)
-            .execute(&self.conn)
+            .execute(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
                     "Failed to insert into Coordinates!",

@@ -16,33 +16,18 @@ use crate::domain::coordinate::Coordinate;
 use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
 use crate::infrastructure::repository::route::RouteRepositoryMysql;
+use diesel::r2d2::{ConnectionManager, Pool};
 
-#[get("/")]
-async fn index() -> Result<HttpResponse, Error> {
-    let conn = establish_connection();
-    let repository = RouteRepositoryMysql::new(conn);
-
-    let route = Route::new(
-        RouteId::new(),
-        "sample route".to_string(),
-        vec![
-            Coordinate::new(BigDecimal::from(35.0), BigDecimal::from(130.0))?,
-            Coordinate::new(BigDecimal::from(45.0), BigDecimal::from(140.0))?,
-        ],
-    );
-
-    repository.register(&route)?;
-
-    let route = repository.find(&route.id())?;
-    Ok(HttpResponse::Ok().body(format!("{:#?}", route)))
-}
-
-fn establish_connection() -> MysqlConnection {
+fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
     dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
 
-    MysqlConnection::establish(&database_url).expect("Error on db connection!")
+    let manager = ConnectionManager::<MysqlConnection>::new(database_url);
+    Pool::builder()
+        .max_size(4)
+        .build(manager)
+        .expect("Failed to create pool")
 }
 
 #[actix_rt::main]
