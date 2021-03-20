@@ -3,10 +3,10 @@ use crate::lib::error::ApplicationResult;
 use crate::domain::types::{Latitude, Longitude};
 use bigdecimal::BigDecimal;
 use getset::Getters;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Value Object for Coordinates
-#[derive(Clone, Debug, PartialEq, Getters, Serialize)]
+#[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]
 #[get = "pub"]
 pub struct Coordinate {
     latitude: Latitude,

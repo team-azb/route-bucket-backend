@@ -3,9 +3,9 @@ use crate::domain::types::RouteId;
 use crate::lib::error::ApplicationResult;
 
 use getset::Getters;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Getters, Serialize)]
+#[derive(Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
 pub struct Route {
     id: RouteId,
