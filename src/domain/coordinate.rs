@@ -1,9 +1,9 @@
-use crate::lib::error::ApplicationResult;
-
-use crate::domain::types::{Latitude, Longitude};
 use bigdecimal::BigDecimal;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+
+use crate::domain::types::{Latitude, Longitude};
+use crate::lib::error::ApplicationResult;
 
 /// Value Object for Coordinates
 #[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]

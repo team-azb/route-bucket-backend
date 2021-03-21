@@ -1,8 +1,8 @@
-use actix_web::{
-    dev::HttpResponseBuilder, http::header, http::StatusCode, HttpResponse, ResponseError,
-};
+use actix_web::{dev, http, HttpResponse, ResponseError};
 use derive_more::Display;
 use thiserror::Error;
+
+use crate::hashmap;
 
 /// ApplicationErrorを持つResult用のエイリアス
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
@@ -24,16 +24,16 @@ pub enum ApplicationError {
 }
 
 impl ResponseError for ApplicationError {
-    fn status_code(&self) -> StatusCode {
+    fn status_code(&self) -> http::StatusCode {
         match *self {
-            ApplicationError::DataBaseError(..) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApplicationError::ValueObjectError(..) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApplicationError::ResourceNotFound { .. } => StatusCode::NOT_FOUND,
+            ApplicationError::DataBaseError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
         }
     }
     fn error_response(&self) -> HttpResponse {
-        HttpResponseBuilder::new(self.status_code())
-            .set_header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-            .body(self.to_string())
+        dev::HttpResponseBuilder::new(self.status_code())
+            .set_header(http::header::CONTENT_TYPE, "text/html; charset=utf-8")
+            .json(hashmap! {"message" => self.to_string()})
     }
 }
