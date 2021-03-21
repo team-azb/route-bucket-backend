@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
 
-#[derive(Clone)]
 pub struct RouteController<Repository: RouteRepository> {
     repository: Repository,
 }
