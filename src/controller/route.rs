@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
 
-pub struct RouteController<Repository: RouteRepository> {
-    repository: Repository,
+pub struct RouteController<R: RouteRepository> {
+    repository: R,
 }
 
-impl<Repository: RouteRepository> RouteController<Repository> {
-    pub fn new(repository: Repository) -> RouteController<Repository> {
+impl<R: RouteRepository> RouteController<R> {
+    pub fn new(repository: R) -> RouteController<R> {
         RouteController { repository }
     }
 
