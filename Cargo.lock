@@ -1545,6 +1545,7 @@ dependencies = [
  "dotenv",
  "env_logger",
  "getset",
+ "log",
  "nanoid",
  "once_cell",
  "r2d2",
