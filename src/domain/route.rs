@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::coordinate::Coordinate;
 use crate::domain::types::RouteId;
-use crate::lib::error::ApplicationResult;
+use crate::utils::error::ApplicationResult;
 
 #[derive(Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]

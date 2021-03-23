@@ -10,7 +10,7 @@ use crate::domain::types::RouteId;
 use crate::infrastructure::dto::coordinate::CoordinateDto;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema;
-use crate::lib::error::{ApplicationError, ApplicationResult};
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 type MysqlConnectionManager = ConnectionManager<MysqlConnection>;
 
