@@ -1,4 +1,5 @@
 use bigdecimal::BigDecimal;
+use derive_more::Display;
 use nanoid::nanoid;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
@@ -10,7 +11,7 @@ use crate::utils::error::{ApplicationError, ApplicationResult};
 // ただのgenericsでSelf(val)やself.0.clone()をしようとすると怒られるので、
 // derive macro + traitでやるしかなさそう
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Display, Debug, Clone, Serialize, Deserialize)]
 pub struct RouteId(String);
 
 impl RouteId {
@@ -40,6 +41,7 @@ pub struct Latitude(
 );
 
 impl Latitude {
+    // TODO: ちゃんとstd::convert::TryFromの実装にかえる
     pub fn from(val: BigDecimal) -> ApplicationResult<Self> {
         if val.abs() <= BigDecimal::from(90.0) {
             Ok(Self(val))
