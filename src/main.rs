@@ -1,11 +1,3 @@
-#[macro_use]
-extern crate diesel;
-
-mod controller;
-mod domain;
-mod infrastructure;
-mod lib;
-
 use actix_web::middleware::Logger;
 use actix_web::{App, Error, HttpServer, Result};
 use diesel::mysql::MysqlConnection;
@@ -13,8 +5,8 @@ use diesel::r2d2::{ConnectionManager, Pool};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 
-use crate::controller::route::{BuildService, RouteController};
-use crate::infrastructure::repository::route::RouteRepositoryMysql;
+use route_bucket_backend::controller::route::{BuildService, RouteController};
+use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
     dotenv().ok();
