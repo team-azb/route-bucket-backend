@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, RunQueryDsl};
@@ -9,13 +8,10 @@ use route_bucket_backend::domain::types::RouteId;
 use route_bucket_backend::infrastructure::dto::coordinate::CoordinateDto;
 use route_bucket_backend::infrastructure::dto::route::RouteDto;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
-use route_bucket_backend::utils::error::ApplicationResult;
 use std::convert::TryFrom;
 
 // TODO: main.rsのcreate_poolと共通化
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
-    dotenv().ok();
-
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
 
     let manager = ConnectionManager::<MysqlConnection>::new(database_url);
@@ -26,6 +22,8 @@ fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
 }
 
 fn main() {
+    dotenv().ok();
+
     env_logger::init();
 
     let pool = create_pool();
@@ -41,7 +39,7 @@ fn main() {
     let sample1 = Route::new(RouteId::new(), String::from("sample1"), Vec::new());
     let sample2 = Route::new(
         RouteId::new(),
-        String::from("sample1"),
+        String::from("sample2"),
         vec![
             Coordinate::try_from((0.0, 100.0)).unwrap(),
             Coordinate::try_from((10.0, 110.0)).unwrap(),
@@ -51,8 +49,8 @@ fn main() {
         ],
     );
 
-    repo.register(&sample1);
-    log::info!("seed Route {} added!", sample1.id());
-    repo.register(&sample2);
-    log::info!("seed Route {} added!", sample2.id());
+    repo.register(&sample1).unwrap();
+    log::info!("Route {} added!", sample1.id());
+    repo.register(&sample2).unwrap();
+    log::info!("Route {} added!", sample2.id());
 }

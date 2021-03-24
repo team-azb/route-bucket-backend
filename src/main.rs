@@ -9,8 +9,6 @@ use route_bucket_backend::controller::route::{BuildService, RouteController};
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
-    dotenv().ok();
-
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
 
     let manager = ConnectionManager::<MysqlConnection>::new(database_url);
@@ -33,7 +31,7 @@ type StaticRouteController = Lazy<RouteController<RouteRepositoryMysql>>;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
-    std::env::set_var("RUST_LOG", "actix_web=info");
+    dotenv().ok();
     env_logger::init();
 
     // staticじゃないと↓で怒られる
