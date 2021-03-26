@@ -1,9 +1,9 @@
-use crate::domain::coordinate::Coordinate;
-use crate::domain::types::RouteId;
-use crate::lib::error::ApplicationResult;
-
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+
+use crate::domain::coordinate::Coordinate;
+use crate::domain::types::RouteId;
+use crate::utils::error::ApplicationResult;
 
 #[derive(Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
@@ -32,6 +32,7 @@ pub trait RouteRepository {
 
     fn register(&self, route: &Route) -> ApplicationResult<()>;
 
+    // TODO: こいつrepositoryではなくてusecase説ある
     fn create(&self, name: &String) -> ApplicationResult<RouteId> {
         let route = Route {
             id: RouteId::new(),

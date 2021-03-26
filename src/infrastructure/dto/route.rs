@@ -2,7 +2,7 @@ use crate::domain::route::Route;
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::coordinate::CoordinateDto;
 use crate::infrastructure::schema::routes;
-use crate::lib::error::ApplicationResult;
+use crate::utils::error::ApplicationResult;
 
 /// ルートのdto構造体
 #[derive(Identifiable, Queryable, Insertable, Debug)]

@@ -3,6 +3,7 @@ name = "route-bucket-backend"
 version = "0.1.0"
 authors = ["shugo256 <shugo256@gmail.com>"]
 edition = "2018"
+default-run = "route-bucket-backend"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,6 +16,7 @@ diesel = { version = "1.4.6", features = ["mysql", "numeric", "r2d2"] }
 dotenv = "0.15.0"
 env_logger = "0.8.3"
 getset = "0.1.1"
+log = "0.4.14"
 nanoid = "0.3.0"
 once_cell = "1.7.2"
 r2d2 = "0.8.9"

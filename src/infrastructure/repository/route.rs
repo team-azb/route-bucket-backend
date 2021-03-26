@@ -1,6 +1,7 @@
 use diesel::{
-    associations::HasTable, BelongingToDsl, ExpressionMethods, MysqlConnection, QueryDsl,
-    RunQueryDsl,
+    associations::HasTable,
+    r2d2::{ConnectionManager, Pool, PooledConnection},
+    BelongingToDsl, ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl,
 };
 use std::convert::TryInto;
 
@@ -9,8 +10,7 @@ use crate::domain::types::RouteId;
 use crate::infrastructure::dto::coordinate::CoordinateDto;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema;
-use crate::lib::error::{ApplicationError, ApplicationResult};
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 type MysqlConnectionManager = ConnectionManager<MysqlConnection>;
 
