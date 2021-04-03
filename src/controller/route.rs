@@ -1,30 +1,25 @@
 use actix_web::{dev, web, HttpResponse, Result, Scope};
-use getset::Getters;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
+use crate::usecase::route::{RouteCreateRequest, RouteUseCase};
 
 pub struct RouteController<R: RouteRepository> {
-    repository: R,
+    usecase: RouteUseCase<R>,
 }
 
 impl<R: RouteRepository> RouteController<R> {
-    pub fn new(repository: R) -> RouteController<R> {
-        RouteController { repository }
+    pub fn new(usecase: RouteUseCase<R>) -> RouteController<R> {
+        RouteController { usecase }
     }
 
     async fn get(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        let route = self.repository.find(id.as_ref())?;
-
-        Ok(HttpResponse::Ok().json(route))
+        Ok(HttpResponse::Ok().json(self.usecase.find(id.as_ref())?))
     }
 
     async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
-        let route_id = self.repository.create(&req.name())?;
-
-        Ok(HttpResponse::Created().json(RouteCreateResponse::new(&route_id)))
+        Ok(HttpResponse::Created().json(self.usecase.create(&req)?))
     }
 }
 
@@ -37,24 +32,5 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
         web::scope("/routes")
             .service(web::resource("/{id}").route(web::get().to(move |id| self.get(id))))
             .service(web::resource("/").route(web::post().to(move |req| self.post(req))))
-    }
-}
-
-// TODO: UseCaseを作ったらそっちに移動する
-/// request body for POST /routes/
-#[derive(Getters, Deserialize)]
-#[get = "pub"]
-struct RouteCreateRequest {
-    name: String,
-}
-
-/// response body for POST /routes/
-#[derive(Serialize)]
-struct RouteCreateResponse {
-    id: RouteId,
-}
-impl RouteCreateResponse {
-    fn new(id: &RouteId) -> Self {
-        Self { id: id.clone() }
     }
 }

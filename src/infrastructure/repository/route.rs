@@ -50,7 +50,7 @@ impl RouteRepository for RouteRepositoryMysql {
     fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
         let conn = self.get_connection()?;
         let route_dto = RouteDto::table()
-            .filter(schema::routes::id.eq(&route_id.to_string()))
+            .find(&route_id.to_string())
             .first::<RouteDto>(&conn)
             .or_else(|_| {
                 Err(ApplicationError::ResourceNotFound {
