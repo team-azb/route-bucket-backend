@@ -23,7 +23,7 @@ impl RouteRepositoryMysql {
         RouteRepositoryMysql { pool }
     }
 
-    pub fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
+    fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
         let conn = self.pool.get().or_else(|_| {
             Err(ApplicationError::DataBaseError(
                 "Failed to get DB connection.",
@@ -32,7 +32,7 @@ impl RouteRepositoryMysql {
         Ok(conn)
     }
 
-    pub fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
+    fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
         let route_dto = RouteDto::from_model(route);
         let coord_dtos = route
             .points()
