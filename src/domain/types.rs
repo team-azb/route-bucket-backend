@@ -5,6 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
 
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use std::convert::TryFrom;
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい
@@ -26,13 +27,12 @@ impl RouteId {
     }
 }
 
-// TODO: rustc 1.51.0でconst genericsが実装される
-// これを使うと、Latitude, Longitudeそれぞれのfromやvalueはいらなくなる
-// (今MAX以外はimplの中身完全一致してる)
-// ↑のderive ValueObjectをベースにしたtraitなイメージ (RangedValueObjectか、ValueObjectのオプションか)
-// オプションならconst genericsいらなそう
+pub type Latitude = BigDecimalValueObject<90>;
+pub type Longitude = BigDecimalValueObject<180>;
+
+/// Value Object for BigDecimal type
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Latitude(
+pub struct BigDecimalValueObject<const MAX_ABS: u64>(
     #[serde(
         serialize_with = "serialize_big_decimal",
         deserialize_with = "deserialize_big_decimal"
@@ -40,45 +40,27 @@ pub struct Latitude(
     BigDecimal,
 );
 
-impl Latitude {
-    // TODO: ちゃんとstd::convert::TryFromの実装にかえる
-    pub fn from(val: BigDecimal) -> ApplicationResult<Self> {
-        if val.abs() <= BigDecimal::from(90.0) {
-            Ok(Self(val))
-        } else {
-            Err(ApplicationError::ValueObjectError(
-                "Absolute value of Latitude must be <= 90.0",
-            ))
-        }
-    }
-
+impl<const MAX_ABS: u64> BigDecimalValueObject<MAX_ABS> {
     pub fn value(&self) -> BigDecimal {
         self.0.clone()
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Longitude(
-    #[serde(
-        serialize_with = "serialize_big_decimal",
-        deserialize_with = "deserialize_big_decimal"
-    )]
-    BigDecimal,
-);
+impl<const MAX_ABS: u64> TryFrom<BigDecimal> for BigDecimalValueObject<MAX_ABS> {
+    type Error = ApplicationError;
 
-impl Longitude {
-    pub fn from(val: BigDecimal) -> ApplicationResult<Self> {
-        if val.abs() <= BigDecimal::from(180.0) {
+    fn try_from(val: BigDecimal) -> ApplicationResult<Self> {
+        if val.abs() <= BigDecimal::from(MAX_ABS) {
             Ok(Self(val))
         } else {
-            Err(ApplicationError::ValueObjectError(
-                "Absolute value of Latitude must be <= 180.0",
-            ))
+            Err(ApplicationError::ValueObjectError(format!(
+                // TODO: stringのconst genericsが追加されたら、
+                // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
+                "Invalid value {} for BigDecimalValueObject<{}>",
+                val,
+                MAX_ABS
+            )))
         }
-    }
-
-    pub fn value(&self) -> BigDecimal {
-        self.0.clone()
     }
 }
 

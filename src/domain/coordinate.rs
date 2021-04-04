@@ -17,8 +17,8 @@ pub struct Coordinate {
 impl Coordinate {
     pub fn new(lat: BigDecimal, lon: BigDecimal) -> ApplicationResult<Coordinate> {
         let coord = Coordinate {
-            latitude: Latitude::from(lat)?,
-            longitude: Longitude::from(lon)?,
+            latitude: Latitude::try_from(lat)?,
+            longitude: Longitude::try_from(lon)?,
         };
         Ok(coord)
     }
