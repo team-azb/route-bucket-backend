@@ -21,7 +21,7 @@ impl RouteDto {
 
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
-            self.name.clone(),
+            &self.name,
             points,
         ))
     }

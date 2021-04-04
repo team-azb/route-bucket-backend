@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 
 use route_bucket_backend::controller::route::{BuildService, RouteController};
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
+use route_bucket_backend::usecase::route::RouteUseCase;
 
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
@@ -37,8 +38,9 @@ async fn main() -> Result<(), Error> {
     // staticじゃないと↓で怒られる
     static ROUTE_CONTROLLER: StaticRouteController = StaticRouteController::new(|| {
         let pool = create_pool();
-        let route_repository = RouteRepositoryMysql::new(pool);
-        RouteController::new(route_repository)
+        let repository = RouteRepositoryMysql::new(pool);
+        let usecase = RouteUseCase::new(repository);
+        RouteController::new(usecase)
     });
 
     HttpServer::new(move || {

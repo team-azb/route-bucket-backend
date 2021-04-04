@@ -14,10 +14,10 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn new(id: RouteId, name: String, points: Vec<Coordinate>) -> Route {
+    pub fn new(id: RouteId, name: &String, points: Vec<Coordinate>) -> Route {
         Route {
             id,
-            name: name.to_string(),
+            name: name.clone(),
             points,
         }
     }
@@ -31,15 +31,4 @@ pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
 
     fn register(&self, route: &Route) -> ApplicationResult<()>;
-
-    // TODO: こいつrepositoryではなくてusecase説ある
-    fn create(&self, name: &String) -> ApplicationResult<RouteId> {
-        let route = Route {
-            id: RouteId::new(),
-            name: name.clone(),
-            points: Vec::new(),
-        };
-        self.register(&route)?;
-        Ok(route.id)
-    }
 }
