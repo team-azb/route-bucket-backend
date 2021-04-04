@@ -14,7 +14,7 @@ pub enum ApplicationError {
     DataBaseError(&'static str),
 
     #[display(fmt = "ValueObjectError: {}", _0)]
-    ValueObjectError(&'static str),
+    ValueObjectError(String),
 
     #[display(fmt = "ResourceNotFound: {} {} not found", resource_name, id)]
     ResourceNotFound {

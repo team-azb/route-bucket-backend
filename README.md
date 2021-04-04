@@ -1,10 +1,7 @@
 # route-bucket-backend
 
 ## supported environment
-```
-rustc 1.48.0 (7eac88abb 2020-11-16)
-cargo 1.48.0 (65cbdd2dc 2020-10-14)
-```
+`rustc` & `cargo` must be `>=1.51.0` since this project uses [const generics](https://blog.rust-lang.org/2021/03/25/Rust-1.51.0.html)
 
 ## Run the Project
 ### Start MySQL
