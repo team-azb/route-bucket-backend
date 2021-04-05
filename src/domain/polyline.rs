@@ -1,10 +1,12 @@
-use bigdecimal::BigDecimal;
-use getset::Getters;
-use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-
 use crate::domain::types::{Latitude, Longitude};
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use bigdecimal::BigDecimal;
+use geo::{LineString, Point};
+use getset::Getters;
+use polyline::{decode_polyline, encode_coordinates};
+use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
+use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -17,6 +19,25 @@ impl Polyline {
 
     pub fn from_vec(points: Vec<Coordinate>) -> Polyline {
         Polyline(points)
+    }
+
+    pub fn encode(&self) -> ApplicationResult<String> {
+        let line_str: LineString<f64> = LineString::from_iter(self.0.clone().into_iter());
+        encode_coordinates(line_str, 5)
+            // TODO: encode_coordinatesのErr(String)も表示する
+            .map_err(|_| ApplicationError::DomainError("failed to encode polyline"))
+    }
+
+    pub fn decode(poly_str: &String) -> ApplicationResult<Polyline> {
+        let line_str = decode_polyline(poly_str, 5)
+            // TODO: encode_coordinatesのErr(String)も表示する
+            .map_err(|_| ApplicationError::DomainError("failed to encode polyline"))?;
+        Ok(Polyline::from_vec(
+            line_str
+                .into_iter()
+                .map(|coord| Coordinate::new(coord.y, coord.x))
+                .collect::<ApplicationResult<Vec<_>>>()?,
+        ))
     }
 
     pub fn insert_point(&mut self, pos: usize, point: Coordinate) -> ApplicationResult<()> {
@@ -76,20 +97,20 @@ pub struct Coordinate {
 }
 
 impl Coordinate {
-    pub fn new(lat: BigDecimal, lon: BigDecimal) -> ApplicationResult<Coordinate> {
+    pub fn new(lat: f64, lon: f64) -> ApplicationResult<Coordinate> {
         let coord = Coordinate {
-            latitude: Latitude::from(lat)?,
-            longitude: Longitude::from(lon)?,
+            latitude: Latitude::try_from(lat)?,
+            longitude: Longitude::try_from(lon)?,
         };
         Ok(coord)
     }
 }
 
-impl TryFrom<(f64, f64)> for Coordinate {
-    type Error = ApplicationError;
-
-    fn try_from(tuple: (f64, f64)) -> ApplicationResult<Coordinate> {
-        let coord = Coordinate::new(BigDecimal::from(tuple.0), BigDecimal::from(tuple.1))?;
-        Ok(coord)
+impl From<Coordinate> for geo::Coordinate<f64> {
+    fn from(coord: Coordinate) -> geo::Coordinate<f64> {
+        geo::Coordinate {
+            x: coord.longitude.value(),
+            y: coord.latitude.value(),
+        }
     }
 }

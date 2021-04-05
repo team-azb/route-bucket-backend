@@ -11,6 +11,8 @@ use crate::utils::error::ApplicationResult;
 pub struct RouteDto {
     id: String,
     name: String,
+    polyline: String,
+    operation_pos: u32,
 }
 
 impl RouteDto {
@@ -23,7 +25,8 @@ impl RouteDto {
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
-            Polyline::from_vec(points),
+            Polyline::decode(&self.polyline)?,
+            OperationHistory::new(operations, self.operation_pos as usize),
         ))
     }
 
@@ -31,6 +34,8 @@ impl RouteDto {
         RouteDto {
             id: route.id().to_string(),
             name: route.name().clone(),
-        }
+            polyline: route.polyline().encode()?,
+            operation_pos: *route.operation_history().pos() as u32,
+        })
     }
 }

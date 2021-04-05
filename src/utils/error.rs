@@ -11,7 +11,7 @@ pub type ApplicationResult<T> = Result<T, ApplicationError>;
 #[derive(Debug, Display, Error)]
 pub enum ApplicationError {
     #[display(fmt = "DataBaseError: {}", _0)]
-    DataBaseError(&'static str),
+    DataBaseError(String),
 
     #[display(fmt = "DomainError: {}", _0)]
     DomainError(&'static str),
