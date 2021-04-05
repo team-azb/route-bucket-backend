@@ -21,13 +21,13 @@ impl Route {
         id: RouteId,
         name: &String,
         polyline: Polyline,
-        // operation_history: OperationHistory,
+        operation_history: OperationHistory,
     ) -> Route {
         Route {
             id,
             name: name.clone(),
             polyline,
-            operation_history: OperationHistory::new(),
+            operation_history,
         }
     }
 

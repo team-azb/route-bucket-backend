@@ -1,6 +1,7 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::operation_history::OperationHistory;
 use crate::domain::polyline::Polyline;
 use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
@@ -20,7 +21,12 @@ impl<R: RouteRepository> RouteUseCase<R> {
     }
 
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route = Route::new(RouteId::new(), req.name(), Polyline::new());
+        let route = Route::new(
+            RouteId::new(),
+            req.name(),
+            Polyline::new(),
+            OperationHistory::new(vec![], 0),
+        );
 
         self.repository.register(&route)?;
         Ok(RouteCreateResponse::new(route.id()))
