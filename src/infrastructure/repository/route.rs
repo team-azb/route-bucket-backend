@@ -35,7 +35,7 @@ impl RouteRepositoryMysql {
     fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
         let route_dto = RouteDto::from_model(route);
         let coord_dtos = route
-            .points()
+            .polyline()
             .iter()
             .enumerate()
             .map(|(index, coord)| {

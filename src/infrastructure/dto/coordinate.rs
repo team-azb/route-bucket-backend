@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 
-use crate::domain::coordinate::Coordinate;
+use crate::domain::polyline::Coordinate;
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::coordinates;

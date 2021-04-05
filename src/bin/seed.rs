@@ -2,7 +2,7 @@ use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, RunQueryDsl};
 use dotenv::dotenv;
-use route_bucket_backend::domain::coordinate::Coordinate;
+use route_bucket_backend::domain::polyline::Coordinate;
 use route_bucket_backend::domain::route::{Route, RouteRepository};
 use route_bucket_backend::domain::types::RouteId;
 use route_bucket_backend::infrastructure::dto::coordinate::CoordinateDto;

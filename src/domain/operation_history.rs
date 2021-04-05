@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::coordinate::Coordinate;
-use crate::domain::route::Route;
+use crate::domain::polyline::{Coordinate, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -25,10 +24,10 @@ impl OperationHistory {
         self.pos += 1;
     }
 
-    pub fn undo(&mut self, route: &mut Route) -> ApplicationResult<()> {
+    pub fn undo(&mut self, polyline: &mut Polyline) -> ApplicationResult<()> {
         if self.pos > 0 {
             self.pos -= 1;
-            self.operations[self.pos].reverse().apply(route)?;
+            self.operations[self.pos].reverse().apply(polyline)?;
             Ok(())
         } else {
             Err(ApplicationError::InvalidOperation(
@@ -37,9 +36,9 @@ impl OperationHistory {
         }
     }
 
-    pub fn redo(&mut self, route: &mut Route) -> ApplicationResult<()> {
+    pub fn redo(&mut self, polyline: &mut Polyline) -> ApplicationResult<()> {
         if self.pos < self.operations.len() {
-            self.operations[self.pos].apply(route)?;
+            self.operations[self.pos].apply(polyline)?;
             self.pos += 1;
             Ok(())
         } else {
@@ -54,30 +53,28 @@ impl OperationHistory {
 pub enum Operation {
     Add { pos: usize, coord: Coordinate },
     Remove { pos: usize, coord: Coordinate },
-    Clear { org_list: Vec<Coordinate> },
+    Clear { org_list: Polyline },
     // reverse operation for Clear
-    InitWithList { list: Vec<Coordinate> },
+    InitWithList { list: Polyline },
 }
 
 impl Operation {
-    // TODO: Polylineを実装したらinsert_pointとかをPolylineのメソッドにして、
-    //     : この引数もRouteではなくPolylineにする
-    pub fn apply(&self, route: &mut Route) -> ApplicationResult<()> {
+    pub fn apply(&self, polyline: &mut Polyline) -> ApplicationResult<()> {
         match self {
-            Self::Add { pos, coord } => Ok(route.insert_point(*pos, coord.clone())?),
+            Self::Add { pos, coord } => Ok(polyline.insert_point(*pos, coord.clone())?),
             Self::Remove { pos, coord } => {
-                let ref removed = route.remove_point(*pos)?;
+                let ref removed = polyline.remove_point(*pos)?;
                 (coord == removed)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError("Contradiction on remove"))
             }
             Self::Clear { org_list } => {
-                let ref removed_list = route.clear_points();
+                let ref removed_list = polyline.clear_points();
                 (org_list == removed_list)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError("Contradiction on clear"))
             }
-            Self::InitWithList { list } => Ok(route.init_points(list.clone())?),
+            Self::InitWithList { list } => Ok(polyline.init_points(list.clone())?),
         }
     }
 

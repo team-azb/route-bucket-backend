@@ -1,3 +1,4 @@
+use crate::domain::polyline::Polyline;
 use crate::domain::route::Route;
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::coordinate::CoordinateDto;
@@ -22,7 +23,7 @@ impl RouteDto {
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
-            points,
+            Polyline::from_vec(points),
         ))
     }
 
