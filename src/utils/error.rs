@@ -16,14 +16,17 @@ pub enum ApplicationError {
     #[display(fmt = "DomainError: {}", _0)]
     DomainError(&'static str),
 
-    #[display(fmt = "ValueObjectError: {}", _0)]
-    ValueObjectError(String),
+    #[display(fmt = "InvalidOperation: {}", _0)]
+    InvalidOperation(&'static str),
 
     #[display(fmt = "ResourceNotFound: {} {} not found", resource_name, id)]
     ResourceNotFound {
         resource_name: &'static str,
         id: String,
     },
+
+    #[display(fmt = "ValueObjectError: {}", _0)]
+    ValueObjectError(&'static str),
 }
 
 impl ResponseError for ApplicationError {
@@ -31,8 +34,9 @@ impl ResponseError for ApplicationError {
         match *self {
             ApplicationError::DataBaseError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
             ApplicationError::DomainError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
-            ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::InvalidOperation(..) => http::StatusCode::BAD_REQUEST,
             ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
+            ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
     fn error_response(&self) -> HttpResponse {
