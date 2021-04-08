@@ -95,4 +95,41 @@ impl RouteRepository for RouteRepositoryMysql {
 
         Ok(())
     }
+
+    fn update(&self, route: &Route) -> ApplicationResult<()> {
+        let conn = self.get_connection()?;
+
+        let (route_dto, op_dtos) = Self::route_to_dtos(route)?;
+
+        diesel::update(&route_dto)
+            .set(&route_dto)
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(format!(
+                    "Failed to update Route {}",
+                    route.id()
+                )))
+            })?;
+
+        // TODO: 現状対応する操作を全削除してinsertし直すという間抜けな方法をとっている
+        //     : これはMySQLのupsertがdieselでできないため(postgresのやつは使えるっぽい）
+        diesel::delete(OperationDto::belonging_to(&route_dto))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(format!(
+                    "Failed to delete Operations that belong to Route {}",
+                    route.id()
+                )))
+            })?;
+        diesel::insert_into(OperationDto::table())
+            .values(op_dtos)
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to insert into Operations!".into(),
+                ))
+            })?;
+
+        Ok(())
+    }
 }

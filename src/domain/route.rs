@@ -11,7 +11,6 @@ use crate::utils::error::ApplicationResult;
 pub struct Route {
     id: RouteId,
     name: String,
-    // TODO: DBにはPolylineとして保存する
     polyline: Polyline,
     operation_history: OperationHistory,
 }
@@ -31,8 +30,8 @@ impl Route {
         }
     }
 
-    pub fn add_operation(&mut self, op: Operation) {
-        self.operation_history.add(op);
+    pub fn push_operation(&mut self, op: Operation) {
+        self.operation_history.push(op, &mut self.polyline);
     }
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
         self.operation_history.redo(&mut self.polyline)
@@ -46,4 +45,6 @@ pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
 
     fn register(&self, route: &Route) -> ApplicationResult<()>;
+
+    fn update(&self, route: &Route) -> ApplicationResult<()>;
 }

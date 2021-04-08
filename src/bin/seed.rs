@@ -62,10 +62,10 @@ fn main() {
         polyline![],
         OperationHistory::new(vec![], 0),
     );
-    let sample2 = Route::new(
+    let mut sample2 = Route::new(
         RouteId::new(),
         &String::from("sample2"),
-        polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0),],
+        polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
         OperationHistory::new(
             vec![
                 Operation::InitWithList {
@@ -82,6 +82,9 @@ fn main() {
                 Operation::Remove {
                     pos: 3,
                     coord: coord!(50.0, 150.0),
+                },
+                Operation::Clear {
+                    org_list: polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
                 },
             ],
             4,

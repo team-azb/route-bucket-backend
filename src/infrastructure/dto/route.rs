@@ -7,7 +7,7 @@ use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
 
 /// ルートのdto構造体
-#[derive(Identifiable, Queryable, Insertable, Debug)]
+#[derive(Identifiable, Queryable, Insertable, Debug, AsChangeset)]
 #[table_name = "routes"]
 pub struct RouteDto {
     id: String,

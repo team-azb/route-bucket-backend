@@ -16,7 +16,8 @@ impl OperationHistory {
         Self { op_list, pos }
     }
 
-    pub fn add(&mut self, op: Operation) {
+    pub fn push(&mut self, op: Operation, polyline: &mut Polyline) {
+        op.apply(polyline);
         // pos以降の要素は全て捨てる
         self.op_list.truncate(self.pos);
         self.op_list.push(op);
@@ -75,10 +76,10 @@ impl Operation {
         let mut coord_list = Polyline::decode(polyline)?;
         let op = match &**code {
             "add" | "rm" => {
-                let pos = pos.ok_or(ApplicationError::DataBaseError(
+                let pos = pos.ok_or(ApplicationError::DomainError(
                     "invalid operation Add without pos".into(),
                 ))?;
-                let coord = coord_list.pop().ok_or(ApplicationError::DataBaseError(
+                let coord = coord_list.pop().ok_or(ApplicationError::DomainError(
                     "empty polyline for Add operation".into(),
                 ))?;
                 match &**code {
@@ -91,7 +92,7 @@ impl Operation {
             },
             "init" => Operation::InitWithList { list: coord_list },
             _ => {
-                return Err(ApplicationError::DataBaseError(format!(
+                return Err(ApplicationError::DomainError(format!(
                     "invalid operation code {}",
                     code
                 )))
@@ -107,13 +108,17 @@ impl Operation {
                 let ref removed = polyline.remove_point(*pos as usize)?;
                 (coord == removed)
                     .then(|| ())
-                    .ok_or(ApplicationError::DomainError("Contradiction on remove"))
+                    .ok_or(ApplicationError::DomainError(
+                        "Contradiction on remove".into(),
+                    ))
             }
             Self::Clear { org_list: org_list } => {
                 let ref removed_list = polyline.clear_points();
                 (org_list == removed_list)
                     .then(|| ())
-                    .ok_or(ApplicationError::DomainError("Contradiction on clear"))
+                    .ok_or(ApplicationError::DomainError(
+                        "Contradiction on clear".into(),
+                    ))
             }
             Self::InitWithList { list } => Ok(polyline.init_points(list.clone())?),
         }

@@ -25,13 +25,13 @@ impl Polyline {
         let line_str: LineString<f64> = LineString::from_iter(self.0.clone().into_iter());
         encode_coordinates(line_str, 5)
             // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline"))
+            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))
     }
 
     pub fn decode(poly_str: &String) -> ApplicationResult<Polyline> {
         let line_str = decode_polyline(poly_str, 5)
             // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline"))?;
+            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))?;
         Ok(Polyline::from_vec(
             line_str
                 .into_iter()
@@ -43,7 +43,9 @@ impl Polyline {
     pub fn insert_point(&mut self, pos: usize, point: Coordinate) -> ApplicationResult<()> {
         if pos > self.len() {
             // TODO: ここの説明の改善
-            Err(ApplicationError::DomainError("Failed to insert point."))
+            Err(ApplicationError::DomainError(
+                "Failed to insert point.".into(),
+            ))
         } else {
             Ok(self.insert(pos, point))
         }
@@ -51,7 +53,9 @@ impl Polyline {
 
     pub fn remove_point(&mut self, pos: usize) -> ApplicationResult<Coordinate> {
         if pos > self.len() {
-            Err(ApplicationError::DomainError("Failed to remove point."))
+            Err(ApplicationError::DomainError(
+                "Failed to remove point.".into(),
+            ))
         } else {
             Ok(self.remove(pos))
         }
@@ -63,9 +67,9 @@ impl Polyline {
 
     // only when points is empty
     pub fn init_points(&mut self, points: Polyline) -> ApplicationResult<()> {
-        if self.is_empty() {
+        if !self.is_empty() {
             Err(ApplicationError::DomainError(
-                "Failed to set points. self.points was already inited.",
+                "Failed to set points. self.points was already inited.".into(),
             ))
         } else {
             self.0 = points.0;

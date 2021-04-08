@@ -14,7 +14,7 @@ pub enum ApplicationError {
     DataBaseError(String),
 
     #[display(fmt = "DomainError: {}", _0)]
-    DomainError(&'static str),
+    DomainError(String),
 
     #[display(fmt = "InvalidOperation: {}", _0)]
     InvalidOperation(&'static str),
@@ -24,6 +24,9 @@ pub enum ApplicationError {
         resource_name: &'static str,
         id: String,
     },
+
+    #[display(fmt = "UseCaseError: {}", _0)]
+    UseCaseError(String),
 
     #[display(fmt = "ValueObjectError: {}", _0)]
     ValueObjectError(&'static str),
@@ -36,6 +39,7 @@ impl ResponseError for ApplicationError {
             ApplicationError::DomainError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
             ApplicationError::InvalidOperation(..) => http::StatusCode::BAD_REQUEST,
             ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
+            ApplicationError::UseCaseError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,
             ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
