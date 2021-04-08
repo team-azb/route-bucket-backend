@@ -29,7 +29,7 @@ pub enum ApplicationError {
     UseCaseError(String),
 
     #[display(fmt = "ValueObjectError: {}", _0)]
-    ValueObjectError(&'static str),
+    ValueObjectError(String),
 }
 
 impl ResponseError for ApplicationError {

@@ -25,24 +25,21 @@ impl<R: RouteRepository> RouteController<R> {
 
     async fn patch_add(
         &self,
-        id: web::Path<RouteId>,
-        pos: web::Path<usize>,
+        path_params: web::Path<(RouteId, usize)>,
         req: web::Json<AddPointRequest>,
     ) -> Result<HttpResponse> {
+        let (id, pos) = path_params.into_inner();
         Ok(HttpResponse::Ok().json(self.usecase.edit(
             "add",
             &id,
-            Some(*pos),
+            Some(pos),
             Some(req.coord().clone()),
         )?))
     }
 
-    async fn patch_remove(
-        &self,
-        id: web::Path<RouteId>,
-        pos: web::Path<usize>,
-    ) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.edit("rm", &id, Some(*pos), None)?))
+    async fn patch_remove(&self, path_params: web::Path<(RouteId, usize)>) -> Result<HttpResponse> {
+        let (id, pos) = path_params.into_inner();
+        Ok(HttpResponse::Ok().json(self.usecase.edit("rm", &id, Some(pos), None)?))
     }
 
     async fn patch_clear(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
@@ -70,11 +67,11 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
             .service(web::resource("/").route(web::post().to(move |req| self.post(req))))
             .service(
                 web::resource("/{id}/add/{pos}")
-                    .route(web::patch().to(move |id, pos, req| self.patch_add(id, pos, req))),
+                    .route(web::patch().to(move |path, req| self.patch_add(path, req))),
             )
             .service(
                 web::resource("/{id}/remove/{pos}")
-                    .route(web::patch().to(move |id, pos| self.patch_remove(id, pos))),
+                    .route(web::patch().to(move |path| self.patch_remove(path))),
             )
             .service(
                 web::resource("/{id}/clear/")
