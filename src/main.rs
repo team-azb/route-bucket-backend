@@ -5,6 +5,7 @@ use diesel::r2d2::{ConnectionManager, Pool};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
 
+use actix_cors::Cors;
 use route_bucket_backend::controller::route::{BuildService, RouteController};
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 use route_bucket_backend::usecase::route::RouteUseCase;
@@ -45,6 +46,8 @@ async fn main() -> Result<(), Error> {
 
     HttpServer::new(move || {
         App::new()
+            // TODO: swagger以外からのアクセス(or development以外の環境)ではcorsを避けたい
+            .wrap(Cors::permissive())
             .wrap(Logger::new("%a \"%r\" %s (%T s)"))
             .service(ROUTE_CONTROLLER.build_service())
     })
