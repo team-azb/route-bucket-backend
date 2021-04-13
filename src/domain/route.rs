@@ -1,7 +1,8 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::coordinate::Coordinate;
+use crate::domain::operation_history::{Operation, OperationHistory};
+use crate::domain::polyline::Polyline;
 use crate::domain::types::RouteId;
 use crate::utils::error::ApplicationResult;
 
@@ -10,20 +11,33 @@ use crate::utils::error::ApplicationResult;
 pub struct Route {
     id: RouteId,
     name: String,
-    points: Vec<Coordinate>,
+    polyline: Polyline,
+    operation_history: OperationHistory,
 }
 
 impl Route {
-    pub fn new(id: RouteId, name: &String, points: Vec<Coordinate>) -> Route {
+    pub fn new(
+        id: RouteId,
+        name: &String,
+        polyline: Polyline,
+        operation_history: OperationHistory,
+    ) -> Route {
         Route {
             id,
             name: name.clone(),
-            points,
+            polyline,
+            operation_history,
         }
     }
 
-    pub fn add_point(&mut self, point: Coordinate) {
-        self.points.push(point);
+    pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
+        self.operation_history.push(op, &mut self.polyline)
+    }
+    pub fn redo_operation(&mut self) -> ApplicationResult<()> {
+        self.operation_history.redo(&mut self.polyline)
+    }
+    pub fn undo_operation(&mut self) -> ApplicationResult<()> {
+        self.operation_history.undo(&mut self.polyline)
     }
 }
 
@@ -31,4 +45,6 @@ pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
 
     fn register(&self, route: &Route) -> ApplicationResult<()>;
+
+    fn update(&self, route: &Route) -> ApplicationResult<()>;
 }

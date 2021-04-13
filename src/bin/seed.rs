@@ -2,13 +2,32 @@ use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, RunQueryDsl};
 use dotenv::dotenv;
-use route_bucket_backend::domain::coordinate::Coordinate;
+use route_bucket_backend::domain::operation_history::{Operation, OperationHistory};
+use route_bucket_backend::domain::polyline::{Coordinate, Polyline};
 use route_bucket_backend::domain::route::{Route, RouteRepository};
 use route_bucket_backend::domain::types::RouteId;
-use route_bucket_backend::infrastructure::dto::coordinate::CoordinateDto;
+use route_bucket_backend::infrastructure::dto::operation::OperationDto;
 use route_bucket_backend::infrastructure::dto::route::RouteDto;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
-use std::convert::TryFrom;
+
+macro_rules! coord {
+    ( $lat: expr, $lon: expr ) => {
+        Coordinate::new($lat, $lon).unwrap()
+    };
+}
+
+macro_rules! polyline {
+    [] => {
+        Polyline::from_vec(vec![])
+    };
+    [ $(($lat: expr, $lon: expr)),+ $(,)?] => {
+        Polyline::from_vec(vec![
+            $(
+                coord!($lat, $lon),
+            )+
+        ])
+    };
+}
 
 // TODO: main.rsのcreate_poolと共通化
 fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
@@ -32,21 +51,43 @@ fn main() {
     diesel::delete(RouteDto::table())
         .execute(&repo.get_connection().unwrap())
         .unwrap();
-    diesel::delete(CoordinateDto::table())
+    diesel::delete(OperationDto::table())
         .execute(&repo.get_connection().unwrap())
         .unwrap();
 
-    let sample1 = Route::new(RouteId::new(), String::from("sample1"), Vec::new());
+    let sample1 = Route::new(
+        RouteId::new(),
+        &String::from("sample1"),
+        polyline![],
+        OperationHistory::new(vec![], 0),
+    );
     let sample2 = Route::new(
         RouteId::new(),
-        String::from("sample2"),
-        vec![
-            Coordinate::try_from((0.0, 100.0)).unwrap(),
-            Coordinate::try_from((10.0, 110.0)).unwrap(),
-            Coordinate::try_from((20.0, 120.0)).unwrap(),
-            Coordinate::try_from((30.0, 130.0)).unwrap(),
-            Coordinate::try_from((40.0, 140.0)).unwrap(),
-        ],
+        &String::from("sample2"),
+        polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
+        OperationHistory::new(
+            vec![
+                Operation::InitWithList {
+                    list: polyline![(10.0, 110.0), (50.0, 150.0)],
+                },
+                Operation::Add {
+                    pos: 0,
+                    coord: coord!(0.0, 100.0),
+                },
+                Operation::Add {
+                    pos: 2,
+                    coord: coord!(20.0, 120.0),
+                },
+                Operation::Remove {
+                    pos: 3,
+                    coord: coord!(50.0, 150.0),
+                },
+                Operation::Clear {
+                    org_list: polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
+                },
+            ],
+            4,
+        ),
     );
 
     repo.register(&sample1).unwrap();

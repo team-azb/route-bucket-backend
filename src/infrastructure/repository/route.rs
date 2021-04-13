@@ -7,7 +7,7 @@ use std::convert::TryInto;
 
 use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
-use crate::infrastructure::dto::coordinate::CoordinateDto;
+use crate::infrastructure::dto::operation::OperationDto;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema;
 use crate::utils::error::{ApplicationError, ApplicationResult};
@@ -23,26 +23,25 @@ impl RouteRepositoryMysql {
         RouteRepositoryMysql { pool }
     }
 
-    fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
+    pub fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
         let conn = self.pool.get().or_else(|_| {
             Err(ApplicationError::DataBaseError(
-                "Failed to get DB connection.",
+                "Failed to get DB connection.".into(),
             ))
         })?;
         Ok(conn)
     }
 
-    fn route_to_dtos(route: &Route) -> (RouteDto, Vec<CoordinateDto>) {
-        let route_dto = RouteDto::from_model(route);
-        let coord_dtos = route
-            .points()
+    fn route_to_dtos(route: &Route) -> ApplicationResult<(RouteDto, Vec<OperationDto>)> {
+        let route_dto = RouteDto::from_model(route)?;
+        let op_dtos = route
+            .operation_history()
+            .op_list()
             .iter()
             .enumerate()
-            .map(|(index, coord)| {
-                CoordinateDto::from_model(coord, route.id(), index.try_into().unwrap())
-            })
-            .collect();
-        (route_dto, coord_dtos)
+            .map(|(index, op)| OperationDto::from_model(op, route.id(), index.try_into().unwrap()))
+            .collect::<ApplicationResult<Vec<_>>>()?;
+        Ok((route_dto, op_dtos))
     }
 }
 
@@ -59,38 +58,75 @@ impl RouteRepository for RouteRepositoryMysql {
                 })
             })?;
 
-        let coord_dtos = CoordinateDto::belonging_to(&route_dto)
-            .order(schema::coordinates::index.asc())
+        let op_dtos = OperationDto::belonging_to(&route_dto)
+            .order(schema::operations::index.asc())
             .load(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
-                    "Failed to load from Coordinates!",
+                    "Failed to load from Operations!".into(),
                 ))
             })?;
 
-        Ok(route_dto.to_model(coord_dtos)?)
+        Ok(route_dto.to_model(op_dtos)?)
     }
 
     fn register(&self, route: &Route) -> ApplicationResult<()> {
         let conn = self.get_connection()?;
 
-        let (route_dto, coord_dtos) = Self::route_to_dtos(route);
+        let (route_dto, op_dtos) = Self::route_to_dtos(route)?;
 
         diesel::insert_into(RouteDto::table())
             .values(route_dto)
             .execute(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
-                    "Failed to insert into Routes!",
+                    "Failed to insert into Routes!".into(),
                 ))
             })?;
 
-        diesel::insert_into(CoordinateDto::table())
-            .values(coord_dtos)
+        diesel::insert_into(OperationDto::table())
+            .values(op_dtos)
             .execute(&conn)
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
-                    "Failed to insert into Coordinates!",
+                    "Failed to insert into Operations!".into(),
+                ))
+            })?;
+
+        Ok(())
+    }
+
+    fn update(&self, route: &Route) -> ApplicationResult<()> {
+        let conn = self.get_connection()?;
+
+        let (route_dto, op_dtos) = Self::route_to_dtos(route)?;
+
+        diesel::update(&route_dto)
+            .set(&route_dto)
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(format!(
+                    "Failed to update Route {}",
+                    route.id()
+                )))
+            })?;
+
+        // TODO: 現状対応する操作を全削除してinsertし直すという間抜けな方法をとっている
+        //     : これはMySQLのupsertがdieselでできないため(postgresのやつは使えるっぽい）
+        diesel::delete(OperationDto::belonging_to(&route_dto))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(format!(
+                    "Failed to delete Operations that belong to Route {}",
+                    route.id()
+                )))
+            })?;
+        diesel::insert_into(OperationDto::table())
+            .values(op_dtos)
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to insert into Operations!".into(),
                 ))
             })?;
 
