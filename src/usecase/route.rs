@@ -41,7 +41,7 @@ impl<R: RouteRepository> RouteUseCase<R> {
         route_id: &RouteId,
         pos: Option<usize>,
         coord: Option<Coordinate>,
-    ) -> ApplicationResult<Route> {
+    ) -> ApplicationResult<RouteOperationResponse> {
         let mut route = self.repository.find(route_id)?;
         let op_polyline = match op_code {
             "add" => {
@@ -69,10 +69,16 @@ impl<R: RouteRepository> RouteUseCase<R> {
         route.push_operation(op);
         self.repository.update(&route);
 
-        Ok(route)
+        Ok(RouteOperationResponse {
+            points: route.polyline().clone(),
+        })
     }
 
-    pub fn migrate_history(&self, route_id: &RouteId, forward: bool) -> ApplicationResult<Route> {
+    pub fn migrate_history(
+        &self,
+        route_id: &RouteId,
+        forward: bool,
+    ) -> ApplicationResult<RouteOperationResponse> {
         let mut route = self.repository.find(route_id)?;
         if forward {
             route.redo_operation()?;
@@ -81,7 +87,9 @@ impl<R: RouteRepository> RouteUseCase<R> {
         }
         self.repository.update(&route);
 
-        Ok(route)
+        Ok(RouteOperationResponse {
+            points: route.polyline().clone(),
+        })
     }
 }
 
@@ -100,4 +108,9 @@ pub struct RouteCreateResponse {
 #[get = "pub"]
 pub struct AddPointRequest {
     coord: Coordinate,
+}
+
+#[derive(Serialize)]
+pub struct RouteOperationResponse {
+    pub points: Polyline,
 }
