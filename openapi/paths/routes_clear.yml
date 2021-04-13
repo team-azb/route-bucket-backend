@@ -1,0 +1,13 @@
+patch:
+  operationId: routesClear
+  summary: 点のクリア
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+  responses:
+    200:
+      description: 更新成功
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route_edit.yml#/RouteEditResponse

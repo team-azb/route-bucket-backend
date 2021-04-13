@@ -1,0 +1,13 @@
+get:
+  operationId: routesGet
+  summary: Routeの取得
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+  responses:
+    200:
+      description: ok
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route.yml#/Route

@@ -1,0 +1,19 @@
+Route:
+  type: object
+  description: Route
+  required: [id, name]
+  properties:
+    id:
+      type: string
+      description: RouteId
+    name:
+      type: string
+      maxLength: 50
+      description: ルートの名前
+    polyline:
+      type: array
+      items:
+        $ref: ./coordinate.yml#/Coordinate
+      description: ルート上の座標のリスト
+    operation_history:
+      $ref: ./operation_history.yml#/OperationHistory
