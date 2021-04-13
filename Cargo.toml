@@ -11,7 +11,6 @@ default-run = "route-bucket-backend"
 actix-cors = "0.5.4"
 actix-rt = "1.1.0"
 actix-web = "3.3.2"
-bigdecimal = "0.1.2"
 derive_more = "0.99.11"
 diesel = { version = "1.4.6", features = ["mysql", "numeric", "r2d2"] }
 dotenv = "0.15.0"

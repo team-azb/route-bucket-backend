@@ -1725,7 +1725,6 @@ dependencies = [
  "actix-cors",
  "actix-rt",
  "actix-web",
- "bigdecimal",
  "derive_more",
  "diesel",
  "dotenv",
