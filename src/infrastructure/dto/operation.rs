@@ -3,7 +3,7 @@ use crate::domain::polyline::Polyline;
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use crate::utils::error::ApplicationResult;
 
 /// 座標のdto構造体
 #[derive(Identifiable, Queryable, Insertable, Associations, Debug)]
@@ -28,8 +28,8 @@ impl OperationDto {
         route_id: &RouteId,
         index: u32,
     ) -> ApplicationResult<OperationDto> {
-        let mut pos_op: Option<u32>;
-        let mut polyline: Polyline;
+        let pos_op: Option<u32>;
+        let polyline: Polyline;
         match operation {
             Operation::Add { pos, coord } | Operation::Remove { pos, coord } => {
                 pos_op = Some(*pos);

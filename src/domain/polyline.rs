@@ -1,7 +1,6 @@
 use crate::domain::types::{Latitude, Longitude};
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use bigdecimal::BigDecimal;
-use geo::{LineString, Point};
+use geo::LineString;
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};

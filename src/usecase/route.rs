@@ -66,8 +66,8 @@ impl<R: RouteRepository> RouteUseCase<R> {
             pos.map(|i| i as u32),
             &op_polyline.encode()?,
         )?;
-        route.push_operation(op);
-        self.repository.update(&route);
+        route.push_operation(op)?;
+        self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
             points: route.polyline().clone(),
@@ -85,7 +85,7 @@ impl<R: RouteRepository> RouteUseCase<R> {
         } else {
             route.undo_operation()?;
         }
-        self.repository.update(&route);
+        self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
             points: route.polyline().clone(),

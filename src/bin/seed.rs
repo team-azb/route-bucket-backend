@@ -9,7 +9,6 @@ use route_bucket_backend::domain::types::RouteId;
 use route_bucket_backend::infrastructure::dto::operation::OperationDto;
 use route_bucket_backend::infrastructure::dto::route::RouteDto;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
-use std::convert::TryFrom;
 
 macro_rules! coord {
     ( $lat: expr, $lon: expr ) => {
@@ -62,7 +61,7 @@ fn main() {
         polyline![],
         OperationHistory::new(vec![], 0),
     );
-    let mut sample2 = Route::new(
+    let sample2 = Route::new(
         RouteId::new(),
         &String::from("sample2"),
         polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],

@@ -1,7 +1,6 @@
 use actix_web::{dev, web, HttpResponse, Result, Scope};
 use once_cell::sync::Lazy;
 
-use crate::domain::operation_history::Operation;
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
 use crate::usecase::route::{AddPointRequest, RouteCreateRequest, RouteUseCase};

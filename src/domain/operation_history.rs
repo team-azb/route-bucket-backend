@@ -1,5 +1,4 @@
 use crate::domain::polyline::{Coordinate, Polyline};
-use crate::infrastructure::schema::operations::dsl::operations;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
 use serde::{Deserialize, Serialize};
@@ -16,12 +15,13 @@ impl OperationHistory {
         Self { op_list, pos }
     }
 
-    pub fn push(&mut self, op: Operation, polyline: &mut Polyline) {
-        op.apply(polyline);
+    pub fn push(&mut self, op: Operation, polyline: &mut Polyline) -> ApplicationResult<()> {
+        op.apply(polyline)?;
         // pos以降の要素は全て捨てる
         self.op_list.truncate(self.pos);
         self.op_list.push(op);
         self.pos += 1;
+        Ok(())
     }
 
     pub fn undo(&mut self, polyline: &mut Polyline) -> ApplicationResult<()> {
@@ -112,7 +112,7 @@ impl Operation {
                         "Contradiction on remove".into(),
                     ))
             }
-            Self::Clear { org_list: org_list } => {
+            Self::Clear { org_list } => {
                 let ref removed_list = polyline.clear_points();
                 (org_list == removed_list)
                     .then(|| ())

@@ -30,8 +30,8 @@ impl Route {
         }
     }
 
-    pub fn push_operation(&mut self, op: Operation) {
-        self.operation_history.push(op, &mut self.polyline);
+    pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
+        self.operation_history.push(op, &mut self.polyline)
     }
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
         self.operation_history.redo(&mut self.polyline)
