@@ -30,3 +30,10 @@ docker-compose up db
 cargo run
 ```
 The root of the app will be at http://localhost:8080/
+
+## Documentation
+To see the documentation(SwaggerUI), run ↓
+```bash
+docker-compose up -d swagger
+```
+and then go to http://localhost:8000/
