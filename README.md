@@ -36,4 +36,4 @@ To see the documentation(SwaggerUI), run ↓
 ```bash
 docker-compose up -d swagger
 ```
-and then go to http://localhost:8000/
+and then go to http://localhost:10080/
