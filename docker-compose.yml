@@ -28,3 +28,9 @@ services:
     environment:
       # yamlなのにjsonに指定するのなぜ
       SWAGGER_JSON: /openapi/root.yml
+
+  osrm:
+    ports:
+      - "5000:5000"
+    build: ./osrm
+    command: osrm-routed --algorithm mld /data/map.osm.pbf
