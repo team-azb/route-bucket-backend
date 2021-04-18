@@ -1,0 +1,18 @@
+OperationHistory:
+  type: object
+  description: Routeへの操作履歴
+  required: [op_list, pos]
+  properties:
+    op_list:
+      type: array
+      items:
+        $ref: '#/Operation'
+      description: 操作のリスト
+    pos:
+      type: number
+      description: 現在op_listのどこにいるか(redo/undo)
+
+Operation:
+  type: string
+  description: Routeへの操作
+  example: まだschema検討中

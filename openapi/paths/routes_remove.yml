@@ -1,0 +1,21 @@
+patch:
+  operationId: routesRemove
+  summary: 点の削除
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+    - $ref: ../components/parameters/pos.yml
+  responses:
+    200:
+      description: 更新成功
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route_edit.yml#/RouteEditResponse
+    400:
+      description: |
+        更新失敗、posの値がRouteの長さより長い場合など
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/error.yml#/Error

@@ -18,3 +18,13 @@ services:
     # 今回はdieselにやってもらう
     #  volumes:
     #    - ./mysql:/docker-entrypoint-initdb.d
+
+  swagger:
+    image: swaggerapi/swagger-ui:v3.45.1
+    ports:
+      - "8000:8080"
+    volumes:
+      - ./openapi/:/openapi/
+    environment:
+      # yamlなのにjsonに指定するのなぜ
+      SWAGGER_JSON: /openapi/root.yml

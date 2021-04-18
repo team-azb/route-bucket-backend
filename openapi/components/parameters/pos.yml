@@ -1,0 +1,7 @@
+in: path
+name: pos
+description: 点の位置
+required: true
+schema:
+  type: number
+  format: integer

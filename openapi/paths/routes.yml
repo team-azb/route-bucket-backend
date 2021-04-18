@@ -1,0 +1,18 @@
+post:
+  operationId: routesPost
+  summary: Routeの作成
+  tags: [route]
+  requestBody:
+    description: Routeの情報
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/route_create.yml#/RouteCreateRequest
+  responses:
+    201:
+      description: created
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route_create.yml#/RouteCreateResponse
