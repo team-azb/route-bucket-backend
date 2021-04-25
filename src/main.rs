@@ -2,7 +2,6 @@ use actix_web::middleware::Logger;
 use actix_web::{App, Error, HttpServer, Result};
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
-use dotenv::dotenv;
 use once_cell::sync::Lazy;
 
 use actix_cors::Cors;
@@ -33,7 +32,6 @@ type StaticRouteController = Lazy<RouteController<RouteRepositoryMysql>>;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
-    dotenv().ok();
     env_logger::init();
 
     // staticじゃないと↓で怒られる

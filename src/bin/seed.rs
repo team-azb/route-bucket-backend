@@ -1,7 +1,6 @@
 use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, RunQueryDsl};
-use dotenv::dotenv;
 use route_bucket_backend::domain::operation_history::{Operation, OperationHistory};
 use route_bucket_backend::domain::polyline::{Coordinate, Polyline};
 use route_bucket_backend::domain::route::{Route, RouteRepository};
@@ -41,8 +40,6 @@ fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
 }
 
 fn main() {
-    dotenv().ok();
-
     env_logger::init();
 
     let pool = create_pool();
