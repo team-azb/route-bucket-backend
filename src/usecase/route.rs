@@ -49,7 +49,9 @@ impl<R: RouteRepository> RouteUseCase<R> {
                 Polyline::from_vec(vec)
             }
             "rm" => {
-                let vec = pos.map_or(vec![], |pos| vec![route.polyline()[pos].clone()]);
+                let vec = pos.map_or(Ok(vec![]), |pos| {
+                    Ok(vec![route.polyline().get(pos)?.clone()])
+                })?;
                 Polyline::from_vec(vec)
             }
             "clear" => route.polyline().clone(),

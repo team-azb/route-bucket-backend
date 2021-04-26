@@ -6,7 +6,6 @@ use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::iter::FromIterator;
-use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Polyline(Vec<Coordinate>);
@@ -39,34 +38,54 @@ impl Polyline {
         ))
     }
 
-    pub fn insert_point(&mut self, pos: usize, point: Coordinate) -> ApplicationResult<()> {
-        if pos > self.len() {
+    pub fn get(&self, i: usize) -> ApplicationResult<&Coordinate> {
+        if i < self.0.len() {
+            Ok(&self.0[i])
+        } else {
+            Err(ApplicationError::DomainError(
+                "Index out of range in get.".into(),
+            ))
+        }
+    }
+
+    pub fn replace(&mut self, i: usize, val: Coordinate) -> ApplicationResult<Coordinate> {
+        if i < self.0.len() {
+            Ok(std::mem::replace(&mut self.0[i], val))
+        } else {
+            Err(ApplicationError::DomainError(
+                "Index out of range in set.".into(),
+            ))
+        }
+    }
+
+    pub fn insert(&mut self, pos: usize, point: Coordinate) -> ApplicationResult<()> {
+        if pos > self.0.len() {
             // TODO: ここの説明の改善
             Err(ApplicationError::DomainError(
                 "Failed to insert point.".into(),
             ))
         } else {
-            Ok(self.insert(pos, point))
+            Ok(self.0.insert(pos, point))
         }
     }
 
-    pub fn remove_point(&mut self, pos: usize) -> ApplicationResult<Coordinate> {
-        if pos > self.len() {
+    pub fn remove(&mut self, pos: usize) -> ApplicationResult<Coordinate> {
+        if pos > self.0.len() {
             Err(ApplicationError::DomainError(
                 "Failed to remove point.".into(),
             ))
         } else {
-            Ok(self.remove(pos))
+            Ok(self.0.remove(pos))
         }
     }
 
-    pub fn clear_points(&mut self) -> Polyline {
+    pub fn clear(&mut self) -> Polyline {
         std::mem::replace(self, Polyline::new())
     }
 
     // only when points is empty
-    pub fn init_points(&mut self, points: Polyline) -> ApplicationResult<()> {
-        if !self.is_empty() {
+    pub fn init_if_empty(&mut self, points: Polyline) -> ApplicationResult<()> {
+        if !self.0.is_empty() {
             Err(ApplicationError::DomainError(
                 "Failed to set points. self.points was already inited.".into(),
             ))
@@ -74,20 +93,6 @@ impl Polyline {
             self.0 = points.0;
             Ok(())
         }
-    }
-}
-
-// Vecのメソッド(sizeや[i])をそのまま呼べるように
-impl Deref for Polyline {
-    type Target = Vec<Coordinate>;
-
-    fn deref(&self) -> &Vec<Coordinate> {
-        &self.0
-    }
-}
-impl DerefMut for Polyline {
-    fn deref_mut(&mut self) -> &mut Vec<Coordinate> {
-        &mut self.0
     }
 }
 
