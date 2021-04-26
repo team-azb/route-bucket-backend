@@ -1,39 +1,24 @@
 # route-bucket-backend
 
-## supported environment
-`rustc` & `cargo` must be `>=1.51.0` since this project uses [const generics](https://blog.rust-lang.org/2021/03/25/Rust-1.51.0.html)
+## Requirements
+* `docker`: 18.09 or higher
+* `docker-compose`: 1.25.1 or higher
+
+Both of these are for build kit support.
 
 ## Run the Project
-### Start MySQL
 ```bash
-docker-compose up db
+./start_server.sh
 ```
+The root of the app will be at `http://localhost:8080/`.
 
-### DB Setup
-
-1. install [diesel_cli](https://crates.io/crates/diesel_cli)
-   ```bash
-   cargo install diesel_cli
-   ```
-1. run ↓ at the root of this project
-   ```bash
-   source .env
-   diesel setup
-   ```
-1. (optional) to add seed data to the db, run ↓
-   ```bash
-   cargo run --bin seed
-   ```
-
-### Start the Backend Server
+### (Optional) Add seed data to the DB
 ```bash
-cargo run
+./insert_seed_data.sh
 ```
-The root of the app will be at http://localhost:8080/
+See `src/bin/seed.rs`
 
 ## Documentation
-To see the documentation(SwaggerUI), run ↓
-```bash
-docker-compose up -d swagger
-```
-and then go to http://localhost:8000/
+To see the documentation(SwaggerUI).
+Swagger container will be up in `./start_server.sh`.
+Go to http://localhost:10080/ for the documents.

@@ -2,29 +2,55 @@ version: '3.0'
 services:
   db:
     image: mysql:8.0.23
+    # caching_sha2_password.soをインストールする方法を見つけ出す
+    command: [--default-authentication-plugin=mysql_native_password]
     environment:
       MYSQL_DATABASE: 'route_bucket_db'
       MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_ROOT_HOST: '%'
       TZ: 'Asia/Tokyo'
     ports:
-      - '3306:3306'
+      - "3306:3306"
 
     # ↓の呪文がないとoperation not permittedになる
     # https://sunday-morning.app/posts/2020-07-29-docker-mysql8-mbind-operation-not-permitted
     cap_add:
       - SYS_NICE
 
-    # テーブル作って初期データ入れるみたいな操作を本来ここに入れた.sqlでやる
-    # 今回はdieselにやってもらう
-    #  volumes:
-    #    - ./mysql:/docker-entrypoint-initdb.d
+  api:
+    ports:
+      - "8080:8080"
+    build:
+      context: .
+      dockerfile: ./docker/api.Dockerfile
+    environment:
+      DATABASE_URL: mysql://root:password@db:3306/route_bucket_db
+      RUST_LOG: info
+    command: >
+      bash -c "
+        ./wait_for_db.sh &&
+        diesel setup &&
+        diesel migration run &&
+        /app/target/release/route-bucket-backend"
+    depends_on:
+      - db
+      # not yet
+      # - osrm
 
   swagger:
     image: swaggerapi/swagger-ui:v3.45.1
     ports:
-      - "8000:8080"
+      - "10080:8080"
     volumes:
       - ./openapi/:/openapi/
     environment:
       # yamlなのにjsonに指定するのなぜ
       SWAGGER_JSON: /openapi/root.yml
+
+  osrm:
+    ports:
+      - "5000:5000"
+    build:
+      context: .
+      dockerfile: ./docker/osrm.Dockerfile
+    command: osrm-routed --algorithm mld /data/map.osm.pbf

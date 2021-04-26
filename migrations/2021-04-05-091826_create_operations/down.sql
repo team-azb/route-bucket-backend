@@ -1,7 +1,8 @@
 -- This file should undo anything in `up.sql`
 DROP TABLE operations;
 
-ALTER TABLE routes DROP `polyline`, `operation_pos`;
+ALTER TABLE routes DROP COLUMN `polyline`,
+                    DROP COLUMN `operation_pos`;
 CREATE TABLE coordinates (
      PRIMARY KEY (`route_id`, `index`),
      `route_id` VARCHAR(11) NOT NULL,
