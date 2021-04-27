@@ -21,6 +21,8 @@ paths:
     $ref: ./paths/routes_add.yml
   /routes/{id}/remove/{pos}:
     $ref: ./paths/routes_remove.yml
+  /routes/{id}/move/{pos}:
+    $ref: ./paths/routes_move.yml
   /routes/{id}/clear/:
     $ref: ./paths/routes_clear.yml
   /routes/{id}/redo/:

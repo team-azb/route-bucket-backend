@@ -1,0 +1,33 @@
+patch:
+  operationId: routesMove
+  summary: 指定した点の座標の変更
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+    - $ref: ../components/parameters/pos.yml
+  requestBody:
+    description: ルートの情報
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          description: 変更したい点の新しい座標
+          required: [coord]
+          properties:
+            coord:
+              $ref: ../components/schemas/coordinate.yml#/Coordinate
+  responses:
+    200:
+      description: 更新成功
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route_edit.yml#/RouteEditResponse
+    400:
+      description: |
+        更新失敗、posの値がRouteの長さ以上の場合など
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/error.yml#/Error
