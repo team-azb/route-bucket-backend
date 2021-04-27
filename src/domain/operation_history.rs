@@ -51,11 +51,26 @@ impl OperationHistory {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Operation {
-    Add { pos: u32, coord: Coordinate },
-    Remove { pos: u32, coord: Coordinate },
-    Clear { org_list: Polyline },
+    Add {
+        pos: u32,
+        coord: Coordinate,
+    },
+    Remove {
+        pos: u32,
+        coord: Coordinate,
+    },
+    Move {
+        pos: u32,
+        from: Coordinate,
+        to: Coordinate,
+    },
+    Clear {
+        org_list: Polyline,
+    },
     // reverse operation for Clear
-    InitWithList { list: Polyline },
+    InitWithList {
+        list: Polyline,
+    },
 }
 
 impl Operation {
@@ -63,6 +78,7 @@ impl Operation {
         match self {
             Self::Add { .. } => "add",
             Self::Remove { .. } => "rm",
+            Self::Move { .. } => "mv",
             Self::Clear { .. } => "clear",
             Self::InitWithList { .. } => "init",
         }
@@ -73,18 +89,28 @@ impl Operation {
         pos: Option<u32>,
         polyline: &String,
     ) -> ApplicationResult<Operation> {
-        let mut coord_list = Polyline::decode(polyline)?;
+        let coord_list = Polyline::decode(polyline)?;
         let op = match &**code {
-            "add" | "rm" => {
-                let pos = pos.ok_or(ApplicationError::DomainError(
-                    "invalid operation Add without pos".into(),
-                ))?;
-                let coord = coord_list.pop().ok_or(ApplicationError::DomainError(
-                    "empty polyline for Add operation".into(),
-                ))?;
+            "add" | "rm" | "mv" => {
+                let pos = pos.ok_or(ApplicationError::DomainError(format!(
+                    "invalid operation {} without pos",
+                    code
+                )))?;
                 match &**code {
-                    "add" => Operation::Add { pos, coord },
-                    _ => Operation::Remove { pos, coord },
+                    "add" => Operation::Add {
+                        pos,
+                        coord: coord_list.get(0)?.clone(),
+                    },
+                    "rm" => Operation::Remove {
+                        pos,
+                        coord: coord_list.get(0)?.clone(),
+                    },
+                    // "mv"
+                    _ => Operation::Move {
+                        pos,
+                        from: coord_list.get(0)?.clone(),
+                        to: coord_list.get(1)?.clone(),
+                    },
                 }
             }
             "clear" => Operation::Clear {
@@ -103,24 +129,32 @@ impl Operation {
 
     pub fn apply(&self, polyline: &mut Polyline) -> ApplicationResult<()> {
         match self {
-            Self::Add { pos, coord } => Ok(polyline.insert_point(*pos as usize, coord.clone())?),
+            Self::Add { pos, coord } => Ok(polyline.insert(*pos as usize, coord.clone())?),
             Self::Remove { pos, coord } => {
-                let ref removed = polyline.remove_point(*pos as usize)?;
+                let ref removed = polyline.remove(*pos as usize)?;
                 (coord == removed)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError(
                         "Contradiction on remove".into(),
                     ))
             }
+            Self::Move { pos, from, to } => {
+                let ref moved = polyline.replace(*pos as usize, to.clone())?;
+                (from == moved)
+                    .then(|| ())
+                    .ok_or(ApplicationError::DomainError(
+                        "Contradiction on move".into(),
+                    ))
+            }
             Self::Clear { org_list } => {
-                let ref removed_list = polyline.clear_points();
+                let ref removed_list = polyline.clear();
                 (org_list == removed_list)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError(
                         "Contradiction on clear".into(),
                     ))
             }
-            Self::InitWithList { list } => Ok(polyline.init_points(list.clone())?),
+            Self::InitWithList { list } => Ok(polyline.init_if_empty(list.clone())?),
         }
     }
 
@@ -133,6 +167,11 @@ impl Operation {
             Self::Remove { pos, coord } => Self::Add {
                 pos: *pos,
                 coord: coord.clone(),
+            },
+            Self::Move { pos, from, to } => Self::Move {
+                pos: *pos,
+                from: to.clone(),
+                to: from.clone(),
             },
             Self::Clear { org_list: list } => Self::InitWithList { list: list.clone() },
             Self::InitWithList { list } => Self::Clear {

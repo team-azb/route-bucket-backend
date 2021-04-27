@@ -43,15 +43,16 @@ impl<R: RouteRepository> RouteUseCase<R> {
         coord: Option<Coordinate>,
     ) -> ApplicationResult<RouteOperationResponse> {
         let mut route = self.repository.find(route_id)?;
+
+        let coord_vec = coord.map_or(vec![], |coord| vec![coord]);
+        let pos_vec = pos.map_or(Ok(vec![]), |pos| {
+            Ok(vec![route.polyline().get(pos)?.clone()])
+        })?;
+
         let op_polyline = match op_code {
-            "add" => {
-                let vec = coord.map_or(vec![], |coord| vec![coord]);
-                Polyline::from_vec(vec)
-            }
-            "rm" => {
-                let vec = pos.map_or(vec![], |pos| vec![route.polyline()[pos].clone()]);
-                Polyline::from_vec(vec)
-            }
+            "add" => Polyline::from_vec(coord_vec),
+            "rm" => Polyline::from_vec(pos_vec),
+            "mv" => Polyline::from_vec([pos_vec, coord_vec].concat()),
             "clear" => route.polyline().clone(),
             _ => {
                 return Err(ApplicationError::UseCaseError(format!(
@@ -106,7 +107,7 @@ pub struct RouteCreateResponse {
 
 #[derive(Getters, Deserialize)]
 #[get = "pub"]
-pub struct AddPointRequest {
+pub struct NewPointRequest {
     coord: Coordinate,
 }
 

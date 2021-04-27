@@ -35,6 +35,10 @@ impl OperationDto {
                 pos_op = Some(*pos);
                 polyline = Polyline::from_vec(vec![coord.clone()]);
             }
+            Operation::Move { pos, from, to } => {
+                pos_op = Some(*pos);
+                polyline = Polyline::from_vec(vec![from.clone(), to.clone()]);
+            }
             Operation::Clear { org_list: list } | Operation::InitWithList { list } => {
                 pos_op = None;
                 polyline = list.clone();

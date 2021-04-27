@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
-use crate::usecase::route::{AddPointRequest, RouteCreateRequest, RouteUseCase};
+use crate::usecase::route::{NewPointRequest, RouteCreateRequest, RouteUseCase};
 
 pub struct RouteController<R: RouteRepository> {
     usecase: RouteUseCase<R>,
@@ -22,14 +22,15 @@ impl<R: RouteRepository> RouteController<R> {
         Ok(HttpResponse::Created().json(self.usecase.create(&req)?))
     }
 
-    async fn patch_add(
+    async fn patch_new_point(
         &self,
         path_params: web::Path<(RouteId, usize)>,
-        req: web::Json<AddPointRequest>,
+        req: web::Json<NewPointRequest>,
+        op_code: &str,
     ) -> Result<HttpResponse> {
         let (id, pos) = path_params.into_inner();
         Ok(HttpResponse::Ok().json(self.usecase.edit(
-            "add",
+            op_code,
             &id,
             Some(pos),
             Some(req.coord().clone()),
@@ -65,12 +66,17 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
             .service(web::resource("/{id}").route(web::get().to(move |id| self.get(id))))
             .service(web::resource("/").route(web::post().to(move |req| self.post(req))))
             .service(
-                web::resource("/{id}/add/{pos}")
-                    .route(web::patch().to(move |path, req| self.patch_add(path, req))),
+                web::resource("/{id}/add/{pos}").route(
+                    web::patch().to(move |path, req| self.patch_new_point(path, req, "add")),
+                ),
             )
             .service(
                 web::resource("/{id}/remove/{pos}")
                     .route(web::patch().to(move |path| self.patch_remove(path))),
+            )
+            .service(
+                web::resource("/{id}/move/{pos}")
+                    .route(web::patch().to(move |path, req| self.patch_new_point(path, req, "mv"))),
             )
             .service(
                 web::resource("/{id}/clear/")
