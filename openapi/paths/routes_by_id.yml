@@ -2,6 +2,8 @@ get:
   operationId: routesGet
   summary: Routeの取得
   tags: [route]
+  description: |
+    指定したRouteの情報を取得する
   parameters:
     - $ref: ../components/parameters/route_id.yml
   responses:
