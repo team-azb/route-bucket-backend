@@ -30,6 +30,10 @@ impl Route {
         }
     }
 
+    pub fn rename(&mut self, name: &String) {
+        self.name = name.clone();
+    }
+
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
         self.operation_history.push(op, &mut self.polyline)
     }

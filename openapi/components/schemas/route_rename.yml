@@ -1,0 +1,8 @@
+RouteRenameRequest:
+  type: object
+  description: Route改名リクエスト
+  required: [name]
+  properties:
+    name:
+      type: string
+      description: 変更したい名前

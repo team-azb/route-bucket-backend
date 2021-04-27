@@ -3,7 +3,9 @@ use once_cell::sync::Lazy;
 
 use crate::domain::route::RouteRepository;
 use crate::domain::types::RouteId;
-use crate::usecase::route::{NewPointRequest, RouteCreateRequest, RouteUseCase};
+use crate::usecase::route::{
+    NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
+};
 
 pub struct RouteController<R: RouteRepository> {
     usecase: RouteUseCase<R>,
@@ -20,6 +22,14 @@ impl<R: RouteRepository> RouteController<R> {
 
     async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
         Ok(HttpResponse::Created().json(self.usecase.create(&req)?))
+    }
+
+    async fn patch_rename(
+        &self,
+        id: web::Path<RouteId>,
+        req: web::Json<RouteRenameRequest>,
+    ) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok().json(self.usecase.rename(&id, &req)?))
     }
 
     async fn patch_new_point(
@@ -65,6 +75,10 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
         web::scope("/routes")
             .service(web::resource("/{id}").route(web::get().to(move |id| self.get(id))))
             .service(web::resource("/").route(web::post().to(move |req| self.post(req))))
+            .service(
+                web::resource("/{id}/rename/")
+                    .route(web::patch().to(move |id, req| self.patch_rename(id, req))),
+            )
             .service(
                 web::resource("/{id}/add/{pos}").route(
                     web::patch().to(move |path, req| self.patch_new_point(path, req, "add")),

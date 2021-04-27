@@ -17,6 +17,8 @@ paths:
     $ref: ./paths/routes.yml
   /routes/{id}:
     $ref: ./paths/routes_by_id.yml
+  /routes/{id}/rename/:
+    $ref: ./paths/routes_rename.yml
   /routes/{id}/add/{pos}:
     $ref: ./paths/routes_add.yml
   /routes/{id}/remove/{pos}:

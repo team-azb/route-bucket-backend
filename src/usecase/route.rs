@@ -35,6 +35,13 @@ impl<R: RouteRepository> RouteUseCase<R> {
         })
     }
 
+    pub fn rename(&self, route_id: &RouteId, req: &RouteRenameRequest) -> ApplicationResult<Route> {
+        let mut route = self.repository.find(route_id)?;
+        route.rename(req.name());
+        self.repository.update(&route)?;
+        Ok(route)
+    }
+
     pub fn edit(
         &self,
         op_code: &str,
@@ -114,4 +121,10 @@ pub struct NewPointRequest {
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
     pub points: Polyline,
+}
+
+#[derive(Getters, Deserialize)]
+#[get = "pub"]
+pub struct RouteRenameRequest {
+    name: String,
 }

@@ -1,0 +1,28 @@
+patch:
+  operationId: routesRename
+  summary: Routeの名前変更
+  description: |
+    指定したRouteの名前を変更する
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/route_rename.yml#/RouteRenameRequest
+  responses:
+    200:
+      description: 更新成功
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/route.yml#/Route
+    404:
+      description: |
+        対応するRouteが存在しない場合
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/error.yml#/Error
