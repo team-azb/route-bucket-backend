@@ -1,6 +1,7 @@
 patch:
   operationId: routesMove
-  summary: 指定した点の座標の変更
+  summary: 点の座標の変更
+  description: route_idに対応するRouteのpos番目の点の座標を変更する
   tags: [route]
   parameters:
     - $ref: ../components/parameters/route_id.yml
