@@ -2,6 +2,8 @@ patch:
   operationId: routesClear
   summary: 点のクリア
   tags: [route]
+  description: |
+    指定したRouteの全ての点を削除する
   parameters:
     - $ref: ../components/parameters/route_id.yml
   responses:

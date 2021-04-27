@@ -2,6 +2,8 @@ patch:
   operationId: routesUndo
   summary: 操作を戻る
   tags: [route]
+  description: |
+    指定したRouteの操作を一つ戻す
   parameters:
     - $ref: ../components/parameters/route_id.yml
   responses:

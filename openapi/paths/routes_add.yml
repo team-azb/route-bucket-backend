@@ -2,6 +2,8 @@ patch:
   operationId: routesAdd
   summary: 新たな点の追加
   tags: [route]
+  description: |
+    指定したRouteのpos番目の位置に新たな点を追加する
   parameters:
     - $ref: ../components/parameters/route_id.yml
     - $ref: ../components/parameters/pos.yml

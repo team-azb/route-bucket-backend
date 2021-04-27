@@ -2,6 +2,8 @@ post:
   operationId: routesPost
   summary: Routeの作成
   tags: [route]
+  description: |
+    指定した名前のRouteを作成し、そのidを返す
   requestBody:
     description: Routeの情報
     required: true

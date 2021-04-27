@@ -2,6 +2,8 @@ patch:
   operationId: routesRemove
   summary: 点の削除
   tags: [route]
+  description: |
+    指定したRouteのpos番目の点を削除する
   parameters:
     - $ref: ../components/parameters/route_id.yml
     - $ref: ../components/parameters/pos.yml
