@@ -105,6 +105,10 @@ impl<R: RouteRepository> RouteUseCase<R> {
             points: route.polyline().clone(),
         })
     }
+
+    pub fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        self.repository.delete(route_id)
+    }
 }
 
 #[derive(Serialize)]

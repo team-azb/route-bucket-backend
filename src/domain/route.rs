@@ -53,4 +53,6 @@ pub trait RouteRepository {
     fn register(&self, route: &Route) -> ApplicationResult<()>;
 
     fn update(&self, route: &Route) -> ApplicationResult<()>;
+
+    fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
 }

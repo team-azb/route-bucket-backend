@@ -11,3 +11,13 @@ get:
         application/json:
           schema:
             $ref: ../components/schemas/route.yml#/Route
+
+delete:
+  operationId: routesDelete
+  summary: Routeの削除
+  tags: [route]
+  parameters:
+    - $ref: ../components/parameters/route_id.yml
+  responses:
+    200:
+      description: ok

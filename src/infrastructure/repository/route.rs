@@ -102,6 +102,7 @@ impl RouteRepository for RouteRepositoryMysql {
                 ))
             })?;
 
+        // TODO: OperationRepositoryとして分離する
         diesel::insert_into(OperationDto::table())
             .values(op_dtos)
             .execute(&conn)
@@ -145,6 +146,31 @@ impl RouteRepository for RouteRepositoryMysql {
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
                     "Failed to insert into Operations!".into(),
+                ))
+            })?;
+
+        Ok(())
+    }
+
+    fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        let conn = self.get_connection()?;
+
+        let id_str = route_id.to_string();
+
+        diesel::delete(RouteDto::table().find(&id_str))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to delete Route!".into(),
+                ))
+            })?;
+
+        // TODO: OperationRepositoryとして分離する
+        diesel::delete(OperationDto::table().filter(schema::operations::route_id.eq(&id_str)))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to delete Operations!".into(),
                 ))
             })?;
 

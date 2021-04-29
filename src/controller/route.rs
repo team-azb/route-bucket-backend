@@ -67,6 +67,11 @@ impl<R: RouteRepository> RouteController<R> {
     async fn patch_redo(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
         Ok(HttpResponse::Ok().json(self.usecase.migrate_history(&id, true)?))
     }
+
+    async fn delete(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
+        self.usecase.delete(&id)?;
+        Ok(HttpResponse::Ok().finish())
+    }
 }
 
 pub trait BuildService<S: dev::HttpServiceFactory + 'static> {
@@ -77,11 +82,15 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
     fn build_service(self) -> Scope {
         // TODO: /の過不足は許容する ex) "/{id}/"
         web::scope("/routes")
-            .service(web::resource("/{id}").route(web::get().to(move |id| self.get(id))))
             .service(
                 web::resource("/")
                     .route(web::get().to(move || self.get_all()))
                     .route(web::post().to(move |req| self.post(req))),
+            )
+            .service(
+                web::resource("/{id}")
+                    .route(web::get().to(move |id| self.get(id)))
+                    .route(web::delete().to(move |id| self.delete(id))),
             )
             .service(
                 web::resource("/{id}/rename/")
