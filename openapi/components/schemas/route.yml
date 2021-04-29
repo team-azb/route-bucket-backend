@@ -11,9 +11,7 @@ Route:
       maxLength: 50
       description: ルートの名前
     polyline:
-      type: array
-      items:
-        $ref: ./coordinate.yml#/Coordinate
+      $ref: ./polyline.yml#/Polyline
       description: ルート上の座標のリスト
     operation_history:
       $ref: ./operation_history.yml#/OperationHistory

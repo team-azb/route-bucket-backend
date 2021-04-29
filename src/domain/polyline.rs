@@ -8,6 +8,7 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(into = "String")]
 pub struct Polyline(Vec<Coordinate>);
 
 impl Polyline {
@@ -93,6 +94,14 @@ impl Polyline {
             self.0 = points.0;
             Ok(())
         }
+    }
+}
+
+impl Into<String> for Polyline {
+    fn into(self) -> String {
+        // Coordinateで範囲チェックしてるので
+        // encode_coordinatesのerrには引っかからないはず
+        self.encode().unwrap()
     }
 }
 

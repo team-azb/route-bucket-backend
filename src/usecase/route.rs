@@ -84,7 +84,7 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
-            points: route.polyline().clone(),
+            polyline: route.polyline().clone(),
         })
     }
 
@@ -102,7 +102,7 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
-            points: route.polyline().clone(),
+            polyline: route.polyline().clone(),
         })
     }
 
@@ -135,7 +135,7 @@ pub struct NewPointRequest {
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub points: Polyline,
+    pub polyline: Polyline,
 }
 
 #[derive(Getters, Deserialize)]

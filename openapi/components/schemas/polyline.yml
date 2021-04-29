@@ -1,0 +1,6 @@
+Polyline:
+  type: string
+  description: |
+    Polyline形式で表現された座標のリスト
+    参考：https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+  example: _p~iF~ps|U_ulLnnqC_mqNvxq`@
