@@ -20,6 +20,10 @@ impl<R: RouteRepository> RouteController<R> {
         Ok(HttpResponse::Ok().json(self.usecase.find(id.as_ref())?))
     }
 
+    async fn get_all(&self) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok().json(self.usecase.find_all()?))
+    }
+
     async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
         Ok(HttpResponse::Created().json(self.usecase.create(&req)?))
     }
@@ -74,7 +78,11 @@ impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R
         // TODO: /の過不足は許容する ex) "/{id}/"
         web::scope("/routes")
             .service(web::resource("/{id}").route(web::get().to(move |id| self.get(id))))
-            .service(web::resource("/").route(web::post().to(move |req| self.post(req))))
+            .service(
+                web::resource("/")
+                    .route(web::get().to(move || self.get_all()))
+                    .route(web::post().to(move |req| self.post(req))),
+            )
             .service(
                 web::resource("/{id}/rename/")
                     .route(web::patch().to(move |id, req| self.patch_rename(id, req))),

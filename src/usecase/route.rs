@@ -20,6 +20,12 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.find(route_id)
     }
 
+    pub fn find_all(&self) -> ApplicationResult<RouteGetAllRequest> {
+        Ok(RouteGetAllRequest {
+            routes: self.repository.find_all()?,
+        })
+    }
+
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
         let route = Route::new(
             RouteId::new(),
@@ -99,6 +105,11 @@ impl<R: RouteRepository> RouteUseCase<R> {
             points: route.polyline().clone(),
         })
     }
+}
+
+#[derive(Serialize)]
+pub struct RouteGetAllRequest {
+    pub routes: Vec<Route>,
 }
 
 #[derive(Getters, Deserialize)]

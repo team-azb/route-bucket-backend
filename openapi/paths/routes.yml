@@ -1,3 +1,21 @@
+get:
+  operationId: routesGetAll
+  summary: 全Route一覧の表示
+  tags: [route]
+  responses:
+    200:
+      description: ok
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [routes]
+            properties:
+              routes:
+                type: array
+                items:
+                  $ref: ../components/schemas/route.yml#/Route
+
 post:
   operationId: routesPost
   summary: Routeの作成

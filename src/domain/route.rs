@@ -48,6 +48,8 @@ impl Route {
 pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
 
+    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
+
     fn register(&self, route: &Route) -> ApplicationResult<()>;
 
     fn update(&self, route: &Route) -> ApplicationResult<()>;
