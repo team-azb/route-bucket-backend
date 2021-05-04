@@ -9,27 +9,19 @@ use crate::domain::route::{Route, RouteRepository};
 use crate::domain::types::RouteId;
 use crate::infrastructure::dto::operation::OperationDto;
 use crate::infrastructure::dto::route::RouteDto;
+use crate::infrastructure::repository::connection_pool::MysqlConnectionPool;
 use crate::infrastructure::schema;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
-type MysqlConnectionManager = ConnectionManager<MysqlConnection>;
-
 pub struct RouteRepositoryMysql {
-    pool: Pool<MysqlConnectionManager>,
+    pool: MysqlConnectionPool,
 }
 
 impl RouteRepositoryMysql {
-    pub fn new(pool: Pool<MysqlConnectionManager>) -> RouteRepositoryMysql {
-        RouteRepositoryMysql { pool }
-    }
-
-    pub fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
-        let conn = self.pool.get().or_else(|_| {
-            Err(ApplicationError::DataBaseError(
-                "Failed to get DB connection.".into(),
-            ))
-        })?;
-        Ok(conn)
+    pub fn new() -> RouteRepositoryMysql {
+        RouteRepositoryMysql {
+            pool: MysqlConnectionPool::new(),
+        }
     }
 
     fn route_to_dtos(route: &Route) -> ApplicationResult<(RouteDto, Vec<OperationDto>)> {
@@ -47,7 +39,7 @@ impl RouteRepositoryMysql {
 
 impl RouteRepository for RouteRepositoryMysql {
     fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get_connection()?;
         let route_dto = RouteDto::table()
             .find(&route_id.to_string())
             .first::<RouteDto>(&conn)
@@ -72,7 +64,7 @@ impl RouteRepository for RouteRepositoryMysql {
     }
 
     fn find_all(&self) -> ApplicationResult<Vec<Route>> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get_connection()?;
 
         let route_dtos = RouteDto::table().load::<RouteDto>(&conn).or_else(|_| {
             Err(ApplicationError::DataBaseError(
@@ -89,7 +81,7 @@ impl RouteRepository for RouteRepositoryMysql {
     }
 
     fn register(&self, route: &Route) -> ApplicationResult<()> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get_connection()?;
 
         let (route_dto, op_dtos) = Self::route_to_dtos(route)?;
 
@@ -116,7 +108,7 @@ impl RouteRepository for RouteRepositoryMysql {
     }
 
     fn update(&self, route: &Route) -> ApplicationResult<()> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get_connection()?;
 
         let (route_dto, op_dtos) = Self::route_to_dtos(route)?;
 
@@ -153,7 +145,7 @@ impl RouteRepository for RouteRepositoryMysql {
     }
 
     fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        let conn = self.get_connection()?;
+        let conn = self.pool.get_connection()?;
 
         let id_str = route_id.to_string();
 
