@@ -1,4 +1,5 @@
 use crate::domain::polyline::{Coordinate, Polyline};
+use crate::domain::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
 use serde::{Deserialize, Serialize};
@@ -179,4 +180,16 @@ impl Operation {
             },
         }
     }
+}
+
+pub trait OperationRepository {
+    fn find_history(&self, route_id: &RouteId) -> ApplicationResult<OperationHistory>;
+
+    fn update_history(
+        &self,
+        route_id: &RouteId,
+        history: &OperationHistory,
+    ) -> ApplicationResult<()>;
+
+    fn delete_history(&self, route_id: &RouteId) -> ApplicationResult<()>;
 }
