@@ -1,4 +1,4 @@
-use crate::domain::operation_history::OperationHistory;
+use crate::domain::operation::OperationHistory;
 use crate::domain::polyline::Polyline;
 use crate::domain::route::Route;
 use crate::domain::types::RouteId;

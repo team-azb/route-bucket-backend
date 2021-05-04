@@ -1,7 +1,7 @@
 use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{MysqlConnection, RunQueryDsl};
-use route_bucket_backend::domain::operation_history::{Operation, OperationHistory};
+use route_bucket_backend::domain::operation::{Operation, OperationHistory};
 use route_bucket_backend::domain::polyline::{Coordinate, Polyline};
 use route_bucket_backend::domain::route::{Route, RouteRepository};
 use route_bucket_backend::domain::types::RouteId;

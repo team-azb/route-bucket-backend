@@ -1,7 +1,7 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::operation_history::{Operation, OperationHistory};
+use crate::domain::operation::{Operation, OperationHistory};
 use crate::domain::polyline::Polyline;
 use crate::domain::types::RouteId;
 use crate::utils::error::ApplicationResult;
