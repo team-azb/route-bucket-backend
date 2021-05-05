@@ -1,8 +1,6 @@
-use crate::domain::operation::OperationHistory;
-use crate::domain::polyline::Polyline;
-use crate::domain::route::Route;
-use crate::domain::types::RouteId;
-use crate::infrastructure::dto::operation::OperationDto;
+use crate::domain::model::polyline::Polyline;
+use crate::domain::model::route::Route;
+use crate::domain::model::types::RouteId;
 use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
 
@@ -17,16 +15,12 @@ pub struct RouteDto {
 }
 
 impl RouteDto {
-    pub fn to_model(&self, op_dtos: Vec<OperationDto>) -> ApplicationResult<Route> {
-        let operations = op_dtos
-            .iter()
-            .map(OperationDto::to_model)
-            .collect::<ApplicationResult<Vec<_>>>()?;
+    pub fn to_model(&self) -> ApplicationResult<Route> {
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
             Polyline::decode(&self.polyline)?,
-            OperationHistory::new(operations, self.operation_pos as usize),
+            self.operation_pos as usize,
         ))
     }
 
@@ -35,7 +29,7 @@ impl RouteDto {
             id: route.id().to_string(),
             name: route.name().clone(),
             polyline: route.polyline().encode()?,
-            operation_pos: *route.operation_history().pos() as u32,
+            operation_pos: *route.op_num() as u32,
         })
     }
 }

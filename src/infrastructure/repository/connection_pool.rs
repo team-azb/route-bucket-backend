@@ -19,7 +19,9 @@ impl MysqlConnectionPool {
         Self { pool }
     }
 
-    pub fn get_connection(&self) -> ApplicationResult<PooledConnection<MysqlConnectionManager>> {
+    pub fn get_connection(
+        &self,
+    ) -> ApplicationResult<PooledConnection<ConnectionManager<MysqlConnection>>> {
         let conn = self.pool.get().or_else(|_| {
             Err(ApplicationError::DataBaseError(
                 "Failed to get DB connection.".into(),

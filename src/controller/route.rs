@@ -1,19 +1,20 @@
 use actix_web::{dev, web, HttpResponse, Result, Scope};
 use once_cell::sync::Lazy;
 
-use crate::domain::route::RouteRepository;
-use crate::domain::types::RouteId;
+use crate::domain::model::operation::OperationRepository;
+use crate::domain::model::route::RouteRepository;
+use crate::domain::model::types::RouteId;
 use crate::usecase::route::{
     NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
 
-pub struct RouteController<R: RouteRepository> {
-    usecase: RouteUseCase<R>,
+pub struct RouteController<R: RouteRepository, O: OperationRepository> {
+    usecase: RouteUseCase<R, O>,
 }
 
-impl<R: RouteRepository> RouteController<R> {
-    pub fn new(usecase: RouteUseCase<R>) -> RouteController<R> {
-        RouteController { usecase }
+impl<R: RouteRepository, O: OperationRepository> RouteController<R, O> {
+    pub fn new(usecase: RouteUseCase<R, O>) -> Self {
+        Self { usecase }
     }
 
     async fn get(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
@@ -78,7 +79,9 @@ pub trait BuildService<S: dev::HttpServiceFactory + 'static> {
     fn build_service(self) -> S;
 }
 
-impl<R: RouteRepository> BuildService<Scope> for &'static Lazy<RouteController<R>> {
+impl<R: RouteRepository, O: OperationRepository> BuildService<Scope>
+    for &'static Lazy<RouteController<R, O>>
+{
     fn build_service(self) -> Scope {
         // TODO: /の過不足は許容する ex) "/{id}/"
         web::scope("/routes")

@@ -1,4 +1,4 @@
-use crate::domain::types::{Latitude, Longitude};
+use crate::domain::model::types::{Latitude, Longitude};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use geo::LineString;
 use getset::Getters;

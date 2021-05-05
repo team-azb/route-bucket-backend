@@ -1,54 +1,7 @@
-use crate::domain::polyline::{Coordinate, Polyline};
-use crate::domain::types::RouteId;
+use crate::domain::model::polyline::{Coordinate, Polyline};
+use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use getset::Getters;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Getters, Deserialize, Serialize)]
-#[get = "pub"]
-pub struct OperationHistory {
-    op_list: Vec<Operation>,
-    pos: usize,
-}
-
-impl OperationHistory {
-    pub fn new(op_list: Vec<Operation>, pos: usize) -> Self {
-        Self { op_list, pos }
-    }
-
-    pub fn push(&mut self, op: Operation, polyline: &mut Polyline) -> ApplicationResult<()> {
-        op.apply(polyline)?;
-        // pos以降の要素は全て捨てる
-        self.op_list.truncate(self.pos);
-        self.op_list.push(op);
-        self.pos += 1;
-        Ok(())
-    }
-
-    pub fn undo(&mut self, polyline: &mut Polyline) -> ApplicationResult<()> {
-        if self.pos > 0 {
-            self.pos -= 1;
-            self.op_list[self.pos].reverse().apply(polyline)?;
-            Ok(())
-        } else {
-            Err(ApplicationError::InvalidOperation(
-                "No more operations to undo.",
-            ))
-        }
-    }
-
-    pub fn redo(&mut self, polyline: &mut Polyline) -> ApplicationResult<()> {
-        if self.pos < self.op_list.len() {
-            self.op_list[self.pos].apply(polyline)?;
-            self.pos += 1;
-            Ok(())
-        } else {
-            Err(ApplicationError::InvalidOperation(
-                "No more operations to redo.",
-            ))
-        }
-    }
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Operation {
@@ -183,13 +136,13 @@ impl Operation {
 }
 
 pub trait OperationRepository {
-    fn find_history(&self, route_id: &RouteId) -> ApplicationResult<OperationHistory>;
+    fn find_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<Vec<Operation>>;
 
-    fn update_history(
+    fn update_by_route_id(
         &self,
         route_id: &RouteId,
-        history: &OperationHistory,
+        op_list: &Vec<Operation>,
     ) -> ApplicationResult<()>;
 
-    fn delete_history(&self, route_id: &RouteId) -> ApplicationResult<()>;
+    fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
 }

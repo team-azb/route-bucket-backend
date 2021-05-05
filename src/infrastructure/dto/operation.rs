@@ -1,6 +1,6 @@
-use crate::domain::operation::Operation;
-use crate::domain::polyline::Polyline;
-use crate::domain::types::RouteId;
+use crate::domain::model::operation::Operation;
+use crate::domain::model::polyline::Polyline;
+use crate::domain::model::types::RouteId;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;
 use crate::utils::error::ApplicationResult;
