@@ -1,20 +1,22 @@
 use crate::domain::model::polyline::{Coordinate, Polyline};
 use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use getset::Getters;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Operation {
     Add {
-        pos: u32,
+        pos: usize,
         coord: Coordinate,
     },
     Remove {
-        pos: u32,
+        pos: usize,
         coord: Coordinate,
     },
     Move {
-        pos: u32,
+        pos: usize,
         from: Coordinate,
         to: Coordinate,
     },
@@ -28,59 +30,6 @@ pub enum Operation {
 }
 
 impl Operation {
-    pub fn to_code(&self) -> &str {
-        match self {
-            Self::Add { .. } => "add",
-            Self::Remove { .. } => "rm",
-            Self::Move { .. } => "mv",
-            Self::Clear { .. } => "clear",
-            Self::InitWithList { .. } => "init",
-        }
-    }
-
-    pub fn from_code(
-        code: &String,
-        pos: Option<u32>,
-        polyline: &String,
-    ) -> ApplicationResult<Operation> {
-        let coord_list = Polyline::decode(polyline)?;
-        let op = match &**code {
-            "add" | "rm" | "mv" => {
-                let pos = pos.ok_or(ApplicationError::DomainError(format!(
-                    "invalid operation {} without pos",
-                    code
-                )))?;
-                match &**code {
-                    "add" => Operation::Add {
-                        pos,
-                        coord: coord_list.get(0)?.clone(),
-                    },
-                    "rm" => Operation::Remove {
-                        pos,
-                        coord: coord_list.get(0)?.clone(),
-                    },
-                    // "mv"
-                    _ => Operation::Move {
-                        pos,
-                        from: coord_list.get(0)?.clone(),
-                        to: coord_list.get(1)?.clone(),
-                    },
-                }
-            }
-            "clear" => Operation::Clear {
-                org_list: coord_list,
-            },
-            "init" => Operation::InitWithList { list: coord_list },
-            _ => {
-                return Err(ApplicationError::DomainError(format!(
-                    "invalid operation code {}",
-                    code
-                )))
-            }
-        };
-        Ok(op)
-    }
-
     pub fn apply(&self, polyline: &mut Polyline) -> ApplicationResult<()> {
         match self {
             Self::Add { pos, coord } => Ok(polyline.insert(*pos as usize, coord.clone())?),
@@ -132,6 +81,112 @@ impl Operation {
                 org_list: list.clone(),
             },
         }
+    }
+}
+
+#[derive(Getters)]
+#[get = "pub"]
+pub struct OperationStruct {
+    code: String,
+    pos: Option<usize>,
+    polyline: Polyline,
+}
+
+impl OperationStruct {
+    pub fn new(
+        code: String,
+        pos: Option<usize>,
+        org_coord: Option<Coordinate>,
+        new_coord: Option<Coordinate>,
+        polyline: Option<Polyline>,
+    ) -> ApplicationResult<Self> {
+        let polyline = if vec!["clear", "init"].contains(&(&code as &str)) {
+            polyline.ok_or(ApplicationError::DomainError(format!(
+                "Must give polyline for code {}",
+                code
+            )))?
+        } else {
+            org_coord.map_or(
+                polyline.ok_or(ApplicationError::DomainError(
+                    "Must give new_coord or org_coord or polyline for OperationStruct::new".into(),
+                ))?,
+                |c1| {
+                    new_coord
+                        .map_or(vec![c1.clone()], |c2| vec![c1.clone(), c2.clone()])
+                        .into()
+                },
+            )
+        };
+        Ok(Self {
+            code,
+            pos,
+            polyline,
+        })
+    }
+}
+
+impl TryFrom<Operation> for OperationStruct {
+    type Error = ApplicationError;
+
+    fn try_from(value: Operation) -> Result<Self, Self::Error> {
+        match value {
+            Operation::Add { pos, coord } => {
+                OperationStruct::new("add".into(), Some(pos), None, Some(coord), None)
+            }
+            Operation::Remove { pos, coord } => {
+                OperationStruct::new("rm".into(), Some(pos), Some(coord), None, None)
+            }
+            Operation::Move { pos, from, to } => {
+                OperationStruct::new("mv".into(), Some(pos), Some(from), Some(to), None)
+            }
+            Operation::Clear { org_list } => {
+                OperationStruct::new("clear".into(), None, None, None, Some(org_list))
+            }
+            Operation::InitWithList { list } => {
+                OperationStruct::new("init".into(), None, None, None, Some(list))
+            }
+        }
+    }
+}
+
+impl TryFrom<OperationStruct> for Operation {
+    type Error = ApplicationError;
+
+    fn try_from(value: OperationStruct) -> Result<Self, Self::Error> {
+        let operation = match &value.code as &str {
+            "add" => Operation::Add {
+                pos: value.pos.ok_or(ApplicationError::DomainError(
+                    "No pos given for Operation::Add".into(),
+                ))?,
+                coord: value.polyline.get(0)?.clone(),
+            },
+            "rm" => Operation::Remove {
+                pos: value.pos.ok_or(ApplicationError::DomainError(
+                    "No pos given for Operation::Remove".into(),
+                ))?,
+                coord: value.polyline.get(0)?.clone(),
+            },
+            "mv" => Operation::Move {
+                pos: value.pos.ok_or(ApplicationError::DomainError(
+                    "No pos given for Operation::Move".into(),
+                ))?,
+                from: value.polyline.get(0)?.clone(),
+                to: value.polyline.get(1)?.clone(),
+            },
+            "clear" => Operation::Clear {
+                org_list: value.polyline,
+            },
+            "init" => Operation::InitWithList {
+                list: value.polyline,
+            },
+            _ => {
+                return Err(ApplicationError::DomainError(format!(
+                    "Invalid operation code {}",
+                    value.code
+                )));
+            }
+        };
+        Ok(operation)
     }
 }
 

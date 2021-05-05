@@ -1,9 +1,10 @@
-use crate::domain::model::operation::Operation;
+use crate::domain::model::operation::{Operation, OperationStruct};
 use crate::domain::model::polyline::Polyline;
 use crate::domain::model::types::RouteId;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;
 use crate::utils::error::ApplicationResult;
+use std::convert::{TryFrom, TryInto};
 
 /// 座標のdto構造体
 #[derive(Identifiable, Queryable, Insertable, Associations, Debug)]
@@ -20,7 +21,14 @@ pub struct OperationDto {
 
 impl OperationDto {
     pub fn to_model(&self) -> ApplicationResult<Operation> {
-        Operation::from_code(&self.code, self.pos, &self.polyline)
+        OperationStruct::new(
+            self.code.clone(),
+            self.pos.map(|u| u as usize),
+            None,
+            None,
+            Some(Polyline::decode(&self.polyline)?),
+        )
+        .map(OperationStruct::try_into)?
     }
 
     pub fn from_model(
@@ -28,28 +36,13 @@ impl OperationDto {
         route_id: &RouteId,
         index: u32,
     ) -> ApplicationResult<OperationDto> {
-        let pos_op: Option<u32>;
-        let polyline: Polyline;
-        match operation {
-            Operation::Add { pos, coord } | Operation::Remove { pos, coord } => {
-                pos_op = Some(*pos);
-                polyline = Polyline::from_vec(vec![coord.clone()]);
-            }
-            Operation::Move { pos, from, to } => {
-                pos_op = Some(*pos);
-                polyline = Polyline::from_vec(vec![from.clone(), to.clone()]);
-            }
-            Operation::Clear { org_list: list } | Operation::InitWithList { list } => {
-                pos_op = None;
-                polyline = list.clone();
-            }
-        };
+        let opst = OperationStruct::try_from(operation.clone())?;
         Ok(OperationDto {
             route_id: route_id.to_string(),
             index,
-            code: operation.to_code().to_string(),
-            pos: pos_op,
-            polyline: polyline.encode()?,
+            code: opst.code().clone(),
+            pos: opst.pos().clone().map(|u| u as u32),
+            polyline: opst.polyline().encode()?,
         })
     }
 }

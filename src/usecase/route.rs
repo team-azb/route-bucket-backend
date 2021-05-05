@@ -1,12 +1,12 @@
-use getset::Getters;
-use serde::{Deserialize, Serialize};
-
-use crate::domain::model::operation::{Operation, OperationRepository};
+use crate::domain::model::operation::{OperationRepository, OperationStruct};
 use crate::domain::model::polyline::{Coordinate, Polyline};
 use crate::domain::model::route::{Route, RouteRepository};
 use crate::domain::model::types::RouteId;
 use crate::domain::service::route::RouteService;
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use crate::utils::error::ApplicationResult;
+use getset::Getters;
+use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
 pub struct RouteUseCase<R: RouteRepository, O: OperationRepository> {
     service: RouteService<R, O>,
@@ -49,34 +49,24 @@ impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
         op_code: &str,
         route_id: &RouteId,
         pos: Option<usize>,
-        coord: Option<Coordinate>,
+        new_coord: Option<Coordinate>,
     ) -> ApplicationResult<RouteOperationResponse> {
         let mut editor = self.service.find_editor(route_id)?;
 
-        let coord_vec = coord.map_or(vec![], |coord| vec![coord]);
-        let pos_vec = pos.map_or(Ok(vec![]), |pos| {
-            Ok(vec![editor.route().polyline().get(pos)?.clone()])
-        })?;
+        let org_polyline = editor.route().polyline().clone();
 
-        let op_polyline = match op_code {
-            "add" => Polyline::from_vec(coord_vec),
-            "rm" => Polyline::from_vec(pos_vec),
-            "mv" => Polyline::from_vec([pos_vec, coord_vec].concat()),
-            "clear" => editor.route().polyline().clone(),
-            _ => {
-                return Err(ApplicationError::UseCaseError(format!(
-                    "edit for op_code {} isn't implemented!",
-                    op_code
-                )))
-            }
-        };
+        let org_coord = pos.map_or(None, |pos| {
+            org_polyline.get(pos).ok().map(Coordinate::clone)
+        });
 
-        let op = Operation::from_code(
-            &String::from(op_code),
-            pos.map(|i| i as u32),
-            &op_polyline.encode()?,
+        let opst = OperationStruct::new(
+            op_code.into(),
+            pos,
+            org_coord,
+            new_coord,
+            Some(org_polyline),
         )?;
-        editor.push_operation(op)?;
+        editor.push_operation(opst.try_into()?)?;
         self.service.update_editor(&editor)?;
 
         Ok(RouteOperationResponse {
