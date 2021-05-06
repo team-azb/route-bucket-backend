@@ -30,6 +30,10 @@ impl Route {
         }
     }
 
+    pub fn rename(&mut self, name: &String) {
+        self.name = name.clone();
+    }
+
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
         self.operation_history.push(op, &mut self.polyline)
     }
@@ -44,7 +48,11 @@ impl Route {
 pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
 
+    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
+
     fn register(&self, route: &Route) -> ApplicationResult<()>;
 
     fn update(&self, route: &Route) -> ApplicationResult<()>;
+
+    fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
 }

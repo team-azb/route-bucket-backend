@@ -3,8 +3,5 @@ RouteEditResponse:
   description: Route編集レスポンス
   required: [points]
   properties:
-    points:
-      type: array
-      items:
-        $ref: ./coordinate.yml#/Coordinate
-      description: 編集後のルート上の座標のリスト
+    polyline:
+      $ref: ./polyline.yml#/Polyline

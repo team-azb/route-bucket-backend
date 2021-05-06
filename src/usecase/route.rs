@@ -20,6 +20,12 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.find(route_id)
     }
 
+    pub fn find_all(&self) -> ApplicationResult<RouteGetAllRequest> {
+        Ok(RouteGetAllRequest {
+            routes: self.repository.find_all()?,
+        })
+    }
+
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
         let route = Route::new(
             RouteId::new(),
@@ -33,6 +39,13 @@ impl<R: RouteRepository> RouteUseCase<R> {
         Ok(RouteCreateResponse {
             id: route.id().clone(),
         })
+    }
+
+    pub fn rename(&self, route_id: &RouteId, req: &RouteRenameRequest) -> ApplicationResult<Route> {
+        let mut route = self.repository.find(route_id)?;
+        route.rename(req.name());
+        self.repository.update(&route)?;
+        Ok(route)
     }
 
     pub fn edit(
@@ -71,7 +84,7 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
-            points: route.polyline().clone(),
+            polyline: route.polyline().clone(),
         })
     }
 
@@ -89,9 +102,18 @@ impl<R: RouteRepository> RouteUseCase<R> {
         self.repository.update(&route)?;
 
         Ok(RouteOperationResponse {
-            points: route.polyline().clone(),
+            polyline: route.polyline().clone(),
         })
     }
+
+    pub fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        self.repository.delete(route_id)
+    }
+}
+
+#[derive(Serialize)]
+pub struct RouteGetAllRequest {
+    pub routes: Vec<Route>,
 }
 
 #[derive(Getters, Deserialize)]
@@ -113,5 +135,11 @@ pub struct NewPointRequest {
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub points: Polyline,
+    pub polyline: Polyline,
+}
+
+#[derive(Getters, Deserialize)]
+#[get = "pub"]
+pub struct RouteRenameRequest {
+    name: String,
 }

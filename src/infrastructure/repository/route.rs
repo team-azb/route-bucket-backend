@@ -58,6 +58,7 @@ impl RouteRepository for RouteRepositoryMysql {
                 })
             })?;
 
+        // TODO: OperationRepositoryとして分離する
         let op_dtos = OperationDto::belonging_to(&route_dto)
             .order(schema::operations::index.asc())
             .load(&conn)
@@ -68,6 +69,23 @@ impl RouteRepository for RouteRepositoryMysql {
             })?;
 
         Ok(route_dto.to_model(op_dtos)?)
+    }
+
+    fn find_all(&self) -> ApplicationResult<Vec<Route>> {
+        let conn = self.get_connection()?;
+
+        let route_dtos = RouteDto::table().load::<RouteDto>(&conn).or_else(|_| {
+            Err(ApplicationError::DataBaseError(
+                "Failed to load from Routes!".into(),
+            ))
+        })?;
+
+        // TODO: Routeじゃなく、RouteProfile的なOperationHistoryを抜いたstructを返す
+        //     : ここではOperationを空のままRouteにしてしまっている
+        Ok(route_dtos
+            .iter()
+            .map(|dto| dto.to_model(Vec::new()))
+            .collect::<ApplicationResult<Vec<Route>>>()?)
     }
 
     fn register(&self, route: &Route) -> ApplicationResult<()> {
@@ -84,6 +102,7 @@ impl RouteRepository for RouteRepositoryMysql {
                 ))
             })?;
 
+        // TODO: OperationRepositoryとして分離する
         diesel::insert_into(OperationDto::table())
             .values(op_dtos)
             .execute(&conn)
@@ -127,6 +146,31 @@ impl RouteRepository for RouteRepositoryMysql {
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(
                     "Failed to insert into Operations!".into(),
+                ))
+            })?;
+
+        Ok(())
+    }
+
+    fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        let conn = self.get_connection()?;
+
+        let id_str = route_id.to_string();
+
+        diesel::delete(RouteDto::table().find(&id_str))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to delete Route!".into(),
+                ))
+            })?;
+
+        // TODO: OperationRepositoryとして分離する
+        diesel::delete(OperationDto::table().filter(schema::operations::route_id.eq(&id_str)))
+            .execute(&conn)
+            .or_else(|_| {
+                Err(ApplicationError::DataBaseError(
+                    "Failed to delete Operations!".into(),
                 ))
             })?;
 
