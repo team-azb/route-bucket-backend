@@ -32,9 +32,9 @@ pub enum Operation {
 impl Operation {
     pub fn apply(&self, polyline: &mut Polyline) -> ApplicationResult<()> {
         match self {
-            Self::Add { pos, coord } => Ok(polyline.insert(*pos as usize, coord.clone())?),
+            Self::Add { pos, coord } => Ok(polyline.insert(*pos, coord.clone())?),
             Self::Remove { pos, coord } => {
-                let ref removed = polyline.remove(*pos as usize)?;
+                let ref removed = polyline.remove(*pos)?;
                 (coord == removed)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError(
@@ -42,7 +42,7 @@ impl Operation {
                     ))
             }
             Self::Move { pos, from, to } => {
-                let ref moved = polyline.replace(*pos as usize, to.clone())?;
+                let ref moved = polyline.replace(*pos, to.clone())?;
                 (from == moved)
                     .then(|| ())
                     .ok_or(ApplicationError::DomainError(
