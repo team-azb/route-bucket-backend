@@ -5,7 +5,7 @@ use getset::Getters;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug)]
 pub enum Operation {
     Add {
         pos: usize,
@@ -84,7 +84,8 @@ impl Operation {
     }
 }
 
-#[derive(Getters)]
+/// struct to make initializing enum Operation easier
+#[derive(Getters, Deserialize, Serialize)]
 #[get = "pub"]
 pub struct OperationStruct {
     code: String,
