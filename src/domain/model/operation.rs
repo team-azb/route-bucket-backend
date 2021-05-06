@@ -62,24 +62,16 @@ impl Operation {
     }
 
     pub fn reverse(&self) -> Operation {
-        match self {
-            Self::Add { pos, coord } => Self::Remove {
-                pos: *pos,
-                coord: coord.clone(),
-            },
-            Self::Remove { pos, coord } => Self::Add {
-                pos: *pos,
-                coord: coord.clone(),
-            },
+        match self.clone() {
+            Self::Add { pos, coord } => Self::Remove { pos, coord },
+            Self::Remove { pos, coord } => Self::Add { pos, coord },
             Self::Move { pos, from, to } => Self::Move {
-                pos: *pos,
-                from: to.clone(),
-                to: from.clone(),
+                pos,
+                from: to,
+                to: from,
             },
-            Self::Clear { org_list: list } => Self::InitWithList { list: list.clone() },
-            Self::InitWithList { list } => Self::Clear {
-                org_list: list.clone(),
-            },
+            Self::Clear { org_list: list } => Self::InitWithList { list },
+            Self::InitWithList { list } => Self::Clear { org_list: list },
         }
     }
 }
