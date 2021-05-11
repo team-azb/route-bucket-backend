@@ -1,4 +1,4 @@
-use crate::domain::model::types::{Latitude, Longitude};
+use crate::domain::model::types::{Latitude, Longitude, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
@@ -7,26 +7,12 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(into = "String")]
+#[serde(into = "Polyline")]
 pub struct LineString(Vec<Coordinate>);
 
 impl LineString {
     pub fn new() -> LineString {
         LineString(Vec::new())
-    }
-
-    pub fn encode(&self) -> ApplicationResult<String> {
-        let line_str = geo::LineString::from(self.clone());
-        encode_coordinates(line_str, 5).map_err(|err| {
-            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
-        })
-    }
-
-    pub fn decode(poly_str: &String) -> ApplicationResult<LineString> {
-        let line_str = decode_polyline(poly_str, 5).map_err(|err| {
-            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
-        })?;
-        LineString::try_from(line_str)
     }
 
     pub fn get(&self, i: usize) -> ApplicationResult<&Coordinate> {
@@ -110,11 +96,22 @@ impl From<Vec<Coordinate>> for LineString {
     }
 }
 
-impl Into<String> for LineString {
-    fn into(self) -> String {
-        // Coordinateで範囲チェックしてるので
-        // encode_coordinatesのerrには引っかからないはず
-        self.encode().unwrap()
+impl From<LineString> for Polyline {
+    fn from(value: LineString) -> Self {
+        let line_str = geo::LineString::from(value);
+        // 範囲チェックはCoordinateで行っているので、unwrapで大丈夫
+        encode_coordinates(line_str, 5).map(Polyline::from).unwrap()
+    }
+}
+
+impl TryFrom<Polyline> for LineString {
+    type Error = ApplicationError;
+
+    fn try_from(value: Polyline) -> Result<Self, Self::Error> {
+        let line_str = decode_polyline(value.into(), 5).map_err(|err| {
+            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
+        })?;
+        LineString::try_from(line_str)
     }
 }
 

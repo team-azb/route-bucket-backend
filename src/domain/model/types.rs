@@ -25,6 +25,20 @@ impl RouteId {
     }
 }
 
+#[derive(Display, Debug, Clone, Serialize, Deserialize)]
+pub struct Polyline(String);
+
+impl From<String> for Polyline {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+impl From<Polyline> for String {
+    fn from(value: Polyline) -> Self {
+        value.0
+    }
+}
+
 pub type Latitude = NumericValueObject<f64, 90>;
 pub type Longitude = NumericValueObject<f64, 180>;
 
