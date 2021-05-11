@@ -1,4 +1,4 @@
-use crate::domain::types::{Latitude, Longitude};
+use crate::domain::model::types::{Latitude, Longitude};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use geo::LineString;
 use getset::Getters;
@@ -16,10 +16,6 @@ impl Polyline {
         Polyline(Vec::new())
     }
 
-    pub fn from_vec(points: Vec<Coordinate>) -> Polyline {
-        Polyline(points)
-    }
-
     pub fn encode(&self) -> ApplicationResult<String> {
         let line_str: LineString<f64> = LineString::from_iter(self.0.clone().into_iter());
         encode_coordinates(line_str, 5)
@@ -31,7 +27,7 @@ impl Polyline {
         let line_str = decode_polyline(poly_str, 5)
             // TODO: encode_coordinatesのErr(String)も表示する
             .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))?;
-        Ok(Polyline::from_vec(
+        Ok(Polyline::from(
             line_str
                 .into_iter()
                 .map(|coord| Coordinate::new(coord.y, coord.x))
@@ -94,6 +90,12 @@ impl Polyline {
             self.0 = points.0;
             Ok(())
         }
+    }
+}
+
+impl From<Vec<Coordinate>> for Polyline {
+    fn from(points: Vec<Coordinate>) -> Self {
+        Polyline(points)
     }
 }
 

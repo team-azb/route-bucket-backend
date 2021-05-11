@@ -1,40 +1,36 @@
+use crate::domain::model::operation::{OperationRepository, OperationStruct};
+use crate::domain::model::polyline::{Coordinate, Polyline};
+use crate::domain::model::route::{Route, RouteRepository};
+use crate::domain::model::types::RouteId;
+use crate::domain::service::route::RouteService;
+use crate::utils::error::ApplicationResult;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
 
-use crate::domain::operation_history::{Operation, OperationHistory};
-use crate::domain::polyline::{Coordinate, Polyline};
-use crate::domain::route::{Route, RouteRepository};
-use crate::domain::types::RouteId;
-use crate::utils::error::{ApplicationError, ApplicationResult};
-
-pub struct RouteUseCase<R: RouteRepository> {
-    repository: R,
+pub struct RouteUseCase<R: RouteRepository, O: OperationRepository> {
+    service: RouteService<R, O>,
 }
 
-impl<R: RouteRepository> RouteUseCase<R> {
-    pub fn new(repository: R) -> Self {
-        Self { repository }
+impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
+    pub fn new(service: RouteService<R, O>) -> Self {
+        Self { service }
     }
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
-        self.repository.find(route_id)
+        self.service.find_route(route_id)
     }
 
     pub fn find_all(&self) -> ApplicationResult<RouteGetAllRequest> {
         Ok(RouteGetAllRequest {
-            routes: self.repository.find_all()?,
+            routes: self.service.find_all_routes()?,
         })
     }
 
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route = Route::new(
-            RouteId::new(),
-            req.name(),
-            Polyline::new(),
-            OperationHistory::new(vec![], 0),
-        );
+        let route = Route::new(RouteId::new(), req.name(), Polyline::new(), 0);
 
-        self.repository.register(&route)?;
+        self.service.register_route(&route)?;
 
         Ok(RouteCreateResponse {
             id: route.id().clone(),
@@ -42,9 +38,9 @@ impl<R: RouteRepository> RouteUseCase<R> {
     }
 
     pub fn rename(&self, route_id: &RouteId, req: &RouteRenameRequest) -> ApplicationResult<Route> {
-        let mut route = self.repository.find(route_id)?;
+        let mut route = self.service.find_route(route_id)?;
         route.rename(req.name());
-        self.repository.update(&route)?;
+        self.service.update_route(&route)?;
         Ok(route)
     }
 
@@ -53,38 +49,28 @@ impl<R: RouteRepository> RouteUseCase<R> {
         op_code: &str,
         route_id: &RouteId,
         pos: Option<usize>,
-        coord: Option<Coordinate>,
+        new_coord: Option<Coordinate>,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let mut route = self.repository.find(route_id)?;
+        let mut editor = self.service.find_editor(route_id)?;
 
-        let coord_vec = coord.map_or(vec![], |coord| vec![coord]);
-        let pos_vec = pos.map_or(Ok(vec![]), |pos| {
-            Ok(vec![route.polyline().get(pos)?.clone()])
-        })?;
+        let org_polyline = editor.route().polyline().clone();
 
-        let op_polyline = match op_code {
-            "add" => Polyline::from_vec(coord_vec),
-            "rm" => Polyline::from_vec(pos_vec),
-            "mv" => Polyline::from_vec([pos_vec, coord_vec].concat()),
-            "clear" => route.polyline().clone(),
-            _ => {
-                return Err(ApplicationError::UseCaseError(format!(
-                    "edit for op_code {} isn't implemented!",
-                    op_code
-                )))
-            }
-        };
+        let org_coord = pos.map_or(None, |pos| {
+            org_polyline.get(pos).ok().map(Coordinate::clone)
+        });
 
-        let op = Operation::from_code(
-            &String::from(op_code),
-            pos.map(|i| i as u32),
-            &op_polyline.encode()?,
+        let opst = OperationStruct::new(
+            op_code.into(),
+            pos,
+            org_coord,
+            new_coord,
+            Some(org_polyline),
         )?;
-        route.push_operation(op)?;
-        self.repository.update(&route)?;
+        editor.push_operation(opst.try_into()?)?;
+        self.service.update_editor(&editor)?;
 
         Ok(RouteOperationResponse {
-            polyline: route.polyline().clone(),
+            polyline: editor.route().polyline().clone(),
         })
     }
 
@@ -93,21 +79,21 @@ impl<R: RouteRepository> RouteUseCase<R> {
         route_id: &RouteId,
         forward: bool,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let mut route = self.repository.find(route_id)?;
+        let mut editor = self.service.find_editor(route_id)?;
         if forward {
-            route.redo_operation()?;
+            editor.redo_operation()?;
         } else {
-            route.undo_operation()?;
+            editor.undo_operation()?;
         }
-        self.repository.update(&route)?;
+        self.service.update_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
-            polyline: route.polyline().clone(),
+            polyline: editor.route().polyline().clone(),
         })
     }
 
     pub fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        self.repository.delete(route_id)
+        self.service.delete_editor(route_id)
     }
 }
 

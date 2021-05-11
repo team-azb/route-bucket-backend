@@ -1,23 +1,12 @@
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{App, Error, HttpServer, Result};
-use diesel::mysql::MysqlConnection;
-use diesel::r2d2::{ConnectionManager, Pool};
 use once_cell::sync::Lazy;
-
-use actix_cors::Cors;
 use route_bucket_backend::controller::route::{BuildService, RouteController};
+use route_bucket_backend::domain::service::route::RouteService;
+use route_bucket_backend::infrastructure::repository::operation::OperationRepositoryMysql;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 use route_bucket_backend::usecase::route::RouteUseCase;
-
-fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
-
-    let manager = ConnectionManager::<MysqlConnection>::new(database_url);
-    Pool::builder()
-        .max_size(4)
-        .build(manager)
-        .expect("Failed to create pool")
-}
 
 // TODO: ControllerとRepositoryMysql系のstructに共通trait実装してcontrollerの初期化を↓みたいに共通化したい
 // fn create_static_controller<Controller, Repository>() -> Lazy<Controller> {
@@ -28,7 +17,7 @@ fn create_pool() -> Pool<ConnectionManager<MysqlConnection>> {
 //     })
 // }
 
-type StaticRouteController = Lazy<RouteController<RouteRepositoryMysql>>;
+type StaticRouteController = Lazy<RouteController<RouteRepositoryMysql, OperationRepositoryMysql>>;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
@@ -36,9 +25,10 @@ async fn main() -> Result<(), Error> {
 
     // staticじゃないと↓で怒られる
     static ROUTE_CONTROLLER: StaticRouteController = StaticRouteController::new(|| {
-        let pool = create_pool();
-        let repository = RouteRepositoryMysql::new(pool);
-        let usecase = RouteUseCase::new(repository);
+        let route_repository = RouteRepositoryMysql::new();
+        let operation_repository = OperationRepositoryMysql::new();
+        let service = RouteService::new(route_repository, operation_repository);
+        let usecase = RouteUseCase::new(service);
         RouteController::new(usecase)
     });
 
