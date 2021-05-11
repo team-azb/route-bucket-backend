@@ -16,22 +16,17 @@ impl LineString {
     }
 
     pub fn encode(&self) -> ApplicationResult<String> {
-        let line_str = geo::LineString::from_iter(self.0.clone().into_iter());
-        encode_coordinates(line_str, 5)
-            // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))
+        let line_str = geo::LineString::from(self.clone());
+        encode_coordinates(line_str, 5).map_err(|err| {
+            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
+        })
     }
 
     pub fn decode(poly_str: &String) -> ApplicationResult<LineString> {
-        let line_str = decode_polyline(poly_str, 5)
-            // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))?;
-        Ok(LineString::from(
-            line_str
-                .into_iter()
-                .map(|coord| Coordinate::new(coord.y, coord.x))
-                .collect::<ApplicationResult<Vec<_>>>()?,
-        ))
+        let line_str = decode_polyline(poly_str, 5).map_err(|err| {
+            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
+        })?;
+        LineString::try_from(line_str)
     }
 
     pub fn get(&self, i: usize) -> ApplicationResult<&Coordinate> {
@@ -89,6 +84,23 @@ impl LineString {
             self.0 = points.0;
             Ok(())
         }
+    }
+}
+
+impl From<LineString> for geo::LineString<f64> {
+    fn from(value: LineString) -> Self {
+        geo::LineString::from_iter(value.0.into_iter())
+    }
+}
+
+impl TryFrom<geo::LineString<f64>> for LineString {
+    type Error = ApplicationError;
+
+    fn try_from(value: geo::LineString<f64>) -> Result<Self, Self::Error> {
+        value
+            .into_iter()
+            .map(|coord| Coordinate::new(coord.y, coord.x))
+            .collect::<ApplicationResult<Vec<_>>>()
     }
 }
 
