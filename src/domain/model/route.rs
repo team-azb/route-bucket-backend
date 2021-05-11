@@ -89,3 +89,7 @@ pub trait RouteRepository {
 
     fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
 }
+
+pub trait RouteInterpolationApi {
+    fn interpolate(&self, route: &Route) -> ApplicationResult<String>;
+}

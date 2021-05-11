@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: mysql://root:password@db:3306/route_bucket_db
       RUST_LOG: info
+      OSRM_ROOT: osrm
     command: >
       bash -c "
         ./wait_for_db.sh &&
