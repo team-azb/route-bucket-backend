@@ -20,13 +20,11 @@ impl RouteInterpolationApi for OsrmApi {
         let target_url = format!(
             "{}/route/v1/bike/polyline({})?overview=full",
             self.api_root,
-            Polyline::from(route.waypoints().clone()).into()
+            String::from(Polyline::from(route.waypoints().clone()))
         );
-        let result = ureq::get(&target_url)
-            .call()
-            .map(|resp| resp.into_json::<serde_json::Value>().unwrap())
+        let result = reqwest::blocking::get(&target_url)
+            .map(|resp| resp.json::<serde_json::Value>().unwrap())
             .map_or(Polyline::from(route.waypoints().clone()), |map| {
-                println!("{}", map);
                 Polyline::from(
                     serde_json::from_value::<String>(map["routes"][0]["geometry"].clone()).unwrap(),
                 )

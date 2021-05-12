@@ -60,6 +60,7 @@ pub struct Route {
     id: RouteId,
     name: String,
     waypoints: LineString,
+    #[serde(skip_serializing)]
     op_num: usize,
 }
 
