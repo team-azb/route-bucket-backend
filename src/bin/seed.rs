@@ -1,5 +1,5 @@
+use route_bucket_backend::domain::model::linestring::{Coordinate, LineString};
 use route_bucket_backend::domain::model::operation::Operation;
-use route_bucket_backend::domain::model::polyline::{Coordinate, Polyline};
 use route_bucket_backend::domain::model::route::{Route, RouteEditor};
 use route_bucket_backend::domain::model::types::RouteId;
 use route_bucket_backend::domain::service::route::RouteService;

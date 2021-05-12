@@ -87,6 +87,7 @@ impl TryFrom<geo::LineString<f64>> for LineString {
             .into_iter()
             .map(|coord| Coordinate::new(coord.y, coord.x))
             .collect::<ApplicationResult<Vec<_>>>()
+            .map(LineString::from)
     }
 }
 
@@ -108,7 +109,7 @@ impl TryFrom<Polyline> for LineString {
     type Error = ApplicationError;
 
     fn try_from(value: Polyline) -> Result<Self, Self::Error> {
-        let line_str = decode_polyline(value.into(), 5).map_err(|err| {
+        let line_str = decode_polyline(&String::from(value), 5).map_err(|err| {
             ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
         })?;
         LineString::try_from(line_str)
