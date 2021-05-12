@@ -75,9 +75,11 @@ where
         )?;
         editor.push_operation(opst.try_into()?)?;
         self.service.update_editor(&editor)?;
+        let polyline = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
-            polyline: editor.route().waypoints().clone(),
+            waypoints: editor.route().waypoints().clone(),
+            polyline,
         })
     }
 
@@ -93,9 +95,11 @@ where
             editor.undo_operation()?;
         }
         self.service.update_route(&editor.route())?;
+        let polyline = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
-            polyline: editor.route().waypoints().clone(),
+            waypoints: editor.route().waypoints().clone(),
+            polyline,
         })
     }
 
@@ -135,7 +139,8 @@ pub struct NewPointRequest {
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub polyline: LineString,
+    pub waypoints: LineString,
+    pub polyline: Polyline,
 }
 
 #[derive(Getters, Deserialize)]

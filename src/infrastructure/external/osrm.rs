@@ -22,14 +22,23 @@ impl RouteInterpolationApi for OsrmApi {
             self.api_root,
             String::from(Polyline::from(route.waypoints().clone()))
         );
-        let result = reqwest::blocking::get(&target_url)
-            .map(|resp| resp.json::<serde_json::Value>().unwrap())
-            .map_or(Polyline::from(route.waypoints().clone()), |map| {
-                Polyline::from(
-                    serde_json::from_value::<String>(map["routes"][0]["geometry"].clone()).unwrap(),
-                )
-            });
+        let result = reqwest::blocking::get(target_url);
 
-        Ok(result)
+        // まだif let から&&で繋げない(https://github.com/rust-lang/rust/issues/53667)
+        let polyline = if let Ok(resp) = result {
+            if resp.status().is_success() {
+                let json = resp.json::<serde_json::Value>().unwrap();
+                Polyline::from(
+                    serde_json::from_value::<String>(json["routes"][0]["geometry"].clone())
+                        .unwrap(),
+                )
+            } else {
+                Polyline::from(route.waypoints().clone())
+            }
+        } else {
+            Polyline::from(route.waypoints().clone())
+        };
+
+        Ok(polyline)
     }
 }
