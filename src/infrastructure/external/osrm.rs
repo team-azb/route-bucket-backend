@@ -1,6 +1,6 @@
 use crate::domain::model::route::{Route, RouteInterpolationApi};
+use crate::domain::model::types::Polyline;
 use crate::utils::error::ApplicationResult;
-use std::collections::HashMap;
 
 /// osrmでルート補間をするための構造体
 pub struct OsrmApi {
@@ -16,18 +16,22 @@ impl OsrmApi {
 }
 
 impl RouteInterpolationApi for OsrmApi {
-    fn interpolate(&self, route: &Route) -> ApplicationResult<String> {
+    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline> {
         let target_url = format!(
             "{}/route/v1/bike/polyline({})?overview=full",
             self.api_root,
-            route.polyline().encode()?
+            Polyline::from(route.waypoints().clone()).into()
         );
-        let resp = ureq::get(&target_url)
+        let result = ureq::get(&target_url)
             .call()
-            .unwrap()
-            .into_json::<HashMap<String, HashMap<String, String>>>()
-            .unwrap();
-        println!("{}", resp["routes"]["geometry"]);
-        todo!()
+            .map(|resp| resp.into_json::<serde_json::Value>().unwrap())
+            .map_or(Polyline::from(route.waypoints().clone()), |map| {
+                println!("{}", map);
+                Polyline::from(
+                    serde_json::from_value::<String>(map["routes"][0]["geometry"].clone()).unwrap(),
+                )
+            });
+
+        Ok(result)
     }
 }

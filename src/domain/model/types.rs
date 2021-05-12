@@ -28,6 +28,12 @@ impl RouteId {
 #[derive(Display, Debug, Clone, Serialize, Deserialize)]
 pub struct Polyline(String);
 
+impl Polyline {
+    pub fn new() -> Self {
+        Self(String::new())
+    }
+}
+
 impl From<String> for Polyline {
     fn from(value: String) -> Self {
         Self(value)

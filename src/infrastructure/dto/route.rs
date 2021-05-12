@@ -1,8 +1,8 @@
-use crate::domain::model::polyline::Polyline;
 use crate::domain::model::route::Route;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
+use std::convert::TryInto;
 
 /// ルートのdto構造体
 #[derive(Identifiable, Queryable, Insertable, Debug, AsChangeset)]
@@ -19,7 +19,7 @@ impl RouteDto {
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
-            Polyline::decode(&self.polyline)?,
+            Polyline::from(self.polyline.clone()).try_into()?,
             self.operation_pos as usize,
         ))
     }
@@ -28,7 +28,7 @@ impl RouteDto {
         Ok(RouteDto {
             id: route.id().to_string(),
             name: route.name().clone(),
-            polyline: route.polyline().encode()?,
+            polyline: Polyline::from(route.waypoints().clone()).into(),
             operation_pos: *route.op_num() as u32,
         })
     }

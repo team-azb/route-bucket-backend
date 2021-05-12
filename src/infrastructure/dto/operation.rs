@@ -1,6 +1,5 @@
 use crate::domain::model::operation::{Operation, OperationStruct};
-use crate::domain::model::polyline::Polyline;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;
 use crate::utils::error::ApplicationResult;
@@ -26,7 +25,7 @@ impl OperationDto {
             self.pos.map(|u| u as usize),
             None,
             None,
-            Some(Polyline::decode(&self.polyline)?),
+            Some(Polyline::from(self.polyline.clone()).try_into()?),
         )
         .map(OperationStruct::try_into)?
     }
@@ -42,7 +41,7 @@ impl OperationDto {
             index,
             code: opst.code().clone(),
             pos: opst.pos().clone().map(|u| u as u32),
-            polyline: opst.polyline().encode()?,
+            polyline: Polyline::from(opst.polyline().clone()).into(),
         })
     }
 }

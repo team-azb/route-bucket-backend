@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::model::linestring::LineString;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::polyline::Polyline;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Getters)]
@@ -92,5 +91,5 @@ pub trait RouteRepository {
 }
 
 pub trait RouteInterpolationApi {
-    fn interpolate(&self, route: &Route) -> ApplicationResult<String>;
+    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline>;
 }
