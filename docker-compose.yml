@@ -27,6 +27,7 @@ services:
       DATABASE_URL: mysql://root:password@db:3306/route_bucket_db
       RUST_LOG: info
       OSRM_ROOT: http://osrm:5000
+      ORS_ROOT: http://ors:8080
     command: >
       bash -c "
         ./wait_for_db.sh &&
@@ -35,7 +36,7 @@ services:
         /app/target/release/route-bucket-backend"
     depends_on:
       - db
-      - osrm
+      - ors
 
   swagger:
     image: swaggerapi/swagger-ui:v3.45.1
@@ -54,3 +55,16 @@ services:
       context: .
       dockerfile: ./docker/osrm.Dockerfile
     command: osrm-routed --algorithm mld /data/map.osm.pbf
+
+  ors:
+    ports:
+      - "12080:8080"
+      - "9001:9001"
+    build:
+      context: ./
+      dockerfile: ./docker/ors.Dockerfile
+    environment:
+      - BUILD_GRAPHS=True  # Forces the container to rebuild the graphs, e.g. when PBF is changed
+      - "JAVA_OPTS=-Djava.awt.headless=true -server -XX:TargetSurvivorRatio=75 -XX:SurvivorRatio=64 -XX:MaxTenuringThreshold=3 -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -XX:ParallelGCThreads=4 -Xms1g -Xmx2g"
+      - "CATALINA_OPTS=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9001 -Dcom.sun.management.jmxremote.rmi.port=9001 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=localhost"
+
