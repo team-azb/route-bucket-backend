@@ -1,0 +1,13 @@
+Waypoints:
+  type: array
+  items:
+    $ref: ./coordinate.yml#/Coordinate
+  description: |
+    ユーザーの入力した点の配列
+
+LineString:
+  type: array
+  items:
+    $ref: ./coordinate.yml#/Coordinate
+  description: |
+    waypointの間を補間した配列

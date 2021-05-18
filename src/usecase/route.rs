@@ -1,12 +1,12 @@
 use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::operation::{OperationRepository, OperationStruct};
 use crate::domain::model::route::{Route, RouteInterpolationApi, RouteRepository};
-use crate::domain::model::types::{Polyline, RouteId};
+use crate::domain::model::types::RouteId;
 use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
 pub struct RouteUseCase<R, O, I> {
     service: RouteService<R, O, I>,
@@ -25,7 +25,10 @@ where
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
         let polyline = self.service.interpolate_route(&route)?;
-        Ok(RouteGetResponse { route, polyline })
+        Ok(RouteGetResponse {
+            route,
+            linestring: LineString::try_from(polyline)?,
+        })
     }
 
     pub fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
@@ -79,7 +82,7 @@ where
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            polyline,
+            linestring: LineString::try_from(polyline)?,
         })
     }
 
@@ -99,7 +102,7 @@ where
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            polyline,
+            linestring: LineString::try_from(polyline)?,
         })
     }
 
@@ -112,7 +115,7 @@ where
 pub struct RouteGetResponse {
     #[serde(flatten)]
     route: Route,
-    polyline: Polyline,
+    linestring: LineString,
 }
 
 #[derive(Serialize)]
@@ -140,7 +143,7 @@ pub struct NewPointRequest {
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
     pub waypoints: LineString,
-    pub polyline: Polyline,
+    pub linestring: LineString,
 }
 
 #[derive(Getters, Deserialize)]

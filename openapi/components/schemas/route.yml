@@ -1,7 +1,7 @@
 Route:
   type: object
   description: Route
-  required: [id, name]
+  required: [id, name, waypoints]
   properties:
     id:
       type: string
@@ -11,13 +11,12 @@ Route:
       maxLength: 50
       description: ルートの名前
     waypoints:
-      $ref: ./polyline.yml#/Polyline
-      description: ユーザーが打った点のリスト
+      $ref: ./linestring.yml#/Waypoints
 
 RouteWithPolyline:
   type: object
   description: Polyline付きのRoute
-  required: [ id, name ]
+  required: [ id, name, waypoints, linestring ]
   properties:
     id:
       type: string
@@ -27,8 +26,6 @@ RouteWithPolyline:
       maxLength: 50
       description: ルートの名前
     waypoints:
-      $ref: ./polyline.yml#/Polyline
-      description: ユーザーが打った点のリスト
-    polyline:
-      $ref: ./polyline.yml#/Polyline
-      description: ルート上の座標のリスト
+      $ref: ./linestring.yml#/Waypoints
+    linestring:
+      $ref: ./linestring.yml#/LineString

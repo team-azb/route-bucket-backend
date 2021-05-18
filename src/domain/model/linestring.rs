@@ -7,7 +7,6 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(into = "Polyline")]
 pub struct LineString(Vec<Coordinate>);
 
 impl LineString {
