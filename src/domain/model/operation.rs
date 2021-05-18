@@ -149,13 +149,13 @@ impl TryFrom<OperationStruct> for Operation {
                 pos: value.pos.ok_or(ApplicationError::DomainError(
                     "No pos given for Operation::Add".into(),
                 ))?,
-                coord: value.polyline.get(0)?.clone(),
+                coord: value.polyline.get(1)?.clone(),
             },
             "rm" => Operation::Remove {
                 pos: value.pos.ok_or(ApplicationError::DomainError(
                     "No pos given for Operation::Remove".into(),
                 ))?,
-                coord: value.polyline.get(1)?.clone(),
+                coord: value.polyline.get(0)?.clone(),
             },
             "mv" => Operation::Move {
                 pos: value.pos.ok_or(ApplicationError::DomainError(
