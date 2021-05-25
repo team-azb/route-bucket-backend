@@ -4,6 +4,7 @@ use route_bucket_backend::domain::model::route::{Route, RouteEditor};
 use route_bucket_backend::domain::model::types::RouteId;
 use route_bucket_backend::domain::service::route::RouteService;
 use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
+use route_bucket_backend::infrastructure::external::srtm::SrtmReader;
 use route_bucket_backend::infrastructure::repository::operation::OperationRepositoryMysql;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 
@@ -32,7 +33,8 @@ fn main() {
     let route_repository = RouteRepositoryMysql::new();
     let op_repository = OperationRepositoryMysql::new();
     let osrm_api = OsrmApi::new();
-    let route_service = RouteService::new(route_repository, op_repository, osrm_api);
+    let srtm_reader = SrtmReader::new().unwrap();
+    let route_service = RouteService::new(route_repository, op_repository, osrm_api, srtm_reader);
 
     let sample1 = Route::new(RouteId::new(), &String::from("sample1"), linestring![], 0);
     let sample2 = &mut RouteEditor::new(
