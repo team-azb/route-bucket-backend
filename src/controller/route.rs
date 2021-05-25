@@ -1,6 +1,7 @@
 use actix_web::{dev, web, HttpResponse, Result, Scope};
 use once_cell::sync::Lazy;
 
+use crate::domain::model::linestring::ElevationApi;
 use crate::domain::model::operation::OperationRepository;
 use crate::domain::model::route::{RouteInterpolationApi, RouteRepository};
 use crate::domain::model::types::RouteId;
@@ -8,17 +9,18 @@ use crate::usecase::route::{
     NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
 
-pub struct RouteController<R, O, I> {
-    usecase: RouteUseCase<R, O, I>,
+pub struct RouteController<R, O, I, E> {
+    usecase: RouteUseCase<R, O, I, E>,
 }
 
-impl<R, I, O> RouteController<R, O, I>
+impl<R, I, O, E> RouteController<R, O, I, E>
 where
     R: RouteRepository,
     O: OperationRepository,
     I: RouteInterpolationApi,
+    E: ElevationApi,
 {
-    pub fn new(usecase: RouteUseCase<R, O, I>) -> Self {
+    pub fn new(usecase: RouteUseCase<R, O, I, E>) -> Self {
         Self { usecase }
     }
 
@@ -84,8 +86,12 @@ pub trait BuildService<S: dev::HttpServiceFactory + 'static> {
     fn build_service(self) -> S;
 }
 
-impl<R: RouteRepository, O: OperationRepository, I: RouteInterpolationApi> BuildService<Scope>
-    for &'static Lazy<RouteController<R, O, I>>
+impl<R, O, I, E> BuildService<Scope> for &'static Lazy<RouteController<R, O, I, E>>
+where
+    R: RouteRepository,
+    O: OperationRepository,
+    I: RouteInterpolationApi,
+    E: ElevationApi,
 {
     fn build_service(self) -> Scope {
         // TODO: /の過不足は許容する ex) "/{id}/"

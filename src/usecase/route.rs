@@ -1,4 +1,4 @@
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::linestring::{Coordinate, ElevationApi, LineString};
 use crate::domain::model::operation::{OperationRepository, OperationStruct};
 use crate::domain::model::route::{Route, RouteInterpolationApi, RouteRepository};
 use crate::domain::model::types::RouteId;
@@ -6,29 +6,27 @@ use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 
-pub struct RouteUseCase<R, O, I> {
-    service: RouteService<R, O, I>,
+pub struct RouteUseCase<R, O, I, E> {
+    service: RouteService<R, O, I, E>,
 }
 
-impl<R, O, I> RouteUseCase<R, O, I>
+impl<R, O, I, E> RouteUseCase<R, O, I, E>
 where
     R: RouteRepository,
     O: OperationRepository,
     I: RouteInterpolationApi,
+    E: ElevationApi,
 {
-    pub fn new(service: RouteService<R, O, I>) -> Self {
+    pub fn new(service: RouteService<R, O, I, E>) -> Self {
         Self { service }
     }
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
-        let polyline = self.service.interpolate_route(&route)?;
-        Ok(RouteGetResponse {
-            route,
-            linestring: LineString::try_from(polyline)?,
-        })
+        let linestring = self.service.interpolate_route(&route)?;
+        Ok(RouteGetResponse { route, linestring })
     }
 
     pub fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
@@ -78,11 +76,11 @@ where
         )?;
         editor.push_operation(opst.try_into()?)?;
         self.service.update_editor(&editor)?;
-        let polyline = self.service.interpolate_route(&editor.route())?;
+        let linestring = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            linestring: LineString::try_from(polyline)?,
+            linestring,
         })
     }
 
@@ -98,11 +96,11 @@ where
             editor.undo_operation()?;
         }
         self.service.update_route(&editor.route())?;
-        let polyline = self.service.interpolate_route(&editor.route())?;
+        let linestring = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            linestring: LineString::try_from(polyline)?,
+            linestring,
         })
     }
 
