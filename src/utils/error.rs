@@ -16,6 +16,9 @@ pub enum ApplicationError {
     #[display(fmt = "DomainError: {}", _0)]
     DomainError(String),
 
+    #[display(fmt = "ExternalError: {}", _0)]
+    ExternalError(String),
+
     #[display(fmt = "InvalidOperation: {}", _0)]
     InvalidOperation(&'static str),
 
@@ -35,12 +38,13 @@ pub enum ApplicationError {
 impl ResponseError for ApplicationError {
     fn status_code(&self) -> http::StatusCode {
         match *self {
-            ApplicationError::DataBaseError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
-            ApplicationError::DomainError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
             ApplicationError::InvalidOperation(..) => http::StatusCode::BAD_REQUEST,
             ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
-            ApplicationError::UseCaseError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,
-            ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            ApplicationError::DataBaseError(..)
+            | ApplicationError::DomainError(..)
+            | ApplicationError::ExternalError(..)
+            | ApplicationError::UseCaseError { .. }
+            | ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
     fn error_response(&self) -> HttpResponse {
