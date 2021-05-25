@@ -1,10 +1,11 @@
-use crate::domain::model::types::{Latitude, Longitude, Polyline};
+use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::iter::FromIterator;
+use std::slice::{Iter, IterMut};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct LineString(Vec<Coordinate>);
@@ -70,6 +71,14 @@ impl LineString {
             Ok(())
         }
     }
+
+    pub fn iter(&self) -> Iter<Coordinate> {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<Coordinate> {
+        self.0.iter_mut()
+    }
 }
 
 impl From<LineString> for geo::LineString<f64> {
@@ -121,6 +130,8 @@ impl TryFrom<Polyline> for LineString {
 pub struct Coordinate {
     latitude: Latitude,
     longitude: Longitude,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    elevation: Option<Elevation>,
 }
 
 impl Coordinate {
@@ -128,8 +139,19 @@ impl Coordinate {
         let coord = Coordinate {
             latitude: Latitude::try_from(lat)?,
             longitude: Longitude::try_from(lon)?,
+            elevation: None,
         };
         Ok(coord)
+    }
+
+    pub fn set_elevation(&mut self, elevation: Option<Elevation>) -> ApplicationResult<()> {
+        (self.elevation == None)
+            .then(|| {
+                self.elevation = elevation;
+            })
+            .ok_or(ApplicationError::DomainError(
+                "Elevation already set for Coordinate.".into(),
+            ))
     }
 }
 
@@ -140,4 +162,14 @@ impl From<Coordinate> for geo::Coordinate<f64> {
             y: coord.latitude.value(),
         }
     }
+}
+
+impl From<Coordinate> for (f64, f64) {
+    fn from(coord: Coordinate) -> (f64, f64) {
+        (coord.latitude.value(), coord.longitude.value())
+    }
+}
+
+pub trait ElevationApi {
+    fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
 }
