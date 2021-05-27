@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: mysql://root:password@db:3306/route_bucket_db
       RUST_LOG: info
+      OSRM_ROOT: http://osrm:5000
     command: >
       bash -c "
         ./wait_for_db.sh &&
@@ -34,8 +35,7 @@ services:
         /app/target/release/route-bucket-backend"
     depends_on:
       - db
-      # not yet
-      # - osrm
+      - osrm
 
   swagger:
     image: swaggerapi/swagger-ui:v3.45.1

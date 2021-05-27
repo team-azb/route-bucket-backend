@@ -1,8 +1,9 @@
+use route_bucket_backend::domain::model::linestring::{Coordinate, LineString};
 use route_bucket_backend::domain::model::operation::Operation;
-use route_bucket_backend::domain::model::polyline::{Coordinate, Polyline};
 use route_bucket_backend::domain::model::route::{Route, RouteEditor};
 use route_bucket_backend::domain::model::types::RouteId;
 use route_bucket_backend::domain::service::route::RouteService;
+use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
 use route_bucket_backend::infrastructure::repository::operation::OperationRepositoryMysql;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 
@@ -12,12 +13,12 @@ macro_rules! coord {
     };
 }
 
-macro_rules! polyline {
+macro_rules! linestring {
     [] => {
-        Polyline::from_vec(vec![])
+        LineString::from(vec![])
     };
     [ $(($lat: expr, $lon: expr)),+ $(,)?] => {
-        Polyline::from_vec(vec![
+        LineString::from(vec![
             $(
                 coord!($lat, $lon),
             )+
@@ -30,37 +31,68 @@ fn main() {
 
     let route_repository = RouteRepositoryMysql::new();
     let op_repository = OperationRepositoryMysql::new();
-    let route_service = RouteService::new(route_repository, op_repository);
+    let osrm_api = OsrmApi::new();
+    let route_service = RouteService::new(route_repository, op_repository, osrm_api);
 
-    let sample1 = Route::new(RouteId::new(), &String::from("sample1"), polyline![], 0);
-    let sample2 = RouteEditor::new(
+    let sample1 = Route::new(RouteId::new(), &String::from("sample1"), linestring![], 0);
+    let sample2 = &mut RouteEditor::new(
         Route::new(
             RouteId::new(),
-            &"sample2".into(),
-            polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
-            4,
+            &"sample2: 皇居ラン".into(),
+            linestring![],
+            0,
         ),
-        vec![
-            Operation::InitWithList {
-                list: polyline![(10.0, 110.0), (50.0, 150.0)],
-            },
-            Operation::Add {
-                pos: 0,
-                coord: coord!(0.0, 100.0),
-            },
-            Operation::Add {
-                pos: 2,
-                coord: coord!(20.0, 120.0),
-            },
-            Operation::Remove {
-                pos: 3,
-                coord: coord!(50.0, 150.0),
-            },
-            Operation::Clear {
-                org_list: polyline![(0.0, 100.0), (10.0, 110.0), (20.0, 120.0)],
-            },
-        ],
+        vec![],
     );
+    sample2
+        .push_operation(Operation::Add {
+            pos: 0,
+            coord: coord!(35.68136, 139.75875),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Add {
+            pos: 1,
+            coord: coord!(35.69053, 139.75681),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Add {
+            pos: 2,
+            coord: coord!(35.69510, 139.75139),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Add {
+            pos: 3,
+            coord: coord!(35.68942, 139.74547),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Add {
+            pos: 4,
+            coord: coord!(35.68418, 139.74424),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Add {
+            pos: 5,
+            coord: coord!(35.68136, 139.75875),
+        })
+        .unwrap();
+    sample2
+        .push_operation(Operation::Clear {
+            org_list: linestring![
+                (35.68136, 139.75875),
+                (35.69053, 139.75681),
+                (35.69510, 139.75139),
+                (35.68942, 139.74547),
+                (35.68418, 139.74424),
+                (35.68136, 139.75875)
+            ],
+        })
+        .unwrap();
+    sample2.undo_operation().unwrap();
 
     route_service.register_route(&sample1).unwrap();
     log::info!("Route {} added!", sample1.id());

@@ -1,4 +1,4 @@
-use crate::domain::model::polyline::{Coordinate, Polyline};
+use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
@@ -21,16 +21,16 @@ pub enum Operation {
         to: Coordinate,
     },
     Clear {
-        org_list: Polyline,
+        org_list: LineString,
     },
     // reverse operation for Clear
     InitWithList {
-        list: Polyline,
+        list: LineString,
     },
 }
 
 impl Operation {
-    pub fn apply(&self, polyline: &mut Polyline) -> ApplicationResult<()> {
+    pub fn apply(&self, polyline: &mut LineString) -> ApplicationResult<()> {
         match self {
             Self::Add { pos, coord } => Ok(polyline.insert(*pos, coord.clone())?),
             Self::Remove { pos, coord } => {
@@ -62,24 +62,16 @@ impl Operation {
     }
 
     pub fn reverse(&self) -> Operation {
-        match self {
-            Self::Add { pos, coord } => Self::Remove {
-                pos: *pos,
-                coord: coord.clone(),
-            },
-            Self::Remove { pos, coord } => Self::Add {
-                pos: *pos,
-                coord: coord.clone(),
-            },
+        match self.clone() {
+            Self::Add { pos, coord } => Self::Remove { pos, coord },
+            Self::Remove { pos, coord } => Self::Add { pos, coord },
             Self::Move { pos, from, to } => Self::Move {
-                pos: *pos,
-                from: to.clone(),
-                to: from.clone(),
+                pos,
+                from: to,
+                to: from,
             },
-            Self::Clear { org_list: list } => Self::InitWithList { list: list.clone() },
-            Self::InitWithList { list } => Self::Clear {
-                org_list: list.clone(),
-            },
+            Self::Clear { org_list: list } => Self::InitWithList { list },
+            Self::InitWithList { list } => Self::Clear { org_list: list },
         }
     }
 }
@@ -90,7 +82,7 @@ impl Operation {
 pub struct OperationStruct {
     code: String,
     pos: Option<usize>,
-    polyline: Polyline,
+    polyline: LineString,
 }
 
 impl OperationStruct {
@@ -99,7 +91,7 @@ impl OperationStruct {
         pos: Option<usize>,
         org_coord: Option<Coordinate>,
         new_coord: Option<Coordinate>,
-        polyline: Option<Polyline>,
+        polyline: Option<LineString>,
     ) -> ApplicationResult<Self> {
         let polyline = if vec!["clear", "init"].contains(&(&code as &str)) {
             polyline.ok_or(ApplicationError::DomainError(format!(
@@ -107,16 +99,14 @@ impl OperationStruct {
                 code
             )))?
         } else {
-            org_coord.map_or(
-                polyline.ok_or(ApplicationError::DomainError(
+            org_coord
+                .clone()
+                .or(new_coord.clone())
+                .map(|c1| LineString::from(vec![c1, new_coord.or(org_coord).unwrap()]))
+                .or(polyline)
+                .ok_or(ApplicationError::DomainError(
                     "Must give new_coord or org_coord or polyline for OperationStruct::new".into(),
-                ))?,
-                |c1| {
-                    new_coord
-                        .map_or(vec![c1.clone()], |c2| vec![c1.clone(), c2.clone()])
-                        .into()
-                },
-            )
+                ))?
         };
         Ok(Self {
             code,
@@ -159,7 +149,7 @@ impl TryFrom<OperationStruct> for Operation {
                 pos: value.pos.ok_or(ApplicationError::DomainError(
                     "No pos given for Operation::Add".into(),
                 ))?,
-                coord: value.polyline.get(0)?.clone(),
+                coord: value.polyline.get(1)?.clone(),
             },
             "rm" => Operation::Remove {
                 pos: value.pos.ok_or(ApplicationError::DomainError(

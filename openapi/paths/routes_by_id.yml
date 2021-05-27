@@ -12,7 +12,7 @@ get:
       content:
         application/json:
           schema:
-            $ref: ../components/schemas/route.yml#/Route
+            $ref: ../components/schemas/route.yml#/RouteWithPolyline
 
 delete:
   operationId: routesDelete

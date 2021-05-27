@@ -1,18 +1,25 @@
 use crate::domain::model::operation::OperationRepository;
-use crate::domain::model::route::{Route, RouteEditor, RouteRepository};
-use crate::domain::model::types::RouteId;
+use crate::domain::model::route::{Route, RouteEditor, RouteInterpolationApi, RouteRepository};
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::utils::error::ApplicationResult;
 
-pub struct RouteService<R: RouteRepository, O: OperationRepository> {
+pub struct RouteService<R, O, I> {
     route_repository: R,
     operation_repository: O,
+    interpolation_api: I,
 }
 
-impl<R: RouteRepository, O: OperationRepository> RouteService<R, O> {
-    pub fn new(route_repository: R, operation_repository: O) -> Self {
+impl<R, O, I> RouteService<R, O, I>
+where
+    R: RouteRepository,
+    O: OperationRepository,
+    I: RouteInterpolationApi,
+{
+    pub fn new(route_repository: R, operation_repository: O, interpolation_api: I) -> Self {
         Self {
             route_repository,
             operation_repository,
+            interpolation_api,
         }
     }
 
@@ -54,5 +61,9 @@ impl<R: RouteRepository, O: OperationRepository> RouteService<R, O> {
     pub fn delete_editor(&self, route_id: &RouteId) -> ApplicationResult<()> {
         self.route_repository.delete(route_id)?;
         self.operation_repository.delete_by_route_id(route_id)
+    }
+
+    pub fn interpolate_route(&self, route: &Route) -> ApplicationResult<Polyline> {
+        self.interpolation_api.interpolate(route)
     }
 }

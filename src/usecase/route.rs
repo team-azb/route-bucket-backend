@@ -1,34 +1,44 @@
+use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::operation::{OperationRepository, OperationStruct};
-use crate::domain::model::polyline::{Coordinate, Polyline};
-use crate::domain::model::route::{Route, RouteRepository};
+use crate::domain::model::route::{Route, RouteInterpolationApi, RouteRepository};
 use crate::domain::model::types::RouteId;
 use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
-pub struct RouteUseCase<R: RouteRepository, O: OperationRepository> {
-    service: RouteService<R, O>,
+pub struct RouteUseCase<R, O, I> {
+    service: RouteService<R, O, I>,
 }
 
-impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
-    pub fn new(service: RouteService<R, O>) -> Self {
+impl<R, O, I> RouteUseCase<R, O, I>
+where
+    R: RouteRepository,
+    O: OperationRepository,
+    I: RouteInterpolationApi,
+{
+    pub fn new(service: RouteService<R, O, I>) -> Self {
         Self { service }
     }
 
-    pub fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
-        self.service.find_route(route_id)
+    pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
+        let route = self.service.find_route(route_id)?;
+        let polyline = self.service.interpolate_route(&route)?;
+        Ok(RouteGetResponse {
+            route,
+            linestring: LineString::try_from(polyline)?,
+        })
     }
 
-    pub fn find_all(&self) -> ApplicationResult<RouteGetAllRequest> {
-        Ok(RouteGetAllRequest {
+    pub fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
+        Ok(RouteGetAllResponse {
             routes: self.service.find_all_routes()?,
         })
     }
 
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route = Route::new(RouteId::new(), req.name(), Polyline::new(), 0);
+        let route = Route::new(RouteId::new(), req.name(), LineString::new(), 0);
 
         self.service.register_route(&route)?;
 
@@ -53,7 +63,7 @@ impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
     ) -> ApplicationResult<RouteOperationResponse> {
         let mut editor = self.service.find_editor(route_id)?;
 
-        let org_polyline = editor.route().polyline().clone();
+        let org_polyline = editor.route().waypoints().clone();
 
         let org_coord = pos.map_or(None, |pos| {
             org_polyline.get(pos).ok().map(Coordinate::clone)
@@ -68,9 +78,11 @@ impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
         )?;
         editor.push_operation(opst.try_into()?)?;
         self.service.update_editor(&editor)?;
+        let polyline = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
-            polyline: editor.route().polyline().clone(),
+            waypoints: editor.route().waypoints().clone(),
+            linestring: LineString::try_from(polyline)?,
         })
     }
 
@@ -86,9 +98,11 @@ impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
             editor.undo_operation()?;
         }
         self.service.update_route(&editor.route())?;
+        let polyline = self.service.interpolate_route(&editor.route())?;
 
         Ok(RouteOperationResponse {
-            polyline: editor.route().polyline().clone(),
+            waypoints: editor.route().waypoints().clone(),
+            linestring: LineString::try_from(polyline)?,
         })
     }
 
@@ -98,8 +112,15 @@ impl<R: RouteRepository, O: OperationRepository> RouteUseCase<R, O> {
 }
 
 #[derive(Serialize)]
-pub struct RouteGetAllRequest {
-    pub routes: Vec<Route>,
+pub struct RouteGetResponse {
+    #[serde(flatten)]
+    route: Route,
+    linestring: LineString,
+}
+
+#[derive(Serialize)]
+pub struct RouteGetAllResponse {
+    routes: Vec<Route>,
 }
 
 #[derive(Getters, Deserialize)]
@@ -121,7 +142,8 @@ pub struct NewPointRequest {
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub polyline: Polyline,
+    pub waypoints: LineString,
+    pub linestring: LineString,
 }
 
 #[derive(Getters, Deserialize)]

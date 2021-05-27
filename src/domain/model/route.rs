@@ -1,9 +1,9 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::model::linestring::LineString;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::polyline::Polyline;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Getters)]
@@ -19,7 +19,7 @@ impl RouteEditor {
     }
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
-        op.apply(&mut self.route.polyline)?;
+        op.apply(&mut self.route.waypoints)?;
         // pos以降の要素は全て捨てる
         self.op_list.truncate(self.route.op_num);
         self.op_list.push(op);
@@ -29,7 +29,7 @@ impl RouteEditor {
 
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
         if self.route.op_num < self.op_list.len() {
-            self.op_list[self.route.op_num].apply(&mut self.route.polyline)?;
+            self.op_list[self.route.op_num].apply(&mut self.route.waypoints)?;
             self.route.op_num += 1;
             Ok(())
         } else {
@@ -44,7 +44,7 @@ impl RouteEditor {
             self.route.op_num -= 1;
             self.op_list[self.route.op_num]
                 .reverse()
-                .apply(&mut self.route.polyline)?;
+                .apply(&mut self.route.waypoints)?;
             Ok(())
         } else {
             Err(ApplicationError::InvalidOperation(
@@ -59,16 +59,17 @@ impl RouteEditor {
 pub struct Route {
     id: RouteId,
     name: String,
-    polyline: Polyline,
+    waypoints: LineString,
+    #[serde(skip_serializing)]
     op_num: usize,
 }
 
 impl Route {
-    pub fn new(id: RouteId, name: &String, polyline: Polyline, op_num: usize) -> Route {
+    pub fn new(id: RouteId, name: &String, waypoints: LineString, op_num: usize) -> Route {
         Route {
             id,
             name: name.clone(),
-            polyline,
+            waypoints,
             op_num,
         }
     }
@@ -88,4 +89,8 @@ pub trait RouteRepository {
     fn update(&self, route: &Route) -> ApplicationResult<()>;
 
     fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
+}
+
+pub trait RouteInterpolationApi {
+    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline>;
 }

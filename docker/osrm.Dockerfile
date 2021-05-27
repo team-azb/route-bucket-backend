@@ -10,5 +10,5 @@ RUN mkdir /data && \
 
 # 地図データの前処理
 RUN osrm-extract -p /opt/bicycle.lua /data/map.osm.pbf && \
-    osrm-partition /data/map.osm.pbf && \
-    osrm-customize /data/map.osm.pbf
+    osrm-partition /data/map.osrm && \
+    osrm-customize /data/map.osrm

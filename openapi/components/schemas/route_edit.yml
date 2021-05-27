@@ -1,7 +1,9 @@
 RouteEditResponse:
   type: object
   description: Route編集レスポンス
-  required: [points]
+  required: [waypoints, linestring]
   properties:
-    polyline:
-      $ref: ./polyline.yml#/Polyline
+    waypoints:
+      $ref: ./linestring.yml#/Waypoints
+    linestring:
+      $ref: ./linestring.yml#/LineString

@@ -1,6 +1,5 @@
-use crate::domain::model::types::{Latitude, Longitude};
+use crate::domain::model::types::{Latitude, Longitude, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use geo::LineString;
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
@@ -8,31 +7,11 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(into = "String")]
-pub struct Polyline(Vec<Coordinate>);
+pub struct LineString(Vec<Coordinate>);
 
-impl Polyline {
-    pub fn new() -> Polyline {
-        Polyline(Vec::new())
-    }
-
-    pub fn encode(&self) -> ApplicationResult<String> {
-        let line_str: LineString<f64> = LineString::from_iter(self.0.clone().into_iter());
-        encode_coordinates(line_str, 5)
-            // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))
-    }
-
-    pub fn decode(poly_str: &String) -> ApplicationResult<Polyline> {
-        let line_str = decode_polyline(poly_str, 5)
-            // TODO: encode_coordinatesのErr(String)も表示する
-            .map_err(|_| ApplicationError::DomainError("failed to encode polyline".into()))?;
-        Ok(Polyline::from(
-            line_str
-                .into_iter()
-                .map(|coord| Coordinate::new(coord.y, coord.x))
-                .collect::<ApplicationResult<Vec<_>>>()?,
-        ))
+impl LineString {
+    pub fn new() -> LineString {
+        LineString(Vec::new())
     }
 
     pub fn get(&self, i: usize) -> ApplicationResult<&Coordinate> {
@@ -76,12 +55,12 @@ impl Polyline {
         }
     }
 
-    pub fn clear(&mut self) -> Polyline {
-        std::mem::replace(self, Polyline::new())
+    pub fn clear(&mut self) -> LineString {
+        std::mem::replace(self, LineString::new())
     }
 
     // only when points is empty
-    pub fn init_if_empty(&mut self, points: Polyline) -> ApplicationResult<()> {
+    pub fn init_if_empty(&mut self, points: LineString) -> ApplicationResult<()> {
         if !self.0.is_empty() {
             Err(ApplicationError::DomainError(
                 "Failed to set points. self.points was already inited.".into(),
@@ -93,17 +72,46 @@ impl Polyline {
     }
 }
 
-impl From<Vec<Coordinate>> for Polyline {
-    fn from(points: Vec<Coordinate>) -> Self {
-        Polyline(points)
+impl From<LineString> for geo::LineString<f64> {
+    fn from(value: LineString) -> Self {
+        geo::LineString::from_iter(value.0.into_iter())
     }
 }
 
-impl Into<String> for Polyline {
-    fn into(self) -> String {
-        // Coordinateで範囲チェックしてるので
-        // encode_coordinatesのerrには引っかからないはず
-        self.encode().unwrap()
+impl TryFrom<geo::LineString<f64>> for LineString {
+    type Error = ApplicationError;
+
+    fn try_from(value: geo::LineString<f64>) -> Result<Self, Self::Error> {
+        value
+            .into_iter()
+            .map(|coord| Coordinate::new(coord.y, coord.x))
+            .collect::<ApplicationResult<Vec<_>>>()
+            .map(LineString::from)
+    }
+}
+
+impl From<Vec<Coordinate>> for LineString {
+    fn from(points: Vec<Coordinate>) -> Self {
+        LineString(points)
+    }
+}
+
+impl From<LineString> for Polyline {
+    fn from(value: LineString) -> Self {
+        let line_str = geo::LineString::from(value);
+        // 範囲チェックはCoordinateで行っているので、unwrapで大丈夫
+        encode_coordinates(line_str, 5).map(Polyline::from).unwrap()
+    }
+}
+
+impl TryFrom<Polyline> for LineString {
+    type Error = ApplicationError;
+
+    fn try_from(value: Polyline) -> Result<Self, Self::Error> {
+        let line_str = decode_polyline(&String::from(value), 5).map_err(|err| {
+            ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
+        })?;
+        LineString::try_from(line_str)
     }
 }
 

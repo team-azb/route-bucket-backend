@@ -4,6 +4,7 @@ use actix_web::{App, Error, HttpServer, Result};
 use once_cell::sync::Lazy;
 use route_bucket_backend::controller::route::{BuildService, RouteController};
 use route_bucket_backend::domain::service::route::RouteService;
+use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
 use route_bucket_backend::infrastructure::repository::operation::OperationRepositoryMysql;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
 use route_bucket_backend::usecase::route::RouteUseCase;
@@ -17,7 +18,8 @@ use route_bucket_backend::usecase::route::RouteUseCase;
 //     })
 // }
 
-type StaticRouteController = Lazy<RouteController<RouteRepositoryMysql, OperationRepositoryMysql>>;
+type StaticRouteController =
+    Lazy<RouteController<RouteRepositoryMysql, OperationRepositoryMysql, OsrmApi>>;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
@@ -27,7 +29,8 @@ async fn main() -> Result<(), Error> {
     static ROUTE_CONTROLLER: StaticRouteController = StaticRouteController::new(|| {
         let route_repository = RouteRepositoryMysql::new();
         let operation_repository = OperationRepositoryMysql::new();
-        let service = RouteService::new(route_repository, operation_repository);
+        let osrm_api = OsrmApi::new();
+        let service = RouteService::new(route_repository, operation_repository, osrm_api);
         let usecase = RouteUseCase::new(service);
         RouteController::new(usecase)
     });
