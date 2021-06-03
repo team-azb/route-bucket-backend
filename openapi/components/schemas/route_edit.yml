@@ -1,9 +1,11 @@
 RouteEditResponse:
   type: object
   description: Route編集レスポンス
-  required: [waypoints, linestring]
+  required: [waypoints, linestring, elevation_gain]
   properties:
     waypoints:
       $ref: ./linestring.yml#/Waypoints
     linestring:
       $ref: ./linestring.yml#/LineString
+    elevation_gain:
+      $ref: ./elevation_gain.yml#/ElevationGain
