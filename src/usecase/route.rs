@@ -1,7 +1,7 @@
 use crate::domain::model::linestring::{Coordinate, ElevationApi, LineString};
 use crate::domain::model::operation::{OperationRepository, OperationStruct};
 use crate::domain::model::route::{Route, RouteInterpolationApi, RouteRepository};
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Elevation, RouteId};
 use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
 use getset::Getters;
@@ -26,7 +26,12 @@ where
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
         let linestring = self.service.interpolate_route(&route)?;
-        Ok(RouteGetResponse { route, linestring })
+        let elevation_gain = linestring.calc_elevation_gain()?;
+        Ok(RouteGetResponse {
+            route,
+            linestring,
+            elevation_gain,
+        })
     }
 
     pub fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
@@ -77,10 +82,12 @@ where
         editor.push_operation(opst.try_into()?)?;
         self.service.update_editor(&editor)?;
         let linestring = self.service.interpolate_route(&editor.route())?;
+        let elevation_gain = linestring.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
             linestring,
+            elevation_gain,
         })
     }
 
@@ -97,10 +104,12 @@ where
         }
         self.service.update_route(&editor.route())?;
         let linestring = self.service.interpolate_route(&editor.route())?;
+        let elevation_gain = linestring.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
             linestring,
+            elevation_gain,
         })
     }
 
@@ -114,6 +123,7 @@ pub struct RouteGetResponse {
     #[serde(flatten)]
     route: Route,
     linestring: LineString,
+    elevation_gain: Elevation,
 }
 
 #[derive(Serialize)]
@@ -140,8 +150,9 @@ pub struct NewPointRequest {
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub waypoints: LineString,
-    pub linestring: LineString,
+    waypoints: LineString,
+    linestring: LineString,
+    elevation_gain: Elevation,
 }
 
 #[derive(Getters, Deserialize)]

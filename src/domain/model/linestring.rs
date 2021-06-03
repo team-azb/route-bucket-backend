@@ -3,7 +3,8 @@ use crate::utils::error::{ApplicationError, ApplicationResult};
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::cmp::max;
+use std::convert::{TryFrom, TryInto};
 use std::iter::FromIterator;
 use std::slice::{Iter, IterMut};
 
@@ -23,6 +24,20 @@ impl LineString {
                 "Index out of range in get.".into(),
             ))
         }
+    }
+
+    pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
+        let mut gain = 0.try_into().unwrap();
+        let mut prev_elev = Elevation::max();
+
+        self.0.iter().for_each(|coord| {
+            if let Some(elev) = coord.elevation {
+                gain += max(elev - prev_elev, 0.try_into().unwrap());
+                prev_elev = elev;
+            }
+        });
+
+        Ok(gain)
     }
 
     pub fn replace(&mut self, i: usize, val: Coordinate) -> ApplicationResult<Coordinate> {
