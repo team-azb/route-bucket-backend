@@ -47,9 +47,10 @@ impl From<Polyline> for String {
 
 pub type Latitude = NumericValueObject<f64, 90>;
 pub type Longitude = NumericValueObject<f64, 180>;
+pub type Elevation = NumericValueObject<i32, { i32::MAX as u32 }>;
 
 /// Value Object for BigDecimal type
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 
 impl<T: Copy, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
@@ -64,6 +65,24 @@ impl<const MAX_ABS: u32> TryFrom<f64> for NumericValueObject<f64, MAX_ABS> {
 
     fn try_from(val: f64) -> ApplicationResult<Self> {
         if val.abs() <= MAX_ABS.into() {
+            Ok(Self(val))
+        } else {
+            Err(ApplicationError::ValueObjectError(format!(
+                // TODO: stringのconst genericsが追加されたら、
+                // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
+                "Invalid value {} for BigDecimalValueObject<{}>",
+                val,
+                MAX_ABS
+            )))
+        }
+    }
+}
+
+impl<const MAX_ABS: u32> TryFrom<i32> for NumericValueObject<i32, MAX_ABS> {
+    type Error = ApplicationError;
+
+    fn try_from(val: i32) -> ApplicationResult<Self> {
+        if val.abs() <= MAX_ABS as i32 {
             Ok(Self(val))
         } else {
             Err(ApplicationError::ValueObjectError(format!(

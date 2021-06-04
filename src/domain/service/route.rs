@@ -1,25 +1,35 @@
+use crate::domain::model::linestring::{ElevationApi, LineString};
 use crate::domain::model::operation::OperationRepository;
 use crate::domain::model::route::{Route, RouteEditor, RouteInterpolationApi, RouteRepository};
-use crate::domain::model::types::{Polyline, RouteId};
+use crate::domain::model::types::RouteId;
 use crate::utils::error::ApplicationResult;
+use std::convert::TryFrom;
 
-pub struct RouteService<R, O, I> {
+pub struct RouteService<R, O, I, E> {
     route_repository: R,
     operation_repository: O,
     interpolation_api: I,
+    elevation_api: E,
 }
 
-impl<R, O, I> RouteService<R, O, I>
+impl<R, O, I, E> RouteService<R, O, I, E>
 where
     R: RouteRepository,
     O: OperationRepository,
     I: RouteInterpolationApi,
+    E: ElevationApi,
 {
-    pub fn new(route_repository: R, operation_repository: O, interpolation_api: I) -> Self {
+    pub fn new(
+        route_repository: R,
+        operation_repository: O,
+        interpolation_api: I,
+        elevation_api: E,
+    ) -> Self {
         Self {
             route_repository,
             operation_repository,
             interpolation_api,
+            elevation_api,
         }
     }
 
@@ -63,7 +73,17 @@ where
         self.operation_repository.delete_by_route_id(route_id)
     }
 
-    pub fn interpolate_route(&self, route: &Route) -> ApplicationResult<Polyline> {
-        self.interpolation_api.interpolate(route)
+    pub fn interpolate_route(&self, route: &Route) -> ApplicationResult<LineString> {
+        let mut linestring = LineString::try_from(self.interpolation_api.interpolate(route)?)?;
+        self.attach_elevation(&mut linestring)?;
+        Ok(linestring)
+    }
+
+    pub fn attach_elevation(&self, linestring: &mut LineString) -> ApplicationResult<()> {
+        linestring
+            .iter_mut()
+            .map(|coord| coord.set_elevation(self.elevation_api.get_elevation(coord)?))
+            .collect::<ApplicationResult<Vec<_>>>()?;
+        Ok(())
     }
 }

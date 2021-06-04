@@ -8,6 +8,6 @@ Waypoints:
 LineString:
   type: array
   items:
-    $ref: ./coordinate.yml#/Coordinate
+    $ref: ./coordinate.yml#/CoordinateWithElevation
   description: |
-    waypointの間を補間した配列
+    waypointの間を補間したうえで、標高を付与した配列
