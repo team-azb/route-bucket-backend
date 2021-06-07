@@ -1,8 +1,9 @@
-use derive_more::Display;
+use derive_more::{Add, AddAssign, Display, Sub};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
 // TODO: Value Object用のderive macroを作る
@@ -50,12 +51,18 @@ pub type Longitude = NumericValueObject<f64, 180>;
 pub type Elevation = NumericValueObject<i32, { i32::MAX as u32 }>;
 
 /// Value Object for BigDecimal type
-#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(
+    Add, AddAssign, Sub, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 
-impl<T: Copy, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
+impl<T: Copy + FromPrimitive, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
     pub fn value(&self) -> T {
         self.0
+    }
+
+    pub fn max() -> Self {
+        Self(T::from_u32(MAX_ABS).unwrap())
     }
 }
 

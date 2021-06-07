@@ -16,7 +16,7 @@ Route:
 RouteWithPolyline:
   type: object
   description: Polyline付きのRoute
-  required: [ id, name, waypoints, linestring ]
+  required: [ id, name, waypoints, linestring, elevation_gain ]
   properties:
     id:
       type: string
@@ -29,3 +29,5 @@ RouteWithPolyline:
       $ref: ./linestring.yml#/Waypoints
     linestring:
       $ref: ./linestring.yml#/LineString
+    elevation_gain:
+      $ref: ./elevation_gain.yml#/ElevationGain
