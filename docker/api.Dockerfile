@@ -11,6 +11,7 @@ RUN apt update && \
     apt search caching-sha2-password
 
 # SRTM elevation data
+COPY docker docker
 RUN ./docker/download_srtm_datas.sh
 
 WORKDIR app
