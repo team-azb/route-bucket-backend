@@ -76,7 +76,10 @@ where
             op_code.into(),
             pos,
             org_coord,
-            new_coord,
+            // TODO: 道路外でも許容する場合（直線モードとか？）としない場合の区別をする
+            new_coord
+                .map(|coord| self.service.correct_coordinate(&coord))
+                .transpose()?,
             Some(org_polyline),
         )?;
         editor.push_operation(opst.try_into()?)?;

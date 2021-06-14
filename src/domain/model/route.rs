@@ -1,7 +1,7 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::LineString;
+use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::operation::Operation;
 use crate::domain::model::types::{Polyline, RouteId};
 use crate::utils::error::{ApplicationError, ApplicationResult};
@@ -92,5 +92,7 @@ pub trait RouteRepository {
 }
 
 pub trait RouteInterpolationApi {
+    fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
+
     fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline>;
 }
