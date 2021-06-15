@@ -20,15 +20,21 @@ impl OsrmApi {
         service: &str,
         args: &String,
     ) -> ApplicationResult<reqwest::blocking::Response> {
-        let target_url = format!("{}/{}/v1/bike/{}", self.api_root, service, args);
-        reqwest::blocking::get(target_url.clone()).map_err(|_| {
-            ApplicationError::ExternalError(format!("Failed to request {}", target_url))
-        })
+        let url_str =
+            format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace("\\", "%5C");
+        let url = reqwest::Url::parse(&url_str).map_err(|err| {
+            ApplicationError::ExternalError(format!(
+                "Failed to parse OSRM URL: {} ({})",
+                url_str, err
+            ))
+        })?;
+        reqwest::blocking::get(url.clone())
+            .map_err(|_| ApplicationError::ExternalError(format!("Failed to request {}", url)))
     }
 
     fn resp_to_json(resp: reqwest::blocking::Response) -> ApplicationResult<serde_json::Value> {
         let status = resp.status();
-        let url = resp.url().clone().into_string();
+        let url = resp.url().clone();
         status
             .is_success()
             .then(|| resp.json::<serde_json::Value>().unwrap())
