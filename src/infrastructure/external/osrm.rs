@@ -15,11 +15,7 @@ impl OsrmApi {
         }
     }
 
-    fn request(
-        &self,
-        service: &str,
-        args: &String,
-    ) -> ApplicationResult<reqwest::blocking::Response> {
+    fn request(&self, service: &str, args: &String) -> ApplicationResult<serde_json::Value> {
         let url_str =
             format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace("\\", "%5C");
         let url = reqwest::Url::parse(&url_str).map_err(|err| {
@@ -28,31 +24,31 @@ impl OsrmApi {
                 url_str, err
             ))
         })?;
-        reqwest::blocking::get(url.clone())
-            .map_err(|_| ApplicationError::ExternalError(format!("Failed to request {}", url)))
-    }
+        let resp = reqwest::blocking::get(url.clone())
+            .map_err(|_| ApplicationError::ExternalError(format!("Failed to request {}", url)))?;
 
-    fn resp_to_json(resp: reqwest::blocking::Response) -> ApplicationResult<serde_json::Value> {
-        let status = resp.status();
-        let url = resp.url().clone();
-        status
-            .is_success()
-            .then(|| resp.json::<serde_json::Value>().unwrap())
-            .ok_or(ApplicationError::ExternalError(format!(
-                "Got Unsuccessful status {} from {}",
-                status, url
+        if resp.status().is_success() {
+            resp.json::<serde_json::Value>().map_err(|_| {
+                ApplicationError::ExternalError("Failed to parse response json".into())
+            })
+        } else {
+            Err(ApplicationError::ExternalError(format!(
+                "Got unsuccessful status {} from OSRM (url: {}, body: {})",
+                resp.status(),
+                resp.url().clone(),
+                resp.json::<serde_json::Value>().unwrap()
             )))
+        }
     }
 }
 
 impl RouteInterpolationApi for OsrmApi {
     fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate> {
-        let resp = self.request(
+        self.request(
             "nearest",
             &format!("{},{}", coord.longitude().value(), coord.latitude().value()),
-        )?;
-
-        Self::resp_to_json(resp).map(|json| {
+        )
+        .map(|json| {
             let coord =
                 serde_json::from_value::<Vec<f64>>(json["waypoints"][0]["location"].clone())
                     .unwrap();
@@ -61,21 +57,20 @@ impl RouteInterpolationApi for OsrmApi {
     }
 
     fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline> {
-        let resp = self.request(
+        if route.waypoints().len() <= 1 {
+            return Ok(Polyline::from(route.waypoints().clone()));
+        }
+        self.request(
             "route",
             &format!(
                 "polyline({})?overview=full",
                 String::from(Polyline::from(route.waypoints().clone()))
             ),
-        )?;
-
-        Ok(
-            Self::resp_to_json(resp).map_or(Polyline::from(route.waypoints().clone()), |json| {
-                Polyline::from(
-                    serde_json::from_value::<String>(json["routes"][0]["geometry"].clone())
-                        .unwrap(),
-                )
-            }),
         )
+        .map(|json| {
+            Polyline::from(
+                serde_json::from_value::<String>(json["routes"][0]["geometry"].clone()).unwrap(),
+            )
+        })
     }
 }
