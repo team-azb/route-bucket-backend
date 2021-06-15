@@ -10,11 +10,12 @@ RUN apt update && \
     apt install -y default-mysql-client && \
     apt search caching-sha2-password
 
+WORKDIR app
+
 # SRTM elevation data
 COPY docker docker
 RUN ./docker/download_srtm_datas.sh
 
-WORKDIR app
 COPY . .
 COPY ./docker/wait_for_db.sh .
 
