@@ -1,6 +1,7 @@
 use crate::domain::model::linestring::Coordinate;
 use crate::domain::model::route::{Route, RouteInterpolationApi};
 use crate::domain::model::types::Polyline;
+use crate::domain::repository::RouteInterpolationApi;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 /// osrmでルート補間をするための構造体

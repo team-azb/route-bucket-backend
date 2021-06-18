@@ -1,9 +1,12 @@
-use crate::domain::model::linestring::{Coordinate, ElevationApi, LineString};
-use crate::domain::model::operation::OperationRepository;
-use crate::domain::model::route::{Route, RouteEditor, RouteInterpolationApi, RouteRepository};
-use crate::domain::model::types::RouteId;
-use crate::utils::error::ApplicationResult;
 use std::convert::TryFrom;
+
+use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::route::{Route, RouteEditor};
+use crate::domain::model::types::RouteId;
+use crate::domain::repository::{
+    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository,
+};
+use crate::utils::error::ApplicationResult;
 
 pub struct RouteService<R, O, I, E> {
     route_repository: R,

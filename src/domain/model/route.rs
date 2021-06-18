@@ -78,21 +78,3 @@ impl Route {
         self.name = name.clone();
     }
 }
-
-pub trait RouteRepository {
-    fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
-
-    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
-
-    fn register(&self, route: &Route) -> ApplicationResult<()>;
-
-    fn update(&self, route: &Route) -> ApplicationResult<()>;
-
-    fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
-}
-
-pub trait RouteInterpolationApi {
-    fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
-
-    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline>;
-}

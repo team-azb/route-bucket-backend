@@ -1,10 +1,12 @@
-use crate::domain::model::operation::{Operation, OperationRepository};
+use diesel::{associations::HasTable, ExpressionMethods, QueryDsl, RunQueryDsl};
+
+use crate::domain::model::operation::Operation;
 use crate::domain::model::types::RouteId;
+use crate::domain::repository::OperationRepository;
 use crate::infrastructure::dto::operation::OperationDto;
 use crate::infrastructure::repository::connection_pool::MysqlConnectionPool;
 use crate::infrastructure::schema;
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use diesel::{associations::HasTable, ExpressionMethods, QueryDsl, RunQueryDsl};
 
 pub struct OperationRepositoryMysql {
     pool: MysqlConnectionPool,

@@ -1,9 +1,11 @@
+use std::convert::TryFrom;
+
+use getset::Getters;
+use serde::{Deserialize, Serialize};
+
 use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use getset::Getters;
-use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 #[derive(Clone, Debug)]
 pub enum Operation {
@@ -179,16 +181,4 @@ impl TryFrom<OperationStruct> for Operation {
         };
         Ok(operation)
     }
-}
-
-pub trait OperationRepository {
-    fn find_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<Vec<Operation>>;
-
-    fn update_by_route_id(
-        &self,
-        route_id: &RouteId,
-        op_list: &Vec<Operation>,
-    ) -> ApplicationResult<()>;
-
-    fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
 }

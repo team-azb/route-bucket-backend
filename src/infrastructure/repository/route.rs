@@ -1,9 +1,11 @@
-use crate::domain::model::route::{Route, RouteRepository};
+use diesel::{associations::HasTable, QueryDsl, RunQueryDsl};
+
+use crate::domain::model::route::Route;
 use crate::domain::model::types::RouteId;
+use crate::domain::repository::RouteRepository;
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::repository::connection_pool::MysqlConnectionPool;
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use diesel::{associations::HasTable, QueryDsl, RunQueryDsl};
 
 pub struct RouteRepositoryMysql {
     pool: MysqlConnectionPool,

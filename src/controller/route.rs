@@ -1,10 +1,10 @@
 use actix_web::{dev, web, HttpResponse, Result, Scope};
 use once_cell::sync::Lazy;
 
-use crate::domain::model::linestring::ElevationApi;
-use crate::domain::model::operation::OperationRepository;
-use crate::domain::model::route::{RouteInterpolationApi, RouteRepository};
 use crate::domain::model::types::RouteId;
+use crate::domain::repository::{
+    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository,
+};
 use crate::usecase::route::{
     NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };

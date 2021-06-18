@@ -1,12 +1,14 @@
-use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
-use crate::utils::error::{ApplicationError, ApplicationResult};
-use getset::Getters;
-use polyline::{decode_polyline, encode_coordinates};
-use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::convert::{TryFrom, TryInto};
 use std::iter::FromIterator;
 use std::slice::{Iter, IterMut};
+
+use getset::Getters;
+use polyline::{decode_polyline, encode_coordinates};
+use serde::{Deserialize, Serialize};
+
+use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct LineString(Vec<Coordinate>);
@@ -187,8 +189,4 @@ impl From<Coordinate> for (f64, f64) {
     fn from(coord: Coordinate) -> (f64, f64) {
         (coord.latitude.value(), coord.longitude.value())
     }
-}
-
-pub trait ElevationApi {
-    fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
 }
