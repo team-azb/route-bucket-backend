@@ -1,6 +1,7 @@
+use crate::domain::model::linestring::Coordinate;
 use crate::domain::model::route::{Route, RouteInterpolationApi};
 use crate::domain::model::types::Polyline;
-use crate::utils::error::ApplicationResult;
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 /// osrmでルート補間をするための構造体
 pub struct OsrmApi {
@@ -13,32 +14,63 @@ impl OsrmApi {
             api_root: std::env::var("OSRM_ROOT").expect("OSRM_ROOT NOT FOUND"),
         }
     }
+
+    fn request(&self, service: &str, args: &String) -> ApplicationResult<serde_json::Value> {
+        let url_str =
+            format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace("\\", "%5C");
+        let url = reqwest::Url::parse(&url_str).map_err(|err| {
+            ApplicationError::ExternalError(format!(
+                "Failed to parse OSRM URL: {} ({})",
+                url_str, err
+            ))
+        })?;
+        let resp = reqwest::blocking::get(url.clone())
+            .map_err(|_| ApplicationError::ExternalError(format!("Failed to request {}", url)))?;
+
+        if resp.status().is_success() {
+            resp.json::<serde_json::Value>().map_err(|_| {
+                ApplicationError::ExternalError("Failed to parse response json".into())
+            })
+        } else {
+            Err(ApplicationError::ExternalError(format!(
+                "Got unsuccessful status {} from OSRM (url: {}, body: {})",
+                resp.status(),
+                resp.url().clone(),
+                resp.json::<serde_json::Value>().unwrap()
+            )))
+        }
+    }
 }
 
 impl RouteInterpolationApi for OsrmApi {
+    fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate> {
+        self.request(
+            "nearest",
+            &format!("{},{}", coord.longitude().value(), coord.latitude().value()),
+        )
+        .map(|json| {
+            let coord =
+                serde_json::from_value::<Vec<f64>>(json["waypoints"][0]["location"].clone())
+                    .unwrap();
+            Coordinate::new(coord[1], coord[0]).unwrap()
+        })
+    }
+
     fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline> {
-        let target_url = format!(
-            "{}/route/v1/bike/polyline({})?overview=full",
-            self.api_root,
-            String::from(Polyline::from(route.waypoints().clone()))
-        );
-        let result = reqwest::blocking::get(target_url);
-
-        // まだif let から&&で繋げない(https://github.com/rust-lang/rust/issues/53667)
-        let polyline = if let Ok(resp) = result {
-            if resp.status().is_success() {
-                let json = resp.json::<serde_json::Value>().unwrap();
-                Polyline::from(
-                    serde_json::from_value::<String>(json["routes"][0]["geometry"].clone())
-                        .unwrap(),
-                )
-            } else {
-                Polyline::from(route.waypoints().clone())
-            }
-        } else {
-            Polyline::from(route.waypoints().clone())
-        };
-
-        Ok(polyline)
+        if route.waypoints().len() <= 1 {
+            return Ok(Polyline::from(route.waypoints().clone()));
+        }
+        self.request(
+            "route",
+            &format!(
+                "polyline({})?overview=full",
+                String::from(Polyline::from(route.waypoints().clone()))
+            ),
+        )
+        .map(|json| {
+            Polyline::from(
+                serde_json::from_value::<String>(json["routes"][0]["geometry"].clone()).unwrap(),
+            )
+        })
     }
 }

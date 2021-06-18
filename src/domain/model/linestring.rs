@@ -87,6 +87,10 @@ impl LineString {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn iter(&self) -> Iter<Coordinate> {
         self.0.iter()
     }

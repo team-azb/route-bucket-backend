@@ -1,4 +1,4 @@
-use crate::domain::model::linestring::{ElevationApi, LineString};
+use crate::domain::model::linestring::{Coordinate, ElevationApi, LineString};
 use crate::domain::model::operation::OperationRepository;
 use crate::domain::model::route::{Route, RouteEditor, RouteInterpolationApi, RouteRepository};
 use crate::domain::model::types::RouteId;
@@ -71,6 +71,10 @@ where
     pub fn delete_editor(&self, route_id: &RouteId) -> ApplicationResult<()> {
         self.route_repository.delete(route_id)?;
         self.operation_repository.delete_by_route_id(route_id)
+    }
+
+    pub fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate> {
+        self.interpolation_api.correct_coordinate(coord)
     }
 
     pub fn interpolate_route(&self, route: &Route) -> ApplicationResult<LineString> {
