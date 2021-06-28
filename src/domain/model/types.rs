@@ -49,6 +49,7 @@ impl From<Polyline> for String {
 pub type Latitude = NumericValueObject<f64, 90>;
 pub type Longitude = NumericValueObject<f64, 180>;
 pub type Elevation = NumericValueObject<i32, { i32::MAX as u32 }>;
+pub type Distance = NumericValueObject<f64, { f64::MAX as u32 }>;
 
 /// Value Object for BigDecimal type
 #[derive(
