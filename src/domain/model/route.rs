@@ -1,9 +1,9 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::linestring::LineString;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::types::{Polyline, RouteId};
+use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Getters)]
@@ -11,11 +11,26 @@ use crate::utils::error::{ApplicationError, ApplicationResult};
 pub struct RouteEditor {
     route: Route,
     op_list: Vec<Operation>,
+    last_op: Option<Operation>,
 }
 
 impl RouteEditor {
     pub fn new(route: Route, op_list: Vec<Operation>) -> Self {
-        Self { route, op_list }
+        Self {
+            route,
+            op_list,
+            last_op: None,
+        }
+    }
+
+    pub fn get_operation(&self, pos: usize) -> ApplicationResult<&Operation> {
+        self.op_list
+            .get(pos)
+            .ok_or(ApplicationError::DomainError(format!(
+                "Index {} out of range for RouteEditor.op_list!(len={})",
+                pos,
+                self.op_list.len()
+            )))
     }
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
