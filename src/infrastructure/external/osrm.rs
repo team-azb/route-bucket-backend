@@ -1,6 +1,8 @@
-use crate::domain::model::linestring::Coordinate;
-use crate::domain::model::route::{Route, RouteInterpolationApi};
-use crate::domain::model::types::Polyline;
+use std::convert::TryFrom;
+
+use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::segment::Segment;
+use crate::domain::model::types::{Distance, Polyline};
 use crate::domain::repository::RouteInterpolationApi;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
@@ -57,21 +59,20 @@ impl RouteInterpolationApi for OsrmApi {
         })
     }
 
-    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline> {
-        if route.waypoints().len() <= 1 {
-            return Ok(Polyline::from(route.waypoints().clone()));
-        }
+    fn interpolate(&self, from: Coordinate, to: Coordinate) -> ApplicationResult<Segment> {
         self.request(
             "route",
             &format!(
                 "polyline({})?overview=full",
-                String::from(Polyline::from(route.waypoints().clone()))
+                String::from(Polyline::from(LineString::from(vec![from, to])))
             ),
         )
         .map(|json| {
-            Polyline::from(
-                serde_json::from_value::<String>(json["routes"][0]["geometry"].clone()).unwrap(),
-            )
+            let polyline =
+                serde_json::from_value::<Polyline>(json["routes"][0]["geometry"].clone()).unwrap();
+            let distance =
+                serde_json::from_value::<Distance>(json["routes"][0]["distance"].clone()).unwrap();
+            Segment::try_from((polyline, distance)).unwrap()
         })
     }
 }
