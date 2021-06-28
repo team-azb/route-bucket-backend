@@ -5,9 +5,17 @@ Waypoints:
   description: |
     ユーザーの入力した点の配列
 
-LineString:
-  type: array
-  items:
-    $ref: ./coordinate.yml#/CoordinateWithElevation
+Segment:
+  type: object
+  properties:
+    points:
+      type: array
+      items:
+        $ref: ./coordinate.yml#/CoordinateWithElevation
+    distance:
+      type: number
+      format: double
+      minimum: 0
+      description: 区間の距離
   description: |
-    waypointの間を補間したうえで、標高を付与した配列
+    waypointに挟まれた一つの区間に対し、補間を行った上で標高を付与した配列
