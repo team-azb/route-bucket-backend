@@ -19,19 +19,16 @@ impl RouteEditor {
     }
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
-        op.apply(&mut self.route.waypoints)?;
         // pos以降の要素は全て捨てる
         self.op_list.truncate(self.route.op_num);
         self.op_list.push(op);
-        self.route.op_num += 1;
-        Ok(())
+
+        self.apply_operation(false)
     }
 
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
         if self.route.op_num < self.op_list.len() {
-            self.op_list[self.route.op_num].apply(&mut self.route.waypoints)?;
-            self.route.op_num += 1;
-            Ok(())
+            self.apply_operation(false)
         } else {
             Err(ApplicationError::InvalidOperation(
                 "No more operations to redo.",
@@ -41,16 +38,28 @@ impl RouteEditor {
 
     pub fn undo_operation(&mut self) -> ApplicationResult<()> {
         if self.route.op_num > 0 {
-            self.route.op_num -= 1;
-            self.op_list[self.route.op_num]
-                .reverse()
-                .apply(&mut self.route.waypoints)?;
-            Ok(())
+            self.apply_operation(true)
         } else {
             Err(ApplicationError::InvalidOperation(
                 "No more operations to undo.",
             ))
         }
+    }
+
+    fn apply_operation(&mut self, reverse: bool) -> ApplicationResult<()> {
+        let op;
+        if reverse {
+            self.route.op_num -= 1;
+            op = self.get_operation(self.route.op_num)?.reverse();
+        } else {
+            op = self.get_operation(self.route.op_num)?.clone();
+            self.route.op_num += 1;
+        };
+
+        op.apply(&mut self.route.waypoints)?;
+        self.last_op.insert(op);
+
+        Ok(())
     }
 }
 
