@@ -4,7 +4,7 @@ table! {
         index -> Unsigned<Integer>,
         code -> Char,
         pos -> Nullable<Unsigned<Integer>>,
-        polyline -> Mediumtext,
+        polyline -> Varchar,
     }
 }
 
@@ -12,12 +12,22 @@ table! {
     routes (id) {
         id -> Varchar,
         name -> Varchar,
-        polyline -> Mediumtext,
+        waypoint_polyline -> Varchar,
         operation_pos -> Unsigned<Integer>,
+    }
+}
+
+table! {
+    segments (route_id, index) {
+        route_id -> Varchar,
+        index -> Integer,
+        polyline -> Varchar,
+        distance -> Double,
     }
 }
 
 allow_tables_to_appear_in_same_query!(
     operations,
     routes,
+    segments,
 );
