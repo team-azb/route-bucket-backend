@@ -1,4 +1,4 @@
-FROM rust:1.51.0
+FROM rust:1.53.0
 
 # diesel_cliのinstall
 # ファイルを変更してもcacheを使えるように、COPYの前に行う
