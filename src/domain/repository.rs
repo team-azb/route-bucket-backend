@@ -1,7 +1,8 @@
 use crate::domain::model::linestring::Coordinate;
 use crate::domain::model::operation::Operation;
 use crate::domain::model::route::Route;
-use crate::domain::model::types::{Elevation, Polyline, RouteId};
+use crate::domain::model::segment::{Segment, SegmentList};
+use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::ApplicationResult;
 
 pub trait RouteRepository {
@@ -26,6 +27,20 @@ pub trait OperationRepository {
     ) -> ApplicationResult<()>;
 
     fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
+}
+
+pub trait SegmentRepository {
+    fn find_by_id(&self, route_id: &RouteId) -> ApplicationResult<SegmentList>;
+
+    fn delete_by_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
+
+    fn insert_by_id(&self, route_id: &RouteId, segments: &SegmentList) -> ApplicationResult<()>;
+
+    fn insert(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()>;
+
+    fn update(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()>;
+
+    fn delete(&self, route_id: &RouteId, pos: u32) -> ApplicationResult<()>;
 }
 
 pub trait RouteInterpolationApi {
