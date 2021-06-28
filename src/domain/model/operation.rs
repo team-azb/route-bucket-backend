@@ -4,7 +4,6 @@ use getset::Getters;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::model::linestring::{Coordinate, LineString};
-use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Clone, Debug)]

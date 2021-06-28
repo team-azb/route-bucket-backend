@@ -3,24 +3,25 @@ use once_cell::sync::Lazy;
 
 use crate::domain::model::types::RouteId;
 use crate::domain::repository::{
-    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository,
+    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository, SegmentRepository,
 };
 use crate::usecase::route::{
     NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
 
-pub struct RouteController<R, O, I, E> {
-    usecase: RouteUseCase<R, O, I, E>,
+pub struct RouteController<R, O, S, I, E> {
+    usecase: RouteUseCase<R, O, S, I, E>,
 }
 
-impl<R, I, O, E> RouteController<R, O, I, E>
+impl<R, O, S, I, E> RouteController<R, O, S, I, E>
 where
     R: RouteRepository,
     O: OperationRepository,
+    S: SegmentRepository,
     I: RouteInterpolationApi,
     E: ElevationApi,
 {
-    pub fn new(usecase: RouteUseCase<R, O, I, E>) -> Self {
+    pub fn new(usecase: RouteUseCase<R, O, S, I, E>) -> Self {
         Self { usecase }
     }
 
@@ -86,10 +87,11 @@ pub trait BuildService<S: dev::HttpServiceFactory + 'static> {
     fn build_service(self) -> S;
 }
 
-impl<R, O, I, E> BuildService<Scope> for &'static Lazy<RouteController<R, O, I, E>>
+impl<R, O, S, I, E> BuildService<Scope> for &'static Lazy<RouteController<R, O, S, I, E>>
 where
     R: RouteRepository,
     O: OperationRepository,
+    S: SegmentRepository,
     I: RouteInterpolationApi,
     E: ElevationApi,
 {

@@ -8,6 +8,7 @@ use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
 use route_bucket_backend::infrastructure::external::srtm::SrtmReader;
 use route_bucket_backend::infrastructure::repository::operation::OperationRepositoryMysql;
 use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMysql;
+use route_bucket_backend::infrastructure::repository::segment::SegmentRepositoryMysql;
 use route_bucket_backend::usecase::route::RouteUseCase;
 
 // TODO: ControllerとRepositoryMysql系のstructに共通trait実装してcontrollerの初期化を↓みたいに共通化したい
@@ -19,8 +20,15 @@ use route_bucket_backend::usecase::route::RouteUseCase;
 //     })
 // }
 
-type StaticRouteController =
-    Lazy<RouteController<RouteRepositoryMysql, OperationRepositoryMysql, OsrmApi, SrtmReader>>;
+type StaticRouteController = Lazy<
+    RouteController<
+        RouteRepositoryMysql,
+        OperationRepositoryMysql,
+        SegmentRepositoryMysql,
+        OsrmApi,
+        SrtmReader,
+    >,
+>;
 
 #[actix_rt::main]
 async fn main() -> Result<(), Error> {
@@ -30,11 +38,13 @@ async fn main() -> Result<(), Error> {
     static ROUTE_CONTROLLER: StaticRouteController = StaticRouteController::new(|| {
         let route_repository = RouteRepositoryMysql::new();
         let operation_repository = OperationRepositoryMysql::new();
+        let segment_repository = SegmentRepositoryMysql::new();
         let osrm_api = OsrmApi::new();
         let srtm_reader = SrtmReader::new().unwrap();
         let service = RouteService::new(
             route_repository,
             operation_repository,
+            segment_repository,
             osrm_api,
             srtm_reader,
         );
