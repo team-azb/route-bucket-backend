@@ -59,7 +59,9 @@ where
     }
 
     pub fn find_segments(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
-        self.segment_repository.find_by_id(route_id)
+        let mut segments = self.segment_repository.find_by_id(route_id)?;
+        self.attach_elevation(&mut segments)?;
+        Ok(segments)
     }
 
     pub fn update_route(&self, route: &Route) -> ApplicationResult<()> {
@@ -74,7 +76,9 @@ where
             .update_by_route_id(route.id(), editor.op_list())?;
 
         if let Some(last_op) = editor.last_op() {
-            self.update_segments(route.id(), route.waypoints(), last_op)
+            let mut segments = self.update_segments(route.id(), route.waypoints(), last_op)?;
+            self.attach_elevation(&mut segments)?;
+            Ok(segments)
         } else {
             Err(ApplicationError::DomainError(format!(
                 "last_op was None for {}",
@@ -217,10 +221,9 @@ where
     }
 
     fn cvt_to_segment(&self, from: &Coordinate, to: &Coordinate) -> ApplicationResult<Segment> {
-        let mut segment = self
+        let segment = self
             .interpolation_api
             .interpolate(from.clone(), to.clone())?;
-        self.attach_elevation(&mut segment)?;
 
         Ok(segment)
     }
@@ -237,10 +240,14 @@ where
             .insert(route_id, pos as u32, &segment)
     }
 
-    fn attach_elevation(&self, segment: &mut Segment) -> ApplicationResult<()> {
-        segment
+    fn attach_elevation(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
+        seg_list
             .iter_mut()
-            .map(|coord| coord.set_elevation(self.elevation_api.get_elevation(coord)?))
+            .map(|seg| {
+                seg.iter_mut()
+                    .map(|coord| coord.set_elevation(self.elevation_api.get_elevation(coord)?))
+                    .collect::<ApplicationResult<Vec<_>>>()
+            })
             .collect::<ApplicationResult<Vec<_>>>()?;
         Ok(())
     }
