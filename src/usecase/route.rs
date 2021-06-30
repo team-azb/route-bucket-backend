@@ -30,7 +30,8 @@ where
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
-        let seg_list = self.service.find_segment_list(route_id)?;
+        let mut seg_list = self.service.find_segment_list(route_id)?;
+        seg_list.attach_distance_from_start()?;
         let elevation_gain = seg_list.calc_elevation_gain()?;
         Ok(RouteGetResponse {
             route,
@@ -88,12 +89,13 @@ where
             Some(org_polyline),
         )?;
         editor.push_operation(opst.try_into()?)?;
-        let seg_list = self.service.update_editor(&editor)?;
+        let mut seg_list = self.service.update_editor(&editor)?;
+        seg_list.attach_distance_from_start()?;
         let elevation_gain = seg_list.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            segments: seg_list,
+            segments,
             elevation_gain,
         })
     }
@@ -109,12 +111,12 @@ where
         } else {
             editor.undo_operation()?;
         }
-        let seg_list = self.service.update_editor(&editor)?;
-        let elevation_gain = seg_list.calc_elevation_gain()?;
+        let segments = self.service.update_editor(&editor)?;
+        let elevation_gain = segments.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            segments: seg_list,
+            segments,
             elevation_gain,
         })
     }
