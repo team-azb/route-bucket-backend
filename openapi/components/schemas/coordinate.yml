@@ -16,7 +16,7 @@ Coordinate:
       maximum: 180
       description: 経度
 
-CoordinateWithElevation:
+CoordinateVerbose:
   type: object
   description: 座標
   required: [latitude, longitude]
@@ -36,3 +36,7 @@ CoordinateWithElevation:
     elevation:
       type: integer
       description: 標高
+    distance_from_start:
+      type: number
+      format: double
+      description: ルートのスタート地点からの距離
