@@ -67,9 +67,6 @@ impl Segment {
     }
 }
 
-// TODO: 各地点の累計距離の計算は、Coordinateに distance_from_start: Option<f64> みたいなんを追加して、
-//     : Segment.calc_distanceみたいなので計算すれば良さそう
-
 impl From<(LineString, Distance)> for Segment {
     fn from((points, distance): (LineString, Distance)) -> Self {
         Segment { points, distance }
