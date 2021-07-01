@@ -78,7 +78,7 @@ impl<const MAX_ABS: u32> TryFrom<f64> for NumericValueObject<f64, MAX_ABS> {
             Err(ApplicationError::ValueObjectError(format!(
                 // TODO: stringのconst genericsが追加されたら、
                 // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
-                "Invalid value {} for BigDecimalValueObject<f64{}>",
+                "Invalid value {} for NumericValueObject<f64, {}>",
                 val,
                 MAX_ABS
             )))
@@ -97,7 +97,7 @@ impl<const MAX_ABS: u32> TryFrom<i32> for NumericValueObject<i32, MAX_ABS> {
             Err(ApplicationError::ValueObjectError(format!(
                 // TODO: stringのconst genericsが追加されたら、
                 // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
-                "Invalid value {} for BigDecimalValueObject<i32, {}>",
+                "Invalid value {} for NumericValueObject<i32, {}>",
                 val,
                 MAX_ABS
             )))
