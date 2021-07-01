@@ -1,4 +1,5 @@
 use diesel::associations::HasTable;
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 
 use crate::domain::model::segment::{Segment, SegmentList};
@@ -8,7 +9,6 @@ use crate::infrastructure::dto::segment::SegmentDto;
 use crate::infrastructure::repository::connection_pool::MysqlConnectionPool;
 use crate::infrastructure::schema::segments;
 use crate::utils::error::{ApplicationError, ApplicationResult};
-use diesel::r2d2::{ConnectionManager, PooledConnection};
 
 pub struct SegmentRepositoryMysql {
     pool: MysqlConnectionPool,
