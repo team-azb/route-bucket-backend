@@ -58,10 +58,10 @@ where
         Ok(RouteEditor::new(route, operations))
     }
 
-    pub fn find_segments(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
-        let mut segments = self.segment_repository.find_by_id(route_id)?;
-        self.attach_elevation(&mut segments)?;
-        Ok(segments)
+    pub fn find_segment_list(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
+        let mut seg_list = self.segment_repository.find_by_id(route_id)?;
+        self.attach_elevation(&mut seg_list)?;
+        Ok(seg_list)
     }
 
     pub fn update_route(&self, route: &Route) -> ApplicationResult<()> {
@@ -76,9 +76,9 @@ where
             .update_by_route_id(route.id(), editor.op_list())?;
 
         if let Some(last_op) = editor.last_op() {
-            let mut segments = self.update_segments(route.id(), route.waypoints(), last_op)?;
-            self.attach_elevation(&mut segments)?;
-            Ok(segments)
+            let mut seg_list = self.update_segments(route.id(), route.waypoints(), last_op)?;
+            self.attach_elevation(&mut seg_list)?;
+            Ok(seg_list)
         } else {
             Err(ApplicationError::DomainError(format!(
                 "last_op was None for {}",
@@ -96,15 +96,15 @@ where
         match last_op {
             Operation::Add { pos, .. } => {
                 self.add_point(route_id, waypoints, *pos)?;
-                self.find_segments(route_id)
+                self.find_segment_list(route_id)
             }
             Operation::Remove { pos, .. } => {
                 self.delete_point(route_id, waypoints, *pos)?;
-                self.find_segments(route_id)
+                self.find_segment_list(route_id)
             }
             Operation::Move { pos, .. } => {
                 self.move_point(route_id, waypoints, *pos)?;
-                self.find_segments(route_id)
+                self.find_segment_list(route_id)
             }
             Operation::Clear { .. } => {
                 self.segment_repository.delete_by_id(route_id)?;
@@ -172,17 +172,14 @@ where
         let to_opt = waypoints.get(pos + 1).ok();
 
         if let Some(from) = from_opt {
-            let segment = self.cvt_to_segment(from, coord)?;
-            println!("{:?}, {:?}, {}", from, coord, pos - 1);
+            let seg = self.cvt_to_segment(from, coord)?;
             self.segment_repository
-                .update(route_id, (pos - 1) as u32, &segment)?;
+                .update(route_id, (pos - 1) as u32, &seg)?;
         }
 
         if let Some(to) = to_opt {
-            let segment = self.cvt_to_segment(coord, to)?;
-            println!("{:?}, {:?}, {}", coord, to, pos);
-            self.segment_repository
-                .update(route_id, pos as u32, &segment)?;
+            let seg = self.cvt_to_segment(coord, to)?;
+            self.segment_repository.update(route_id, pos as u32, &seg)?;
         }
 
         Ok(())
@@ -193,7 +190,7 @@ where
         route_id: &RouteId,
         waypoints: &LineString,
     ) -> ApplicationResult<SegmentList> {
-        let segments = waypoints
+        let seg_list = waypoints
             .iter()
             .tuple_windows()
             // TODO: rayon::par_bridgeで並列化
@@ -201,9 +198,9 @@ where
             .collect::<ApplicationResult<Vec<_>>>()?
             .into();
 
-        self.segment_repository.insert_by_id(route_id, &segments)?;
+        self.segment_repository.insert_by_id(route_id, &seg_list)?;
 
-        Ok(segments)
+        Ok(seg_list)
     }
 
     pub fn register_route(&self, route: &Route) -> ApplicationResult<()> {
@@ -221,11 +218,11 @@ where
     }
 
     fn cvt_to_segment(&self, from: &Coordinate, to: &Coordinate) -> ApplicationResult<Segment> {
-        let segment = self
+        let seg = self
             .interpolation_api
             .interpolate(from.clone(), to.clone())?;
 
-        Ok(segment)
+        Ok(seg)
     }
 
     fn insert_as_segment(
@@ -235,9 +232,8 @@ where
         from: &Coordinate,
         to: &Coordinate,
     ) -> ApplicationResult<()> {
-        let segment = self.cvt_to_segment(from, to)?;
-        self.segment_repository
-            .insert(route_id, pos as u32, &segment)
+        let seg = self.cvt_to_segment(from, to)?;
+        self.segment_repository.insert(route_id, pos as u32, &seg)
     }
 
     fn attach_elevation(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {

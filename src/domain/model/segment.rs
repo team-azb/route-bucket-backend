@@ -39,8 +39,8 @@ impl SegmentList {
 }
 
 impl From<Vec<Segment>> for SegmentList {
-    fn from(segments: Vec<Segment>) -> Self {
-        Self(segments)
+    fn from(seg_vec: Vec<Segment>) -> Self {
+        Self(seg_vec)
     }
 }
 

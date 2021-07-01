@@ -79,14 +79,10 @@ impl SegmentRepository for SegmentRepositoryMysql {
         Ok(())
     }
 
-    fn insert_by_id(
-        &self,
-        route_id: &RouteId,
-        segment_list: &SegmentList,
-    ) -> ApplicationResult<()> {
+    fn insert_by_id(&self, route_id: &RouteId, seg_list: &SegmentList) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        let seg_dtos = segment_list
+        let seg_dtos = seg_list
             .iter()
             .enumerate()
             .map(|(i, seg)| SegmentDto::from_model(seg, route_id, i as u32))
@@ -105,15 +101,15 @@ impl SegmentRepository for SegmentRepositoryMysql {
         Ok(())
     }
 
-    fn insert(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()> {
+    fn insert(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
         self.shift_segments(route_id, pos, true, &conn)?;
 
-        let segment_dto = SegmentDto::from_model(segment, route_id, pos)?;
+        let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
 
         diesel::insert_into(SegmentDto::table())
-            .values(segment_dto)
+            .values(seg_dto)
             .execute(&conn)
             .map_err(|_| {
                 ApplicationError::DataBaseError(format!(
@@ -125,17 +121,17 @@ impl SegmentRepository for SegmentRepositoryMysql {
         Ok(())
     }
 
-    fn update(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()> {
+    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        let segment_dto = SegmentDto::from_model(segment, route_id, pos)?;
+        let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
 
         diesel::update(
             SegmentDto::table()
                 .filter(segments::route_id.eq(route_id.to_string()))
                 .filter(segments::index.eq(pos as i32)),
         )
-        .set(segment_dto)
+        .set(seg_dto)
         .execute(&conn)
         .map_err(|_| {
             ApplicationError::DataBaseError(format!(

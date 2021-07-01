@@ -30,11 +30,11 @@ where
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
-        let segments = self.service.find_segments(route_id)?;
-        let elevation_gain = segments.calc_elevation_gain()?;
+        let seg_list = self.service.find_segment_list(route_id)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
         Ok(RouteGetResponse {
             route,
-            segments,
+            segments: seg_list,
             elevation_gain,
         })
     }
@@ -88,12 +88,12 @@ where
             Some(org_polyline),
         )?;
         editor.push_operation(opst.try_into()?)?;
-        let segments = self.service.update_editor(&editor)?;
-        let elevation_gain = segments.calc_elevation_gain()?;
+        let seg_list = self.service.update_editor(&editor)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            segments,
+            segments: seg_list,
             elevation_gain,
         })
     }
@@ -109,12 +109,12 @@ where
         } else {
             editor.undo_operation()?;
         }
-        let segments = self.service.update_editor(&editor)?;
-        let elevation_gain = segments.calc_elevation_gain()?;
+        let seg_list = self.service.update_editor(&editor)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            segments,
+            segments: seg_list,
             elevation_gain,
         })
     }

@@ -34,11 +34,11 @@ pub trait SegmentRepository {
 
     fn delete_by_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
 
-    fn insert_by_id(&self, route_id: &RouteId, segments: &SegmentList) -> ApplicationResult<()>;
+    fn insert_by_id(&self, route_id: &RouteId, seg_list: &SegmentList) -> ApplicationResult<()>;
 
-    fn insert(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()>;
+    fn insert(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()>;
 
-    fn update(&self, route_id: &RouteId, pos: u32, segment: &Segment) -> ApplicationResult<()>;
+    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()>;
 
     fn delete(&self, route_id: &RouteId, pos: u32) -> ApplicationResult<()>;
 }
