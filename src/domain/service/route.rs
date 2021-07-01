@@ -59,7 +59,7 @@ where
     }
 
     pub fn find_segment_list(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
-        let mut seg_list = self.segment_repository.find_by_id(route_id)?;
+        let mut seg_list = self.segment_repository.find_by_route_id(route_id)?;
         self.attach_elevation(&mut seg_list)?;
         Ok(seg_list)
     }
@@ -107,7 +107,7 @@ where
                 self.find_segment_list(route_id)
             }
             Operation::Clear { .. } => {
-                self.segment_repository.delete_by_id(route_id)?;
+                self.segment_repository.delete_by_route_id(route_id)?;
                 Ok(Vec::new().into())
             }
             Operation::InitWithList { list } => self.insert_waypoints(route_id, list),
@@ -198,7 +198,8 @@ where
             .collect::<ApplicationResult<Vec<_>>>()?
             .into();
 
-        self.segment_repository.insert_by_id(route_id, &seg_list)?;
+        self.segment_repository
+            .insert_by_route_id(route_id, &seg_list)?;
 
         Ok(seg_list)
     }
@@ -210,7 +211,7 @@ where
     pub fn delete_editor(&self, route_id: &RouteId) -> ApplicationResult<()> {
         self.route_repository.delete(route_id)?;
         self.operation_repository.delete_by_route_id(route_id)?;
-        self.segment_repository.delete_by_id(route_id)
+        self.segment_repository.delete_by_route_id(route_id)
     }
 
     pub fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate> {

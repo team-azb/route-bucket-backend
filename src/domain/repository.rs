@@ -30,17 +30,21 @@ pub trait OperationRepository {
 }
 
 pub trait SegmentRepository {
-    fn find_by_id(&self, route_id: &RouteId) -> ApplicationResult<SegmentList>;
-
-    fn delete_by_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
-
-    fn insert_by_id(&self, route_id: &RouteId, seg_list: &SegmentList) -> ApplicationResult<()>;
+    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()>;
 
     fn insert(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()>;
 
-    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()>;
-
     fn delete(&self, route_id: &RouteId, pos: u32) -> ApplicationResult<()>;
+
+    fn find_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<SegmentList>;
+
+    fn insert_by_route_id(
+        &self,
+        route_id: &RouteId,
+        seg_list: &SegmentList,
+    ) -> ApplicationResult<()>;
+
+    fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
 }
 
 pub trait RouteInterpolationApi {

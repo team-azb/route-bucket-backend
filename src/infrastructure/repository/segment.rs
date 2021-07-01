@@ -51,52 +51,24 @@ impl SegmentRepositoryMysql {
 }
 
 impl SegmentRepository for SegmentRepositoryMysql {
-    fn find_by_id(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
+    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        Ok(SegmentDto::table()
-            .filter(segments::route_id.eq(route_id.to_string()))
-            .load::<SegmentDto>(&conn)
-            .map_err(|_| ApplicationError::DataBaseError("Failed to find Segments".into()))?
-            .iter()
-            .map(SegmentDto::to_model)
-            .collect::<ApplicationResult<Vec<Segment>>>()?
-            .into())
-    }
+        let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
 
-    fn delete_by_id(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        let conn = self.pool.get_connection()?;
-
-        diesel::delete(SegmentDto::table().filter(segments::route_id.eq(route_id.to_string())))
-            .execute(&conn)
-            .map_err(|_| {
-                ApplicationError::DataBaseError(format!(
-                    "Failed to delete Segments that belong to Route {}",
-                    route_id.to_string()
-                ))
-            })?;
-
-        Ok(())
-    }
-
-    fn insert_by_id(&self, route_id: &RouteId, seg_list: &SegmentList) -> ApplicationResult<()> {
-        let conn = self.pool.get_connection()?;
-
-        let seg_dtos = seg_list
-            .iter()
-            .enumerate()
-            .map(|(i, seg)| SegmentDto::from_model(seg, route_id, i as u32))
-            .collect::<ApplicationResult<Vec<_>>>()?;
-
-        diesel::insert_into(SegmentDto::table())
-            .values(seg_dtos)
-            .execute(&conn)
-            .map_err(|_| {
-                ApplicationError::DataBaseError(format!(
-                    "Failed to insert Segments to {}",
-                    route_id.to_string()
-                ))
-            })?;
+        diesel::update(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.eq(pos as i32)),
+        )
+        .set(seg_dto)
+        .execute(&conn)
+        .map_err(|_| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to update Segments that belong to Route {}",
+                route_id.to_string()
+            ))
+        })?;
 
         Ok(())
     }
@@ -121,28 +93,6 @@ impl SegmentRepository for SegmentRepositoryMysql {
         Ok(())
     }
 
-    fn update(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
-        let conn = self.pool.get_connection()?;
-
-        let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
-
-        diesel::update(
-            SegmentDto::table()
-                .filter(segments::route_id.eq(route_id.to_string()))
-                .filter(segments::index.eq(pos as i32)),
-        )
-        .set(seg_dto)
-        .execute(&conn)
-        .map_err(|_| {
-            ApplicationError::DataBaseError(format!(
-                "Failed to update Segments that belong to Route {}",
-                route_id.to_string()
-            ))
-        })?;
-
-        Ok(())
-    }
-
     fn delete(&self, route_id: &RouteId, pos: u32) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
@@ -160,6 +110,60 @@ impl SegmentRepository for SegmentRepositoryMysql {
         })?;
 
         self.shift_segments(route_id, pos, false, &conn)?;
+
+        Ok(())
+    }
+
+    fn find_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
+        let conn = self.pool.get_connection()?;
+
+        Ok(SegmentDto::table()
+            .filter(segments::route_id.eq(route_id.to_string()))
+            .load::<SegmentDto>(&conn)
+            .map_err(|_| ApplicationError::DataBaseError("Failed to find Segments".into()))?
+            .iter()
+            .map(SegmentDto::to_model)
+            .collect::<ApplicationResult<Vec<Segment>>>()?
+            .into())
+    }
+
+    fn insert_by_route_id(
+        &self,
+        route_id: &RouteId,
+        seg_list: &SegmentList,
+    ) -> ApplicationResult<()> {
+        let conn = self.pool.get_connection()?;
+
+        let seg_dtos = seg_list
+            .iter()
+            .enumerate()
+            .map(|(i, seg)| SegmentDto::from_model(seg, route_id, i as u32))
+            .collect::<ApplicationResult<Vec<_>>>()?;
+
+        diesel::insert_into(SegmentDto::table())
+            .values(seg_dtos)
+            .execute(&conn)
+            .map_err(|_| {
+                ApplicationError::DataBaseError(format!(
+                    "Failed to insert Segments to {}",
+                    route_id.to_string()
+                ))
+            })?;
+
+        Ok(())
+    }
+
+    fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        let conn = self.pool.get_connection()?;
+
+        diesel::delete(SegmentDto::table().filter(segments::route_id.eq(route_id.to_string())))
+            .execute(&conn)
+            .map_err(|_| {
+                ApplicationError::DataBaseError(format!(
+                    "Failed to delete Segments that belong to Route {}",
+                    route_id.to_string()
+                ))
+            })?;
 
         Ok(())
     }
