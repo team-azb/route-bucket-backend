@@ -57,7 +57,7 @@ pub trait SegmentRepository {
 pub trait RouteInterpolationApi {
     fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
 
-    fn interpolate(&self, from: Coordinate, to: Coordinate) -> ApplicationResult<Segment>;
+    fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
 }
 
 pub trait ElevationApi {
