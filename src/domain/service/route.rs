@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::operation::Operation;
@@ -242,6 +243,7 @@ where
     fn attach_elevation(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
         seg_list
             .iter_mut()
+            .par_bridge()
             .map(|seg| {
                 seg.iter_mut()
                     .map(|coord| coord.set_elevation(self.elevation_api.get_elevation(coord)?))
