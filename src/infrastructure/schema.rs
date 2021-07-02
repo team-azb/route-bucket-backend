@@ -12,7 +12,6 @@ table! {
     routes (id) {
         id -> Varchar,
         name -> Varchar,
-        waypoint_polyline -> Varchar,
         operation_pos -> Unsigned<Integer>,
     }
 }
