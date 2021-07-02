@@ -95,7 +95,7 @@ where
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            segments,
+            segments: seg_list,
             elevation_gain,
         })
     }
