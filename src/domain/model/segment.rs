@@ -39,8 +39,7 @@ impl SegmentList {
     pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
         // compute cumulative distance within the segments
         self.iter_mut().par_bridge().for_each(|seg| {
-            seg.distance = seg
-                .iter_mut()
+            seg.iter_mut()
                 .scan((Distance::zero(), None), |(dist, prev_op), coord| {
                     if let Some(prev_coord) = prev_op {
                         *dist += coord.haversine_distance(prev_coord);
@@ -57,7 +56,7 @@ impl SegmentList {
         self.iter_mut()
             .scan(Distance::zero(), |offset, seg| {
                 let prev_offset = *offset;
-                *offset += seg.distance;
+                *offset += seg.get_distance();
                 Some((seg, prev_offset))
             })
             .par_bridge()
@@ -80,6 +79,25 @@ impl SegmentList {
     }
 }
 
+impl From<SegmentList> for (Vec<Coordinate>, Vec<Segment>) {
+    fn from(seg_list: SegmentList) -> Self {
+        let (coords, segments) = seg_list
+            .0
+            .into_iter()
+            .enumerate()
+            .map(|(i, seg)| {
+                let coords = if i == 0 {
+                    vec![seg.start, seg.goal]
+                } else {
+                    vec![seg.goal]
+                };
+                (coords, seg.points)
+            })
+            .unzip();
+        (coords.into_iter().concat().collect_vec(), segments)
+    }
+}
+
 impl From<Vec<Segment>> for SegmentList {
     fn from(seg_vec: Vec<Segment>) -> Self {
         Self(seg_vec)
@@ -95,11 +113,26 @@ impl From<SegmentList> for Vec<Segment> {
 #[derive(Debug, Getters, Serialize)]
 #[get = "pub"]
 pub struct Segment {
-    points: LineString,
-    distance: Distance,
+    #[serde(skip_serializing)]
+    start: Coordinate,
+    #[serde(skip_serializing)]
+    goal: Coordinate,
+    points: Vec<Coordinate>,
 }
 
 impl Segment {
+    pub fn get_distance(&self) -> Distance {
+        self.points
+            .last()
+            .map(Coordinate::distance_from_start)
+            .flatten()
+            .unwrap_or(Distance::zero())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.points.is_empty()
+    }
+
     pub fn iter(&self) -> Iter<Coordinate> {
         self.points.iter()
     }
@@ -109,16 +142,33 @@ impl Segment {
     }
 }
 
-impl From<(LineString, Distance)> for Segment {
-    fn from((points, distance): (LineString, Distance)) -> Self {
-        Segment { points, distance }
+impl TryFrom<Vec<Coordinate>> for Segment {
+    type Error = ApplicationError;
+
+    fn try_from(points: Vec<Coordinate>) -> ApplicationResult<Self> {
+        let err = ApplicationError::DomainError(
+            "Cannot Initialize Segment from an empty Vec<Coordinate>!".into(),
+        );
+        Ok(Segment {
+            start: points.first().ok_or(&err)?.clone(),
+            goal: points.last().ok_or(&err)?.clone(),
+            points,
+        })
     }
 }
 
-impl TryFrom<(Polyline, Distance)> for Segment {
+impl TryFrom<Polyline> for Segment {
     type Error = ApplicationError;
 
-    fn try_from((polyline, distance): (Polyline, Distance)) -> ApplicationResult<Self> {
-        Ok(Segment::from((LineString::try_from(polyline)?, distance)))
+    fn try_from(polyline: Polyline) -> ApplicationResult<Self> {
+        Segment::try_from(Vec::try_from(polyline)?)
+    }
+}
+
+impl TryFrom<String> for Segment {
+    type Error = ApplicationError;
+
+    fn try_from(polyline_str: String) -> ApplicationResult<Self> {
+        Segment::try_from(Polyline::from(polyline_str))
     }
 }

@@ -43,19 +43,20 @@ where
         }
     }
 
-    pub fn find_route(&self, route_id: &RouteId) -> ApplicationResult<RouteInfo> {
+    pub fn find_info(&self, route_id: &RouteId) -> ApplicationResult<RouteInfo> {
         self.route_repository.find(route_id)
     }
 
-    pub fn find_all_routes(&self) -> ApplicationResult<Vec<RouteInfo>> {
+    pub fn find_all_infos(&self) -> ApplicationResult<Vec<RouteInfo>> {
         self.route_repository.find_all()
     }
 
-    pub fn find_editor(&self, route_id: &RouteId) -> ApplicationResult<Route> {
-        let route_info = self.find_route(route_id)?;
-        let operations = self.operation_repository.find_by_route_id(route_id)?;
+    pub fn find_route(&self, route_id: &RouteId) -> ApplicationResult<Route> {
+        let route_info = self.find_info(route_id)?;
+        let op_list = self.operation_repository.find_by_route_id(route_id)?;
+        let seg_list = self.find_segment_list(route_id)?;
 
-        Ok(Route::new(route_info, operations))
+        Ok(Route::new(route_info, op_list, seg_list))
     }
 
     pub fn find_segment_list(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::model::linestring::LineString;
 use crate::domain::model::operation::Operation;
+use crate::domain::model::segment::SegmentList;
 use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
@@ -11,7 +12,7 @@ use crate::utils::error::{ApplicationError, ApplicationResult};
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
-    last_op: Option<Operation>,
+    seg_list: SegmentList,
 }
 
 impl Route {
@@ -19,7 +20,7 @@ impl Route {
         Self {
             info,
             op_list,
-            last_op: None,
+            seg_list,
         }
     }
 
