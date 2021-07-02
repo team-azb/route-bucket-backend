@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::domain::model::linestring::{Coordinate, LineString};
 use crate::domain::model::operation::Operation;
-use crate::domain::model::route::{Route, RouteEditor};
+use crate::domain::model::route::{Route, RouteInfo};
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::RouteId;
 use crate::domain::repository::{
@@ -43,19 +43,19 @@ where
         }
     }
 
-    pub fn find_route(&self, route_id: &RouteId) -> ApplicationResult<Route> {
+    pub fn find_route(&self, route_id: &RouteId) -> ApplicationResult<RouteInfo> {
         self.route_repository.find(route_id)
     }
 
-    pub fn find_all_routes(&self) -> ApplicationResult<Vec<Route>> {
+    pub fn find_all_routes(&self) -> ApplicationResult<Vec<RouteInfo>> {
         self.route_repository.find_all()
     }
 
-    pub fn find_editor(&self, route_id: &RouteId) -> ApplicationResult<RouteEditor> {
-        let route = self.find_route(route_id)?;
+    pub fn find_editor(&self, route_id: &RouteId) -> ApplicationResult<Route> {
+        let route_info = self.find_route(route_id)?;
         let operations = self.operation_repository.find_by_route_id(route_id)?;
 
-        Ok(RouteEditor::new(route, operations))
+        Ok(Route::new(route_info, operations))
     }
 
     pub fn find_segment_list(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
@@ -64,25 +64,26 @@ where
         Ok(seg_list)
     }
 
-    pub fn update_route(&self, route: &Route) -> ApplicationResult<()> {
-        self.route_repository.update(route)
+    pub fn update_route_info(&self, info: &RouteInfo) -> ApplicationResult<()> {
+        self.route_repository.update(info)
     }
 
-    pub fn update_editor(&self, editor: &RouteEditor) -> ApplicationResult<SegmentList> {
-        let route = editor.route();
+    pub fn update_route(&self, route: &Route) -> ApplicationResult<SegmentList> {
+        let route_info = route.info();
 
-        self.update_route(route)?;
+        self.update_route_info(route_info)?;
         self.operation_repository
-            .update_by_route_id(route.id(), editor.op_list())?;
+            .update_by_route_id(route_info.id(), route.op_list())?;
 
-        if let Some(last_op) = editor.last_op() {
-            let mut seg_list = self.update_segments(route.id(), route.waypoints(), last_op)?;
+        if let Some(last_op) = route.last_op() {
+            let mut seg_list =
+                self.update_segments(route_info.id(), route_info.waypoints(), last_op)?;
             self.attach_elevation(&mut seg_list)?;
             Ok(seg_list)
         } else {
             Err(ApplicationError::DomainError(format!(
                 "last_op was None for {}",
-                route.id().to_string()
+                route_info.id().to_string()
             )))
         }
     }
@@ -204,8 +205,8 @@ where
         Ok(seg_list)
     }
 
-    pub fn register_route(&self, route: &Route) -> ApplicationResult<()> {
-        self.route_repository.register(route)
+    pub fn register_route(&self, route_info: &RouteInfo) -> ApplicationResult<()> {
+        self.route_repository.register(route_info)
     }
 
     pub fn delete_editor(&self, route_id: &RouteId) -> ApplicationResult<()> {

@@ -1,4 +1,4 @@
-use crate::domain::model::route::Route;
+use crate::domain::model::route::RouteInfo;
 use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
@@ -14,19 +14,19 @@ pub struct RouteDto {
 }
 
 impl RouteDto {
-    pub fn to_model(&self) -> ApplicationResult<Route> {
-        Ok(Route::new(
+    pub fn to_model(&self) -> ApplicationResult<RouteInfo> {
+        Ok(RouteInfo::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
             self.operation_pos as usize,
         ))
     }
 
-    pub fn from_model(route: &Route) -> ApplicationResult<RouteDto> {
+    pub fn from_model(route_info: &RouteInfo) -> ApplicationResult<RouteDto> {
         Ok(RouteDto {
-            id: route.id().to_string(),
-            name: route.name().clone(),
-            operation_pos: *route.op_num() as u32,
+            id: route_info.id().to_string(),
+            name: route_info.name().clone(),
+            operation_pos: *route_info.op_num() as u32,
         })
     }
 }

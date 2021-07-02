@@ -1,6 +1,6 @@
 use diesel::{associations::HasTable, QueryDsl, RunQueryDsl};
 
-use crate::domain::model::route::Route;
+use crate::domain::model::route::RouteInfo;
 use crate::domain::model::types::RouteId;
 use crate::domain::repository::RouteRepository;
 use crate::infrastructure::dto::route::RouteDto;
@@ -20,7 +20,7 @@ impl RouteRepositoryMysql {
 }
 
 impl RouteRepository for RouteRepositoryMysql {
-    fn find(&self, route_id: &RouteId) -> ApplicationResult<Route> {
+    fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteInfo> {
         let conn = self.pool.get_connection()?;
         let route_dto = RouteDto::table()
             .find(&route_id.to_string())
@@ -35,7 +35,7 @@ impl RouteRepository for RouteRepositoryMysql {
         Ok(route_dto.to_model()?)
     }
 
-    fn find_all(&self) -> ApplicationResult<Vec<Route>> {
+    fn find_all(&self) -> ApplicationResult<Vec<RouteInfo>> {
         let conn = self.pool.get_connection()?;
 
         let route_dtos = RouteDto::table().load::<RouteDto>(&conn).or_else(|_| {
@@ -47,13 +47,13 @@ impl RouteRepository for RouteRepositoryMysql {
         Ok(route_dtos
             .iter()
             .map(|dto| dto.to_model())
-            .collect::<ApplicationResult<Vec<Route>>>()?)
+            .collect::<ApplicationResult<Vec<RouteInfo>>>()?)
     }
 
-    fn register(&self, route: &Route) -> ApplicationResult<()> {
+    fn register(&self, route_info: &RouteInfo) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        let route_dto = RouteDto::from_model(route)?;
+        let route_dto = RouteDto::from_model(route_info)?;
 
         diesel::insert_into(RouteDto::table())
             .values(route_dto)
@@ -67,10 +67,10 @@ impl RouteRepository for RouteRepositoryMysql {
         Ok(())
     }
 
-    fn update(&self, route: &Route) -> ApplicationResult<()> {
+    fn update(&self, route_info: &RouteInfo) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        let route_dto = RouteDto::from_model(route)?;
+        let route_dto = RouteDto::from_model(route_info)?;
 
         diesel::update(&route_dto)
             .set(&route_dto)
@@ -78,7 +78,7 @@ impl RouteRepository for RouteRepositoryMysql {
             .or_else(|_| {
                 Err(ApplicationError::DataBaseError(format!(
                     "Failed to update Route {}",
-                    route.id()
+                    route_info.id()
                 )))
             })?;
 

@@ -1,18 +1,18 @@
 use crate::domain::model::linestring::Coordinate;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::route::Route;
+use crate::domain::model::route::RouteInfo;
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::ApplicationResult;
 
 pub trait RouteRepository {
-    fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
+    fn find(&self, id: &RouteId) -> ApplicationResult<RouteInfo>;
 
-    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
+    fn find_all(&self) -> ApplicationResult<Vec<RouteInfo>>;
 
-    fn register(&self, route: &Route) -> ApplicationResult<()>;
+    fn register(&self, route_info: &RouteInfo) -> ApplicationResult<()>;
 
-    fn update(&self, route: &Route) -> ApplicationResult<()>;
+    fn update(&self, route_info: &RouteInfo) -> ApplicationResult<()>;
 
     fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
 }
