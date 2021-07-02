@@ -4,6 +4,7 @@ use crate::domain::model::route::RouteInfo;
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::ApplicationResult;
+use std::ops::Range;
 
 pub trait RouteRepository {
     fn find(&self, id: &RouteId) -> ApplicationResult<RouteInfo>;
@@ -45,6 +46,12 @@ pub trait SegmentRepository {
     ) -> ApplicationResult<()>;
 
     fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
+
+    fn delete_by_route_id_and_range(
+        &self,
+        route_id: &RouteId,
+        range: Range<u32>,
+    ) -> ApplicationResult<()>;
 }
 
 pub trait RouteInterpolationApi {

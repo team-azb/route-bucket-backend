@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
@@ -25,28 +27,22 @@ impl SegmentRepositoryMysql {
         &self,
         route_id: &RouteId,
         start_pos: u32,
-        right_shift: bool,
+        step: i32,
         conn: &PooledConnection<ConnectionManager<MysqlConnection>>,
     ) -> ApplicationResult<usize> {
-        let src = SegmentDto::table()
-            .filter(segments::route_id.eq(route_id.to_string()))
-            .filter(segments::index.ge(start_pos as i32));
-        let err_msg = format!(
-            "Failed to update Segments that belong to Route {}",
-            route_id.to_string()
-        );
-
-        if right_shift {
-            diesel::update(src)
-                .set(segments::index.eq(segments::index + 1))
-                .execute(conn)
-                .map_err(|_| ApplicationError::DataBaseError(err_msg))
-        } else {
-            diesel::update(src)
-                .set(segments::index.eq(segments::index - 1))
-                .execute(conn)
-                .map_err(|_| ApplicationError::DataBaseError(err_msg))
-        }
+        diesel::update(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.ge(start_pos as i32)),
+        )
+        .set(segments::index.eq(segments::index + step))
+        .execute(conn)
+        .map_err(|_| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to update Segments that belong to Route {}",
+                route_id.to_string()
+            ))
+        })
     }
 }
 
@@ -164,6 +160,32 @@ impl SegmentRepository for SegmentRepositoryMysql {
                     route_id.to_string()
                 ))
             })?;
+
+        Ok(())
+    }
+
+    fn delete_by_route_id_and_range(
+        &self,
+        route_id: &RouteId,
+        range: Range<u32>,
+    ) -> ApplicationResult<()> {
+        let conn = self.pool.get_connection()?;
+
+        let width = range.end() - range.start();
+        diesel::delete(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.between(range.start() as i32, range.end() as i32 - 1)),
+        )
+        .execute(&conn)
+        .map_err(|_| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to delete Segments that belong to Route {}",
+                route_id.to_string()
+            ))
+        })?;
+
+        self.shift_segments(route_id, range.end(), width as i32, &conn)?;
 
         Ok(())
     }
