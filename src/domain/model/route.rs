@@ -1,9 +1,9 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::linestring::LineString;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::types::{Polyline, RouteId};
+use crate::domain::model::types::RouteId;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Getters)]
@@ -11,27 +11,39 @@ use crate::utils::error::{ApplicationError, ApplicationResult};
 pub struct RouteEditor {
     route: Route,
     op_list: Vec<Operation>,
+    last_op: Option<Operation>,
 }
 
 impl RouteEditor {
     pub fn new(route: Route, op_list: Vec<Operation>) -> Self {
-        Self { route, op_list }
+        Self {
+            route,
+            op_list,
+            last_op: None,
+        }
+    }
+
+    pub fn get_operation(&self, pos: usize) -> ApplicationResult<&Operation> {
+        self.op_list
+            .get(pos)
+            .ok_or(ApplicationError::DomainError(format!(
+                "Index {} out of range for RouteEditor.op_list!(len={})",
+                pos,
+                self.op_list.len()
+            )))
     }
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
-        op.apply(&mut self.route.waypoints)?;
         // pos以降の要素は全て捨てる
         self.op_list.truncate(self.route.op_num);
         self.op_list.push(op);
-        self.route.op_num += 1;
-        Ok(())
+
+        self.apply_operation(false)
     }
 
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
         if self.route.op_num < self.op_list.len() {
-            self.op_list[self.route.op_num].apply(&mut self.route.waypoints)?;
-            self.route.op_num += 1;
-            Ok(())
+            self.apply_operation(false)
         } else {
             Err(ApplicationError::InvalidOperation(
                 "No more operations to redo.",
@@ -41,16 +53,28 @@ impl RouteEditor {
 
     pub fn undo_operation(&mut self) -> ApplicationResult<()> {
         if self.route.op_num > 0 {
-            self.route.op_num -= 1;
-            self.op_list[self.route.op_num]
-                .reverse()
-                .apply(&mut self.route.waypoints)?;
-            Ok(())
+            self.apply_operation(true)
         } else {
             Err(ApplicationError::InvalidOperation(
                 "No more operations to undo.",
             ))
         }
+    }
+
+    fn apply_operation(&mut self, reverse: bool) -> ApplicationResult<()> {
+        let op;
+        if reverse {
+            self.route.op_num -= 1;
+            op = self.get_operation(self.route.op_num)?.reverse();
+        } else {
+            op = self.get_operation(self.route.op_num)?.clone();
+            self.route.op_num += 1;
+        };
+
+        op.apply(&mut self.route.waypoints)?;
+        self.last_op.insert(op);
+
+        Ok(())
     }
 }
 
@@ -77,22 +101,4 @@ impl Route {
     pub fn rename(&mut self, name: &String) {
         self.name = name.clone();
     }
-}
-
-pub trait RouteRepository {
-    fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
-
-    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
-
-    fn register(&self, route: &Route) -> ApplicationResult<()>;
-
-    fn update(&self, route: &Route) -> ApplicationResult<()>;
-
-    fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
-}
-
-pub trait RouteInterpolationApi {
-    fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
-
-    fn interpolate(&self, route: &Route) -> ApplicationResult<Polyline>;
 }

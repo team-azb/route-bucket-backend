@@ -1,12 +1,13 @@
-use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use std::convert::TryFrom;
+use std::iter::FromIterator;
+use std::slice::{Iter, IterMut};
+
 use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
-use std::cmp::max;
-use std::convert::{TryFrom, TryInto};
-use std::iter::FromIterator;
-use std::slice::{Iter, IterMut};
+
+use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct LineString(Vec<Coordinate>);
@@ -24,20 +25,6 @@ impl LineString {
                 "Index out of range in get.".into(),
             ))
         }
-    }
-
-    pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
-        let mut gain = 0.try_into().unwrap();
-        let mut prev_elev = Elevation::max();
-
-        self.0.iter().for_each(|coord| {
-            if let Some(elev) = coord.elevation {
-                gain += max(elev - prev_elev, 0.try_into().unwrap());
-                prev_elev = elev;
-            }
-        });
-
-        Ok(gain)
     }
 
     pub fn replace(&mut self, i: usize, val: Coordinate) -> ApplicationResult<Coordinate> {
@@ -187,8 +174,4 @@ impl From<Coordinate> for (f64, f64) {
     fn from(coord: Coordinate) -> (f64, f64) {
         (coord.latitude.value(), coord.longitude.value())
     }
-}
-
-pub trait ElevationApi {
-    fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
 }

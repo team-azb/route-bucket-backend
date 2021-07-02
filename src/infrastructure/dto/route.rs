@@ -10,7 +10,7 @@ use std::convert::TryInto;
 pub struct RouteDto {
     id: String,
     name: String,
-    polyline: String,
+    waypoint_polyline: String,
     operation_pos: u32,
 }
 
@@ -19,7 +19,7 @@ impl RouteDto {
         Ok(Route::new(
             RouteId::from_string(self.id.clone()),
             &self.name,
-            Polyline::from(self.polyline.clone()).try_into()?,
+            Polyline::from(self.waypoint_polyline.clone()).try_into()?,
             self.operation_pos as usize,
         ))
     }
@@ -28,7 +28,7 @@ impl RouteDto {
         Ok(RouteDto {
             id: route.id().to_string(),
             name: route.name().clone(),
-            polyline: Polyline::from(route.waypoints().clone()).into(),
+            waypoint_polyline: Polyline::from(route.waypoints().clone()).into(),
             operation_pos: *route.op_num() as u32,
         })
     }

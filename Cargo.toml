@@ -17,6 +17,7 @@ diesel = { version = "1.4.6", features = ["mysql", "numeric", "r2d2"] }
 env_logger = "0.8.3"
 geo = "0.17.1"
 getset = "0.1.1"
+itertools = "0.10.1"
 log = "0.4.14"
 nanoid = "0.3.0"
 num-derive = "0.3.3"

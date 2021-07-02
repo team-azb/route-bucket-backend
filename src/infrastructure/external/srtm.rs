@@ -1,14 +1,17 @@
-use crate::domain::model::linestring::{Coordinate, ElevationApi};
-use crate::domain::model::types::{Elevation, Latitude, Longitude};
-use crate::utils::error::{ApplicationError, ApplicationResult};
-use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
-use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+
+use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
+use num_traits::FromPrimitive;
+
+use crate::domain::model::linestring::Coordinate;
+use crate::domain::model::types::{Elevation, Latitude, Longitude};
+use crate::domain::repository::ElevationApi;
+use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(FromPrimitive)]
 enum SrtmByteOrder {

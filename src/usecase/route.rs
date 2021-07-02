@@ -1,35 +1,40 @@
-use crate::domain::model::linestring::{Coordinate, ElevationApi, LineString};
-use crate::domain::model::operation::{OperationRepository, OperationStruct};
-use crate::domain::model::route::{Route, RouteInterpolationApi, RouteRepository};
+use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::operation::OperationStruct;
+use crate::domain::model::route::Route;
+use crate::domain::model::segment::SegmentList;
 use crate::domain::model::types::{Elevation, RouteId};
+use crate::domain::repository::{
+    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository, SegmentRepository,
+};
 use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
-pub struct RouteUseCase<R, O, I, E> {
-    service: RouteService<R, O, I, E>,
+pub struct RouteUseCase<R, O, S, I, E> {
+    service: RouteService<R, O, S, I, E>,
 }
 
-impl<R, O, I, E> RouteUseCase<R, O, I, E>
+impl<R, O, S, I, E> RouteUseCase<R, O, S, I, E>
 where
     R: RouteRepository,
     O: OperationRepository,
+    S: SegmentRepository,
     I: RouteInterpolationApi,
     E: ElevationApi,
 {
-    pub fn new(service: RouteService<R, O, I, E>) -> Self {
+    pub fn new(service: RouteService<R, O, S, I, E>) -> Self {
         Self { service }
     }
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route = self.service.find_route(route_id)?;
-        let linestring = self.service.interpolate_route(&route)?;
-        let elevation_gain = linestring.calc_elevation_gain()?;
+        let seg_list = self.service.find_segment_list(route_id)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
         Ok(RouteGetResponse {
             route,
-            linestring,
+            segments: seg_list,
             elevation_gain,
         })
     }
@@ -83,13 +88,12 @@ where
             Some(org_polyline),
         )?;
         editor.push_operation(opst.try_into()?)?;
-        self.service.update_editor(&editor)?;
-        let linestring = self.service.interpolate_route(&editor.route())?;
-        let elevation_gain = linestring.calc_elevation_gain()?;
+        let seg_list = self.service.update_editor(&editor)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            linestring,
+            segments: seg_list,
             elevation_gain,
         })
     }
@@ -105,13 +109,12 @@ where
         } else {
             editor.undo_operation()?;
         }
-        self.service.update_route(&editor.route())?;
-        let linestring = self.service.interpolate_route(&editor.route())?;
-        let elevation_gain = linestring.calc_elevation_gain()?;
+        let seg_list = self.service.update_editor(&editor)?;
+        let elevation_gain = seg_list.calc_elevation_gain()?;
 
         Ok(RouteOperationResponse {
             waypoints: editor.route().waypoints().clone(),
-            linestring,
+            segments: seg_list,
             elevation_gain,
         })
     }
@@ -125,7 +128,7 @@ where
 pub struct RouteGetResponse {
     #[serde(flatten)]
     route: Route,
-    linestring: LineString,
+    segments: SegmentList,
     elevation_gain: Elevation,
 }
 
@@ -154,7 +157,7 @@ pub struct NewPointRequest {
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
     waypoints: LineString,
-    linestring: LineString,
+    segments: SegmentList,
     elevation_gain: Elevation,
 }
 

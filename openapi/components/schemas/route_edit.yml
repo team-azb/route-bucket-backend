@@ -5,7 +5,9 @@ RouteEditResponse:
   properties:
     waypoints:
       $ref: ./linestring.yml#/Waypoints
-    linestring:
-      $ref: ./linestring.yml#/LineString
+    segments:
+      type: array
+      items:
+        $ref: ./linestring.yml#/Segment
     elevation_gain:
       $ref: ./elevation_gain.yml#/ElevationGain
