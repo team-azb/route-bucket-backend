@@ -4,180 +4,113 @@ use getset::Getters;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::segment::SegmentList;
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use std::mem::swap;
 
 #[derive(Clone, Debug)]
-pub enum Operation {
-    Add {
-        pos: usize,
-        coord: Coordinate,
-    },
-    Remove {
-        pos: usize,
-        coord: Coordinate,
-    },
-    Move {
-        pos: usize,
-        from: Coordinate,
-        to: Coordinate,
-    },
-    Clear {
-        org_list: LineString,
-    },
-    // reverse operation for Clear
-    InitWithList {
-        list: LineString,
-    },
+pub enum OperationType {
+    Add,
+    Remove,
+    Move,
+    Clear,
+    InitWithList, // reverse operation for Clear
+}
+
+impl OperationType {
+    pub fn reverse(mut self) {
+        self = match self {
+            OperationType::Add => OperationType::Remove,
+            OperationType::Remove => OperationType::Add,
+            OperationType::Move => OperationType::Move,
+            OperationType::Clear => OperationType::InitWithList,
+            OperationType::InitWithList => OperationType::Clear,
+        };
+    }
+}
+
+impl TryFrom<String> for OperationType {
+    type Error = ApplicationError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "ad" => Ok(OperationType::Add),
+            "rm" => Ok(OperationType::Remove),
+            "mv" => Ok(OperationType::Move),
+            "cl" => Ok(OperationType::Clear),
+            "in" => Ok(OperationType::InitWithList),
+            _ => Err(ApplicationError::DomainError(format!(
+                "Cannot convert {} into OperationType!",
+                value
+            ))),
+        }
+    }
+}
+
+impl From<OperationType> for String {
+    fn from(value: OperationType) -> Self {
+        match value {
+            OperationType::Add => "ad",
+            OperationType::Remove => "rm",
+            OperationType::Move => "mv",
+            OperationType::Clear => "cl",
+            OperationType::InitWithList => "in",
+        }
+        .into()
+    }
+}
+
+#[derive(Clone, Debug, Getters)]
+#[get = "pub"]
+pub struct Operation {
+    op_type: OperationType,
+    start_pos: usize,
+    org_coords: Vec<Coordinate>,
+    new_coords: Vec<Coordinate>,
 }
 
 impl Operation {
-    pub fn apply(&self, polyline: &mut LineString) -> ApplicationResult<()> {
-        match self {
-            Self::Add { pos, coord } => Ok(polyline.insert(*pos, coord.clone())?),
-            Self::Remove { pos, coord } => {
-                let ref removed = polyline.remove(*pos)?;
-                (coord == removed)
-                    .then(|| ())
-                    .ok_or(ApplicationError::DomainError(
-                        "Contradiction on remove".into(),
-                    ))
-            }
-            Self::Move { pos, from, to } => {
-                let ref moved = polyline.replace(*pos, to.clone())?;
-                (from == moved)
-                    .then(|| ())
-                    .ok_or(ApplicationError::DomainError(
-                        "Contradiction on move".into(),
-                    ))
-            }
-            Self::Clear { org_list } => {
-                let ref removed_list = polyline.clear();
-                (org_list == removed_list)
-                    .then(|| ())
-                    .ok_or(ApplicationError::DomainError(
-                        "Contradiction on clear".into(),
-                    ))
-            }
-            Self::InitWithList { list } => Ok(polyline.init_if_empty(list.clone())?),
-        }
-    }
-
-    pub fn reverse(&self) -> Operation {
-        match self.clone() {
-            Self::Add { pos, coord } => Self::Remove { pos, coord },
-            Self::Remove { pos, coord } => Self::Add { pos, coord },
-            Self::Move { pos, from, to } => Self::Move {
-                pos,
-                from: to,
-                to: from,
-            },
-            Self::Clear { org_list: list } => Self::InitWithList { list },
-            Self::InitWithList { list } => Self::Clear { org_list: list },
-        }
-    }
-}
-
-/// struct to make initializing enum Operation easier
-#[derive(Getters, Deserialize, Serialize)]
-#[get = "pub"]
-pub struct OperationStruct {
-    code: String,
-    pos: Option<usize>,
-    polyline: LineString,
-}
-
-impl OperationStruct {
     pub fn new(
-        code: String,
-        pos: Option<usize>,
-        org_coord: Option<Coordinate>,
-        new_coord: Option<Coordinate>,
-        polyline: Option<LineString>,
-    ) -> ApplicationResult<Self> {
-        let polyline = if vec!["clear", "init"].contains(&(&code as &str)) {
-            polyline.ok_or(ApplicationError::DomainError(format!(
-                "Must give polyline for code {}",
-                code
-            )))?
-        } else {
-            org_coord
-                .clone()
-                .or(new_coord.clone())
-                .map(|c1| LineString::from(vec![c1, new_coord.or(org_coord).unwrap()]))
-                .or(polyline)
-                .ok_or(ApplicationError::DomainError(
-                    "Must give new_coord or org_coord or polyline for OperationStruct::new".into(),
-                ))?
-        };
-        Ok(Self {
-            code,
-            pos,
-            polyline,
-        })
-    }
-}
-
-impl TryFrom<Operation> for OperationStruct {
-    type Error = ApplicationError;
-
-    fn try_from(value: Operation) -> Result<Self, Self::Error> {
-        match value {
-            Operation::Add { pos, coord } => {
-                OperationStruct::new("add".into(), Some(pos), None, Some(coord), None)
-            }
-            Operation::Remove { pos, coord } => {
-                OperationStruct::new("rm".into(), Some(pos), Some(coord), None, None)
-            }
-            Operation::Move { pos, from, to } => {
-                OperationStruct::new("mv".into(), Some(pos), Some(from), Some(to), None)
-            }
-            Operation::Clear { org_list } => {
-                OperationStruct::new("clear".into(), None, None, None, Some(org_list))
-            }
-            Operation::InitWithList { list } => {
-                OperationStruct::new("init".into(), None, None, None, Some(list))
-            }
+        op_type: OperationType,
+        start_pos: usize,
+        org_coords: Vec<Coordinate>,
+        new_coords: Vec<Coordinate>,
+    ) -> Self {
+        Self {
+            op_type,
+            start_pos,
+            org_coords,
+            new_coords,
         }
     }
-}
 
-impl TryFrom<OperationStruct> for Operation {
-    type Error = ApplicationError;
+    pub fn new_add(pos: usize, coord: Coordinate) -> Self {
+        Self::new(OperationType::Add, pos, Vec::new(), vec![coord])
+    }
 
-    fn try_from(value: OperationStruct) -> Result<Self, Self::Error> {
-        let operation = match &value.code as &str {
-            "add" => Operation::Add {
-                pos: value.pos.ok_or(ApplicationError::DomainError(
-                    "No pos given for Operation::Add".into(),
-                ))?,
-                coord: value.polyline.get(1)?.clone(),
-            },
-            "rm" => Operation::Remove {
-                pos: value.pos.ok_or(ApplicationError::DomainError(
-                    "No pos given for Operation::Remove".into(),
-                ))?,
-                coord: value.polyline.get(0)?.clone(),
-            },
-            "mv" => Operation::Move {
-                pos: value.pos.ok_or(ApplicationError::DomainError(
-                    "No pos given for Operation::Move".into(),
-                ))?,
-                from: value.polyline.get(0)?.clone(),
-                to: value.polyline.get(1)?.clone(),
-            },
-            "clear" => Operation::Clear {
-                org_list: value.polyline,
-            },
-            "init" => Operation::InitWithList {
-                list: value.polyline,
-            },
-            _ => {
-                return Err(ApplicationError::DomainError(format!(
-                    "Invalid operation code {}",
-                    value.code
-                )));
-            }
-        };
-        Ok(operation)
+    pub fn new_remove(pos: usize, org_waypoints: Vec<Coordinate>) -> Self {
+        let org = org_waypoints[pos].clone();
+        Self::new(OperationType::Remove, pos, vec![org], Vec::new())
+    }
+
+    pub fn new_move(pos: usize, coord: Coordinate, org_waypoints: Vec<Coordinate>) -> Self {
+        let org = org_waypoints[pos].clone();
+        Self::new(OperationType::Move, pos, vec![org], vec![coord])
+    }
+
+    pub fn new_clear(org_waypoints: Vec<Coordinate>) -> Self {
+        Self::new(OperationType::Clear, 0, org_waypoints, Vec::new())
+    }
+
+    pub fn apply(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
+        seg_list.replace_range(
+            self.start_pos..self.start_pos + self.org_coords.len(),
+            self.new_coords.clone(),
+        )
+    }
+
+    pub fn reverse(&mut self) {
+        self.op_type.reverse();
+        swap(&mut self.org_coords, &mut self.new_coords);
     }
 }

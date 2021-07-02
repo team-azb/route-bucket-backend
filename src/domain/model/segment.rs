@@ -1,10 +1,12 @@
 use std::cmp::max;
 use std::convert::{TryFrom, TryInto};
+use std::ops::Range;
 use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
-use num_traits::Zero;
+use itertools::Itertools;
+use num_traits::{clamp, Zero};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
@@ -13,7 +15,10 @@ use crate::domain::model::types::{Distance, Elevation, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
 #[derive(Debug, Serialize)]
-pub struct SegmentList(Vec<Segment>);
+pub struct SegmentList {
+    segments: Vec<Segment>,
+    replaced_range: Range<usize>,
+}
 
 impl SegmentList {
     pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
@@ -70,12 +75,37 @@ impl SegmentList {
         Ok(())
     }
 
+    pub fn replace_range(
+        &mut self,
+        range: Range<usize>,
+        waypoints: Vec<Coordinate>,
+    ) -> ApplicationResult<()> {
+        if range.start() > *self.segments.len() {
+            return Err(ApplicationError::DomainError(
+                "Invalid Range at replace_range!".into(),
+            ));
+        }
+
+        let end = clamp(range.end(), range.start(), *self.segments.len());
+
+        self.replaced_range = (range.start()..end);
+        let replace_with: Vec<_> = waypoints
+            .iter_into()
+            .tuple_windows()
+            .map(|(from, to)| Segment::new_empty(from, to))
+            .try_collect()?;
+
+        self.segments
+            .splice(self.replaced_range.clone(), replace_with);
+        Ok(())
+    }
+
     pub fn iter(&self) -> Iter<Segment> {
-        self.0.iter()
+        self.segments.iter()
     }
 
     pub fn iter_mut(&mut self) -> IterMut<Segment> {
-        self.0.iter_mut()
+        self.segments.iter_mut()
     }
 }
 
@@ -99,14 +129,17 @@ impl From<SegmentList> for (Vec<Coordinate>, Vec<Segment>) {
 }
 
 impl From<Vec<Segment>> for SegmentList {
-    fn from(seg_vec: Vec<Segment>) -> Self {
-        Self(seg_vec)
+    fn from(segments: Vec<Segment>) -> Self {
+        Self {
+            segments,
+            replaced_range: (0..0),
+        }
     }
 }
 
 impl From<SegmentList> for Vec<Segment> {
     fn from(seg_list: SegmentList) -> Self {
-        seg_list.0
+        seg_list.segments
     }
 }
 
@@ -121,6 +154,14 @@ pub struct Segment {
 }
 
 impl Segment {
+    pub fn new_empty(start: Coordinate, goal: Coordinate) -> Self {
+        Self {
+            start,
+            goal,
+            points: Vec::new(),
+        }
+    }
+
     pub fn get_distance(&self) -> Distance {
         self.points
             .last()
