@@ -3,7 +3,7 @@ table! {
         route_id -> Varchar,
         index -> Unsigned<Integer>,
         code -> Char,
-        pos -> Nullable<Unsigned<Integer>>,
+        pos -> Unsigned<Integer>,
         polyline -> Varchar,
     }
 }
@@ -21,7 +21,6 @@ table! {
         route_id -> Varchar,
         index -> Integer,
         polyline -> Varchar,
-        distance -> Double,
     }
 }
 
