@@ -1,8 +1,8 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 
 use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::segment::Segment;
-use crate::domain::model::types::{Distance, Polyline};
+use crate::domain::model::types::Polyline;
 use crate::domain::repository::RouteInterpolationApi;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
@@ -64,14 +64,16 @@ impl RouteInterpolationApi for OsrmApi {
             "route",
             &format!(
                 "polyline({})?overview=full",
-                String::from(Polyline::from(LineString::from(vec![from, to])))
+                String::from(Polyline::from(vec![
+                    seg.start().clone(),
+                    seg.goal().clone()
+                ]))
             ),
         )?;
 
         let polyline =
             serde_json::from_value::<Polyline>(json["routes"][0]["geometry"].clone()).unwrap();
-        seg.set_points(polyline.try_into()?);
 
-        Ok(())
+        seg.set_points(polyline.try_into()?)
     }
 }

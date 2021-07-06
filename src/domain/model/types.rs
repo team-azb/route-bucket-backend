@@ -40,7 +40,7 @@ pub type Latitude = NumericValueObject<f64, 90>;
 pub type Longitude = NumericValueObject<f64, 180>;
 // NOTE: genericsの特殊化が実装されたら、この0は消せる
 // 参考: https://github.com/rust-lang/rust/issues/31844
-pub type Elevation = NumericValueObject<i32, 0>;
+pub type Elevation = NumericValueObject<i32, 1000000>;
 pub type Distance = NumericValueObject<f64, 0>;
 
 /// Value Object for BigDecimal type

@@ -1,17 +1,19 @@
-use getset::Getters;
+use derive_more::From;
+use getset::{Getters, MutGetters};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::Operation;
 use crate::domain::model::segment::SegmentList;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
-#[derive(Debug, Getters)]
+#[derive(Debug, From, Getters, MutGetters)]
 #[get = "pub"]
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
+    #[getset(get_mut = "pub")]
     seg_list: SegmentList,
 }
 
@@ -62,18 +64,26 @@ impl Route {
         }
     }
 
+    pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
+        self.seg_list.calc_elevation_gain()
+    }
+
+    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
+        self.seg_list.gather_waypoints()
+    }
+
     fn apply_operation(&mut self, reverse: bool) -> ApplicationResult<()> {
-        let op;
+        let mut op;
         if reverse {
             self.info.op_num -= 1;
-            op = self.get_operation(self.info.op_num)?.reverse();
+            op = self.get_operation(self.info.op_num)?.clone();
+            op.reverse()
         } else {
             op = self.get_operation(self.info.op_num)?.clone();
             self.info.op_num += 1;
         };
 
-        op.apply(&mut self.info.waypoints)?;
-        self.last_op.insert(op);
+        op.apply(&mut self.seg_list)?;
 
         Ok(())
     }

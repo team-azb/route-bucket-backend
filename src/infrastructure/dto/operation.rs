@@ -1,4 +1,4 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::{Operation, OperationType};
@@ -31,13 +31,13 @@ impl OperationDto {
                 .map(String::from)
                 .map(Polyline::from)
                 .map(Vec::try_from)
-                .try_collect()?,
+                .collect::<ApplicationResult<Vec<_>>>()?,
         )
         .unwrap();
 
         Ok(Operation::new(
             op_type,
-            *self.pos as usize,
+            self.pos as usize,
             org_coords,
             new_coords,
         ))
@@ -48,14 +48,14 @@ impl OperationDto {
         route_id: &RouteId,
         index: u32,
     ) -> ApplicationResult<OperationDto> {
-        let org_polyline: String = operation.org_coords().clone().into();
-        let new_polyline: String = operation.new_coords().clone().into();
+        let org_polyline: String = Polyline::from(operation.org_coords().clone()).into();
+        let new_polyline: String = Polyline::from(operation.new_coords().clone()).into();
 
         Ok(OperationDto {
             route_id: route_id.to_string(),
             index,
-            code: operation.op_type().into(),
-            pos: operation.start_pos() as u32,
+            code: operation.op_type().clone().into(),
+            pos: *operation.start_pos() as u32,
             polyline: [org_polyline, new_polyline].join(" "),
         })
     }

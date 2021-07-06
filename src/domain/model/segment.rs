@@ -6,7 +6,7 @@ use std::slice::{Iter, IterMut};
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use itertools::Itertools;
-use num_traits::{clamp, Zero};
+use num_traits::Zero;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
@@ -14,7 +14,8 @@ use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::types::{Distance, Elevation, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Getters)]
+#[get = "pub"]
 pub struct SegmentList {
     segments: Vec<Segment>,
     replaced_range: Range<usize>,
@@ -77,27 +78,49 @@ impl SegmentList {
 
     pub fn replace_range(
         &mut self,
-        range: Range<usize>,
-        waypoints: Vec<Coordinate>,
+        mut range: Range<usize>,
+        mut waypoints: Vec<Coordinate>,
     ) -> ApplicationResult<()> {
-        if range.start() > *self.segments.len() {
+        if range.start > self.segments.len() {
             return Err(ApplicationError::DomainError(
                 "Invalid Range at replace_range!".into(),
             ));
         }
 
-        let end = clamp(range.end(), range.start(), *self.segments.len());
+        if range.start > 0 {
+            range.start -= 1;
+            waypoints.insert(0, self.segments[range.start].start.clone())
+        }
 
-        self.replaced_range = (range.start()..end);
-        let replace_with: Vec<_> = waypoints
-            .iter_into()
+        if range.end < self.segments.len() {
+            waypoints.push(self.segments[range.end].start.clone())
+        } else if let Some(last_ref) = waypoints.last() {
+            let last = last_ref.clone();
+            waypoints.push(last)
+        }
+
+        let replace_with = waypoints
+            .into_iter()
             .tuple_windows()
-            .map(|(from, to)| Segment::new_empty(from, to))
-            .try_collect()?;
+            .map(|(start, goal)| Segment::new_empty(start, goal))
+            .collect_vec();
 
-        self.segments
-            .splice(self.replaced_range.clone(), replace_with);
+        self.segments.splice(range.clone(), replace_with);
+
+        self.replaced_range = range;
         Ok(())
+    }
+
+    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
+        self.segments.iter().map(|seg| seg.start.clone()).collect()
+    }
+
+    pub fn into_segments_in_between(self) -> Vec<Segment> {
+        let mut segments: Vec<Segment> = self.into();
+        if segments.len() > 0 {
+            segments.pop();
+        }
+        segments
     }
 
     pub fn iter(&self) -> Iter<Segment> {
@@ -106,25 +129,6 @@ impl SegmentList {
 
     pub fn iter_mut(&mut self) -> IterMut<Segment> {
         self.segments.iter_mut()
-    }
-}
-
-impl From<SegmentList> for (Vec<Coordinate>, Vec<Segment>) {
-    fn from(seg_list: SegmentList) -> Self {
-        let (coords, segments) = seg_list
-            .0
-            .into_iter()
-            .enumerate()
-            .map(|(i, seg)| {
-                let coords = if i == 0 {
-                    vec![seg.start, seg.goal]
-                } else {
-                    vec![seg.goal]
-                };
-                (coords, seg.points)
-            })
-            .unzip();
-        (coords.into_iter().concat().collect_vec(), segments)
     }
 }
 
@@ -143,7 +147,7 @@ impl From<SegmentList> for Vec<Segment> {
     }
 }
 
-#[derive(Debug, Getters, Serialize)]
+#[derive(Clone, Debug, Getters, Serialize)]
 #[get = "pub"]
 pub struct Segment {
     #[serde(skip_serializing)]
@@ -165,9 +169,27 @@ impl Segment {
     pub fn get_distance(&self) -> Distance {
         self.points
             .last()
-            .map(Coordinate::distance_from_start)
+            .map(|coord| coord.distance_from_start().clone())
             .flatten()
             .unwrap_or(Distance::zero())
+    }
+
+    pub fn set_points(&mut self, points: Vec<Coordinate>) -> ApplicationResult<()> {
+        if self.is_empty() {
+            self.points = points;
+            Ok(())
+        } else {
+            Err(ApplicationError::DomainError(
+                "Cannot set_points to a Segment which isn't empty!".into(),
+            ))
+        }
+    }
+
+    pub fn reset_endpoints(&mut self, start_op: Option<Coordinate>, goal_op: Option<Coordinate>) {
+        self.start = start_op.unwrap_or(self.start.clone());
+        self.goal = goal_op.unwrap_or(self.goal.clone());
+
+        self.points.clear();
     }
 
     pub fn is_empty(&self) -> bool {
@@ -191,8 +213,8 @@ impl TryFrom<Vec<Coordinate>> for Segment {
             "Cannot Initialize Segment from an empty Vec<Coordinate>!".into(),
         );
         Ok(Segment {
-            start: points.first().ok_or(&err)?.clone(),
-            goal: points.last().ok_or(&err)?.clone(),
+            start: points.first().ok_or(err.clone())?.clone(),
+            goal: points.last().ok_or(err.clone())?.clone(),
             points,
         })
     }

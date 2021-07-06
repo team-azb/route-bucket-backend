@@ -8,7 +8,7 @@ use crate::hashmap;
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
 
 /// actix-webを用いて直接リクエストに変換できる自作エラークラス
-#[derive(Debug, Display, Error)]
+#[derive(Clone, Debug, Display, Error)]
 pub enum ApplicationError {
     #[display(fmt = "DataBaseError: {}", _0)]
     DataBaseError(String),

@@ -30,17 +30,37 @@ impl SegmentRepositoryMysql {
         step: i32,
         conn: &PooledConnection<ConnectionManager<MysqlConnection>>,
     ) -> ApplicationResult<usize> {
+        // TODO: PRIMARY KEYのconfilictが起きないように、一旦
+        //     : -idxに飛ばしてから処理している
+        //     : ここのもう少し賢い方法を考える
+        //     : PRIMARY KEYを(route_id, idx, segment_id)の順にすれば良さそう
         diesel::update(
             SegmentDto::table()
                 .filter(segments::route_id.eq(route_id.to_string()))
                 .filter(segments::index.ge(start_pos as i32)),
         )
-        .set(segments::index.eq(segments::index + step))
+        .set(segments::index.eq(segments::index * (-1)))
         .execute(conn)
-        .map_err(|_| {
+        .map_err(|err| {
             ApplicationError::DataBaseError(format!(
-                "Failed to update Segments that belong to Route {}",
-                route_id.to_string()
+                "Failed to shift Segments that belong to Route {}, {:?}",
+                route_id.to_string(),
+                err
+            ))
+        })?;
+
+        diesel::update(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.le(-(start_pos as i32))),
+        )
+        .set(segments::index.eq(segments::index * (-1) + step))
+        .execute(conn)
+        .map_err(|err| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to shift Segments that belong to Route {}, {:?}",
+                route_id.to_string(),
+                err
             ))
         })
     }
@@ -72,7 +92,7 @@ impl SegmentRepository for SegmentRepositoryMysql {
     fn insert(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        self.shift_segments(route_id, pos, true, &conn)?;
+        self.shift_segments(route_id, pos, 1, &conn)?;
 
         let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
 
@@ -105,7 +125,7 @@ impl SegmentRepository for SegmentRepositoryMysql {
             ))
         })?;
 
-        self.shift_segments(route_id, pos, false, &conn)?;
+        self.shift_segments(route_id, pos, -1, &conn)?;
 
         Ok(())
     }
@@ -171,11 +191,11 @@ impl SegmentRepository for SegmentRepositoryMysql {
     ) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        let width = range.end() - range.start();
+        let width = range.end - range.start;
         diesel::delete(
             SegmentDto::table()
                 .filter(segments::route_id.eq(route_id.to_string()))
-                .filter(segments::index.between(range.start() as i32, range.end() as i32 - 1)),
+                .filter(segments::index.between(range.start as i32, range.end as i32 - 1)),
         )
         .execute(&conn)
         .map_err(|_| {
@@ -185,7 +205,7 @@ impl SegmentRepository for SegmentRepositoryMysql {
             ))
         })?;
 
-        self.shift_segments(route_id, range.end(), width as i32, &conn)?;
+        self.shift_segments(route_id, range.end, -(width as i32), &conn)?;
 
         Ok(())
     }

@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 
 use getset::Getters;
-use serde::{Deserialize, Serialize};
 
 use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::segment::SegmentList;
@@ -18,14 +17,14 @@ pub enum OperationType {
 }
 
 impl OperationType {
-    pub fn reverse(mut self) {
-        self = match self {
+    pub fn reverse(&self) -> Self {
+        match *self {
             OperationType::Add => OperationType::Remove,
             OperationType::Remove => OperationType::Add,
             OperationType::Move => OperationType::Move,
             OperationType::Clear => OperationType::InitWithList,
             OperationType::InitWithList => OperationType::Clear,
-        };
+        }
     }
 }
 
@@ -110,7 +109,7 @@ impl Operation {
     }
 
     pub fn reverse(&mut self) {
-        self.op_type.reverse();
+        self.op_type = self.op_type.reverse();
         swap(&mut self.org_coords, &mut self.new_coords);
     }
 }

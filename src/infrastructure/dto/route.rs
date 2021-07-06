@@ -1,8 +1,7 @@
 use crate::domain::model::route::RouteInfo;
-use crate::domain::model::types::{Polyline, RouteId};
+use crate::domain::model::types::RouteId;
 use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
-use std::convert::TryInto;
 
 /// ルートのdto構造体
 #[derive(Identifiable, Queryable, Insertable, Debug, AsChangeset)]

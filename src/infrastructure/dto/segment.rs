@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::domain::model::segment::Segment;
-use crate::domain::model::types::{Distance, Polyline, RouteId};
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::segments;
 use crate::utils::error::ApplicationResult;
