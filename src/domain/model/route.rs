@@ -1,7 +1,7 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::LineString;
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::Operation;
 use crate::domain::model::segment::SegmentList;
 use crate::domain::model::types::RouteId;

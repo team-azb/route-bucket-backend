@@ -10,7 +10,7 @@ use num_traits::{clamp, Zero};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::types::{Distance, Elevation, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 

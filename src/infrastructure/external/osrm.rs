@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::segment::Segment;
 use crate::domain::model::types::{Distance, Polyline};
 use crate::domain::repository::RouteInterpolationApi;

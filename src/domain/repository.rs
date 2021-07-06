@@ -1,4 +1,4 @@
-use crate::domain::model::linestring::Coordinate;
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::Operation;
 use crate::domain::model::route::RouteInfo;
 use crate::domain::model::segment::{Segment, SegmentList};

@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::segment::SegmentList;
 use crate::utils::error::{ApplicationError, ApplicationResult};
 use std::mem::swap;

@@ -1,4 +1,4 @@
-pub mod linestring;
+pub mod coordinate;
 pub mod operation;
 pub mod route;
 pub mod segment;

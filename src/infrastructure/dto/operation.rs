@@ -1,9 +1,7 @@
 use std::convert::{TryFrom, TryInto};
 
-use itertools::Itertools;
-
-use crate::domain::model::linestring::Coordinate;
-use crate::domain::model::operation::{Operation, OperationStruct, OperationType};
+use crate::domain::model::coordinate::Coordinate;
+use crate::domain::model::operation::{Operation, OperationType};
 use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;

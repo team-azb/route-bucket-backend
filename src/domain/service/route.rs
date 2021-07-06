@@ -1,8 +1,7 @@
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
-use crate::domain::model::operation::Operation;
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::route::{Route, RouteInfo};
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::RouteId;

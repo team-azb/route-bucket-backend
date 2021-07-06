@@ -1,9 +1,9 @@
 use std::convert::{TryFrom, TryInto};
 use std::iter::FromIterator;
-use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
+use itertools::Itertools;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +57,19 @@ impl From<Coordinate> for geo::Coordinate<f64> {
     }
 }
 
+impl TryFrom<geo::Coordinate<f64>> for Coordinate {
+    type Error = ApplicationError;
+
+    fn try_from(geo_coord: geo::Coordinate<f64>) -> ApplicationResult<Coordinate> {
+        Ok(Coordinate {
+            latitude: Latitude::try_from(geo_coord.y)?,
+            longitude: Longitude::try_from(geo_coord.x)?,
+            elevation: None,
+            distance_from_start: None,
+        })
+    }
+}
+
 impl From<Coordinate> for (f64, f64) {
     fn from(coord: Coordinate) -> (f64, f64) {
         (coord.latitude.value(), coord.longitude.value())
@@ -78,7 +91,7 @@ impl TryFrom<Polyline> for Vec<Coordinate> {
         let line_str = decode_polyline(&String::from(value), 5).map_err(|err| {
             ApplicationError::DomainError(format!("failed to encode polyline: {}", err))
         })?;
-        Ok(Vec::from_iter(line_str.into_iter()))
+        line_str.into_iter().map(Coordinate::try_from).try_collect()
     }
 }
 

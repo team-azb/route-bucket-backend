@@ -3,8 +3,8 @@ use std::convert::TryInto;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::{Coordinate, LineString};
-use crate::domain::model::operation::OperationStruct;
+use crate::domain::model::coordinate::Coordinate;
+use crate::domain::model::operation::Operation;
 use crate::domain::model::route::{Route, RouteInfo};
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::{Elevation, RouteId};
