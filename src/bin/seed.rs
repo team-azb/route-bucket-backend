@@ -1,6 +1,6 @@
-use route_bucket_backend::domain::model::linestring::{Coordinate, LineString};
+use route_bucket_backend::domain::model::coordinate::Coordinate;
 use route_bucket_backend::domain::model::operation::Operation;
-use route_bucket_backend::domain::model::route::Route;
+use route_bucket_backend::domain::model::route::RouteInfo;
 use route_bucket_backend::domain::model::types::RouteId;
 use route_bucket_backend::domain::service::route::RouteService;
 use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
@@ -15,18 +15,18 @@ macro_rules! coord {
     };
 }
 
-macro_rules! linestring {
-    [] => {
-        LineString::from(vec![])
-    };
-    [ $(($lat: expr, $lon: expr)),+ $(,)?] => {
-        LineString::from(vec![
-            $(
-                coord!($lat, $lon),
-            )+
-        ])
-    };
-}
+// macro_rules! linestring {
+//     [] => {
+//         LineString::from(vec![])
+//     };
+//     [ $(($lat: expr, $lon: expr)),+ $(,)?] => {
+//         LineString::from(vec![
+//             $(
+//                 coord!($lat, $lon),
+//             )+
+//         ])
+//     };
+// }
 
 fn main() {
     env_logger::init();
@@ -46,10 +46,9 @@ fn main() {
 
     let route_id1 = RouteId::new();
     route_service
-        .register_route(&Route::new(
+        .register_route(&RouteInfo::new(
             route_id1.clone(),
             &String::from("sample1"),
-            linestring![],
             0,
         ))
         .unwrap();
@@ -57,80 +56,59 @@ fn main() {
 
     let route_id2 = RouteId::new();
     route_service
-        .register_route(&Route::new(
+        .register_route(&RouteInfo::new(
             route_id2.clone(),
             &String::from("sample2: 皇居ラン"),
-            linestring![],
             0,
         ))
         .unwrap();
 
-    let mut sample2 = route_service.find_editor(&route_id2).unwrap();
+    let mut sample2 = route_service.find_route(&route_id2).unwrap();
 
     // let sample2
     sample2
-        .push_operation(Operation::Add {
-            pos: 0,
-            coord: coord!(35.68136, 139.75875),
-        })
+        .push_operation(Operation::new_add(0, coord!(35.68136, 139.75875)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
     sample2
-        .push_operation(Operation::Add {
-            pos: 1,
-            coord: coord!(35.69053, 139.75681),
-        })
+        .push_operation(Operation::new_add(1, coord!(35.69053, 139.75681)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2
-        .push_operation(Operation::Add {
-            pos: 2,
-            coord: coord!(35.69510, 139.75139),
-        })
+        .push_operation(Operation::new_add(2, coord!(35.69510, 139.75139)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2
-        .push_operation(Operation::Add {
-            pos: 3,
-            coord: coord!(35.68942, 139.74547),
-        })
+        .push_operation(Operation::new_add(3, coord!(35.68942, 139.74547)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2
-        .push_operation(Operation::Add {
-            pos: 4,
-            coord: coord!(35.68418, 139.74424),
-        })
+        .push_operation(Operation::new_add(4, coord!(35.68418, 139.74424)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2
-        .push_operation(Operation::Add {
-            pos: 5,
-            coord: coord!(35.68136, 139.75875),
-        })
+        .push_operation(Operation::new_add(5, coord!(35.68136, 139.75875)))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2
-        .push_operation(Operation::Clear {
-            org_list: linestring![
-                (35.68136, 139.75875),
-                (35.69053, 139.75681),
-                (35.69510, 139.75139),
-                (35.68942, 139.74547),
-                (35.68418, 139.74424),
-                (35.68136, 139.75875)
-            ],
-        })
+        .push_operation(Operation::new_clear(vec![
+            coord!(35.68136, 139.75875),
+            coord!(35.69053, 139.75681),
+            coord!(35.69510, 139.75139),
+            coord!(35.68942, 139.74547),
+            coord!(35.68418, 139.74424),
+            coord!(35.68136, 139.75875),
+        ]))
         .unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
     sample2.undo_operation().unwrap();
-    route_service.update_editor(&sample2).unwrap();
+    route_service.update_route(&mut sample2).unwrap();
 
-    log::info!("Route {} added!", sample2.route().id());
+    log::info!("Route {} added!", sample2.info().id());
 }
