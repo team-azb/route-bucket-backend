@@ -72,7 +72,7 @@ impl TryFrom<geo::Coordinate<f64>> for Coordinate {
 
 impl From<Coordinate> for (f64, f64) {
     fn from(coord: Coordinate) -> (f64, f64) {
-        (coord.latitude.value(), coord.longitude.value())
+        (coord.longitude.value(), coord.latitude.value())
     }
 }
 
