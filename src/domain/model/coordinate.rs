@@ -4,6 +4,7 @@ use std::iter::FromIterator;
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use itertools::Itertools;
+use num_traits::FromPrimitive;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 
@@ -67,6 +68,21 @@ impl TryFrom<geo::Coordinate<f64>> for Coordinate {
             elevation: None,
             distance_from_start: None,
         })
+    }
+}
+
+impl From<Coordinate> for gpx::Waypoint {
+    fn from(coord: Coordinate) -> Self {
+        let elevation = coord
+            .elevation
+            .map(|elev| elev.value())
+            .map(f64::from_i32)
+            .flatten();
+
+        let mut waypoint = Self::new(<(f64, f64)>::from(coord).into());
+        waypoint.elevation = elevation;
+
+        waypoint
     }
 }
 

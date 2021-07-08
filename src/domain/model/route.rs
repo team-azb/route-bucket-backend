@@ -1,5 +1,6 @@
 use derive_more::From;
 use getset::{Getters, MutGetters};
+use gpx::{Gpx, GpxVersion, Metadata};
 use serde::{Deserialize, Serialize};
 
 use crate::domain::model::coordinate::Coordinate;
@@ -89,6 +90,17 @@ impl Route {
     }
 }
 
+impl From<Route> for Gpx {
+    fn from(route: Route) -> Self {
+        Gpx {
+            version: GpxVersion::Gpx11,
+            metadata: Some(route.info.into()),
+            tracks: vec![route.seg_list.into()],
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
 pub struct RouteInfo {
@@ -109,5 +121,20 @@ impl RouteInfo {
 
     pub fn rename(&mut self, name: &String) {
         self.name = name.clone();
+    }
+}
+
+impl From<RouteInfo> for Metadata {
+    fn from(route_info: RouteInfo) -> Self {
+        Self {
+            name: Some(route_info.name),
+            description: None,
+            // TODO: ここにRouteBucketのリンクを入れられると良さそう
+            author: None,
+            links: vec![],
+            time: None,
+            keywords: None,
+            bounds: None,
+        }
     }
 }
