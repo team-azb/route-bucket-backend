@@ -61,6 +61,7 @@ where
     pub fn find_segment_list(&self, route_id: &RouteId) -> ApplicationResult<SegmentList> {
         let mut seg_list = self.segment_repository.find_by_route_id(route_id)?;
         self.attach_elevation(&mut seg_list)?;
+        seg_list.attach_distance_from_start()?;
         Ok(seg_list)
     }
 
