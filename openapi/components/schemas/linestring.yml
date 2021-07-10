@@ -11,7 +11,7 @@ Segment:
     points:
       type: array
       items:
-        $ref: ./coordinate.yml#/CoordinateWithElevation
+        $ref: ./coordinate.yml#/CoordinateVerbose
     distance:
       type: number
       format: double

@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::iter::FromIterator;
 use std::slice::{Iter, IterMut};
 
@@ -6,8 +6,9 @@ use getset::Getters;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::types::{Elevation, Latitude, Longitude, Polyline};
+use crate::domain::model::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 use crate::utils::error::{ApplicationError, ApplicationResult};
+use geo::algorithm::haversine_distance::HaversineDistance;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct LineString(Vec<Coordinate>);
@@ -138,6 +139,8 @@ pub struct Coordinate {
     longitude: Longitude,
     #[serde(skip_serializing_if = "Option::is_none")]
     elevation: Option<Elevation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    distance_from_start: Option<Distance>,
 }
 
 impl Coordinate {
@@ -146,6 +149,7 @@ impl Coordinate {
             latitude: Latitude::try_from(lat)?,
             longitude: Longitude::try_from(lon)?,
             elevation: None,
+            distance_from_start: None,
         };
         Ok(coord)
     }
@@ -158,6 +162,10 @@ impl Coordinate {
             .ok_or(ApplicationError::DomainError(
                 "Elevation already set for Coordinate.".into(),
             ))
+    }
+
+    pub fn set_distance_from_start(&mut self, distance: Distance) -> () {
+        self.distance_from_start.insert(distance);
     }
 }
 
@@ -173,5 +181,17 @@ impl From<Coordinate> for geo::Coordinate<f64> {
 impl From<Coordinate> for (f64, f64) {
     fn from(coord: Coordinate) -> (f64, f64) {
         (coord.latitude.value(), coord.longitude.value())
+    }
+}
+
+impl HaversineDistance<Distance> for Coordinate {
+    fn haversine_distance(&self, rhs: &Self) -> Distance {
+        geo::Point::new(self.longitude.value(), self.latitude.value())
+            .haversine_distance(&geo::Point::new(
+                rhs.longitude.value(),
+                rhs.latitude.value(),
+            ))
+            .try_into()
+            .unwrap()
     }
 }

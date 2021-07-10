@@ -2,7 +2,10 @@ use std::cmp::max;
 use std::convert::{TryFrom, TryInto};
 use std::slice::{Iter, IterMut};
 
+use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
+use num_traits::Zero;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
 use crate::domain::model::linestring::{Coordinate, LineString};
@@ -14,19 +17,58 @@ pub struct SegmentList(Vec<Segment>);
 
 impl SegmentList {
     pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
-        let mut gain = 0.try_into().unwrap();
-        let mut prev_elev = Elevation::max();
-
-        self.iter().for_each(|seg| {
-            seg.iter().for_each(|coord| {
-                if let Some(elev) = coord.elevation() {
-                    gain += max(*elev - prev_elev, 0.try_into().unwrap());
-                    prev_elev = *elev;
-                }
+        self.iter()
+            .par_bridge()
+            .fold(i32::zero, |total_gain, seg| {
+                let mut gain = Elevation::zero();
+                let mut prev_elev = Elevation::max();
+                seg.iter().for_each(|coord| {
+                    if let Some(elev) = coord.elevation() {
+                        gain += max(*elev - prev_elev, 0.try_into().unwrap());
+                        prev_elev = *elev;
+                    }
+                });
+                // NOTE: const genericsのあるNumericValueObjectに、Sumがderiveできないので、i32にしている
+                // pull request -> https://github.com/JelteF/derive_more/pull/167
+                total_gain + gain.value()
             })
+            .sum::<i32>()
+            .try_into()
+    }
+
+    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+        // compute cumulative distance within the segments
+        self.iter_mut().par_bridge().for_each(|seg| {
+            seg.distance = seg
+                .iter_mut()
+                .scan((Distance::zero(), None), |(dist, prev_op), coord| {
+                    if let Some(prev_coord) = prev_op {
+                        *dist += coord.haversine_distance(prev_coord);
+                    }
+                    coord.set_distance_from_start(*dist);
+                    prev_op.insert(coord.clone());
+                    Some(*dist)
+                })
+                .last()
+                .unwrap();
         });
 
-        Ok(gain)
+        // convert to global cumulative distance
+        self.iter_mut()
+            .scan(Distance::zero(), |offset, seg| {
+                let prev_offset = *offset;
+                *offset += seg.distance;
+                Some((seg, prev_offset))
+            })
+            .par_bridge()
+            .for_each(|(seg, offset)| {
+                seg.iter_mut().par_bridge().for_each(|coord| {
+                    let org_dist = coord.distance_from_start().unwrap();
+                    coord.set_distance_from_start(org_dist + offset);
+                });
+            });
+
+        Ok(())
     }
 
     pub fn iter(&self) -> Iter<Segment> {
