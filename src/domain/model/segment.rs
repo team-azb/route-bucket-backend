@@ -6,7 +6,6 @@ use std::slice::{Iter, IterMut};
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use itertools::Itertools;
-use num_traits::Zero;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
@@ -22,10 +21,10 @@ pub struct SegmentList {
 }
 
 impl SegmentList {
-    pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
+    pub fn calc_elevation_gain(&self) -> Elevation {
         self.iter()
             .par_bridge()
-            .fold(i32::zero, |total_gain, seg| {
+            .fold(Elevation::zero, |total_gain, seg| {
                 let mut gain = Elevation::zero();
                 let mut prev_elev = Elevation::max();
                 seg.iter().for_each(|coord| {
@@ -36,10 +35,9 @@ impl SegmentList {
                 });
                 // NOTE: const genericsのあるNumericValueObjectに、Sumがderiveできないので、i32にしている
                 // pull request -> https://github.com/JelteF/derive_more/pull/167
-                total_gain + gain.value()
+                total_gain + gain
             })
-            .sum::<i32>()
-            .try_into()
+            .sum::<Elevation>()
     }
 
     pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {

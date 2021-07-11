@@ -64,7 +64,7 @@ impl Route {
         }
     }
 
-    pub fn calc_elevation_gain(&self) -> ApplicationResult<Elevation> {
+    pub fn calc_elevation_gain(&self) -> Elevation {
         self.seg_list.calc_elevation_gain()
     }
 

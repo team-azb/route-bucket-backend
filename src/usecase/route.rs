@@ -31,7 +31,7 @@ where
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let route_info = self.service.find_info(route_id)?;
         let seg_list = self.service.find_segment_list(route_id)?;
-        let elevation_gain = seg_list.calc_elevation_gain()?;
+        let elevation_gain = seg_list.calc_elevation_gain();
 
         let waypoints = seg_list.gather_waypoints();
         let segments = seg_list.into_segments_in_between();
@@ -129,7 +129,7 @@ where
         // TODO: posのrangeチェック
 
         self.service.update_route(route)?;
-        let elevation_gain = route.calc_elevation_gain()?;
+        let elevation_gain = route.calc_elevation_gain();
 
         // NOTE: どうせここでcloneが必要なので、update_routeの戻り値にSegmentListを指定してもいいかもしれない
         let seg_list = route.seg_list().clone();

@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use derive_more::{Add, AddAssign, Display, From, Into, Sub};
+use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,19 @@ pub type Distance = NumericValueObject<f64, 0>;
 
 /// Value Object for BigDecimal type
 #[derive(
-    Add, AddAssign, Sub, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+    Add,
+    AddAssign,
+    Sub,
+    Sum,
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
 )]
 pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 
