@@ -38,8 +38,6 @@ services:
     command: >
       bash -c "
         ./wait_for_db.sh &&
-        diesel setup &&
-        diesel migration run &&
         /app/target/release/route-bucket-backend"
     depends_on:
       - db
@@ -62,3 +60,13 @@ services:
       context: .
       dockerfile: ./docker/osrm.Dockerfile
     command: osrm-routed --algorithm mld /data/map.osm.pbf
+
+  db_manager:
+    build:
+      context: .
+      dockerfile: ./docker/db_manager.Dockerfile
+    depends_on:
+      - db
+    profiles:
+      - management
+

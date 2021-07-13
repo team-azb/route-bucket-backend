@@ -1,10 +1,5 @@
 FROM rust:1.53.0
 
-# diesel_cliのinstall
-# ファイルを変更してもcacheを使えるように、COPYの前に行う
-# 参考: https://tech.plaid.co.jp/improve_docker_build_efficiency/#3-cache-
-RUN cargo install diesel_cli --version 1.4.1
-
 # dbを待つためにmysqlコマンドをインストール
 RUN apt update && \
     apt install -y default-mysql-client && \
