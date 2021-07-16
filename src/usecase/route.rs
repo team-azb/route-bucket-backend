@@ -1,16 +1,16 @@
-use crate::domain::model::linestring::{Coordinate, LineString};
-use crate::domain::model::operation::OperationStruct;
-use crate::domain::model::route::Route;
-use crate::domain::model::segment::SegmentList;
+use getset::Getters;
+use serde::{Deserialize, Serialize};
+
+use crate::domain::model::coordinate::Coordinate;
+use crate::domain::model::operation::Operation;
+use crate::domain::model::route::{Route, RouteInfo};
+use crate::domain::model::segment::Segment;
 use crate::domain::model::types::{Elevation, RouteId};
 use crate::domain::repository::{
     ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository, SegmentRepository,
 };
 use crate::domain::service::route::RouteService;
 use crate::utils::error::ApplicationResult;
-use getset::Getters;
-use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
 
 pub struct RouteUseCase<R, O, S, I, E> {
     service: RouteService<R, O, S, I, E>,
@@ -29,114 +29,134 @@ where
     }
 
     pub fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
-        let route = self.service.find_route(route_id)?;
-        let mut seg_list = self.service.find_segment_list(route_id)?;
-        seg_list.attach_distance_from_start()?;
-        let elevation_gain = seg_list.calc_elevation_gain()?;
+        let route_info = self.service.find_info(route_id)?;
+        let seg_list = self.service.find_segment_list(route_id)?;
+        let elevation_gain = seg_list.calc_elevation_gain();
+
+        let waypoints = seg_list.gather_waypoints();
+        let segments = seg_list.into_segments_in_between();
+
         Ok(RouteGetResponse {
-            route,
-            segments: seg_list,
+            route_info,
+            waypoints,
+            segments,
             elevation_gain,
         })
     }
 
     pub fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
         Ok(RouteGetAllResponse {
-            routes: self.service.find_all_routes()?,
+            route_infos: self.service.find_all_infos()?,
         })
     }
 
     pub fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route = Route::new(RouteId::new(), req.name(), LineString::new(), 0);
+        let route_info = RouteInfo::new(RouteId::new(), req.name(), 0);
 
-        self.service.register_route(&route)?;
+        self.service.register_route(&route_info)?;
 
         Ok(RouteCreateResponse {
-            id: route.id().clone(),
+            id: route_info.id().clone(),
         })
     }
 
-    pub fn rename(&self, route_id: &RouteId, req: &RouteRenameRequest) -> ApplicationResult<Route> {
+    pub fn rename(
+        &self,
+        route_id: &RouteId,
+        req: &RouteRenameRequest,
+    ) -> ApplicationResult<RouteInfo> {
+        let mut route_info = self.service.find_info(route_id)?;
+        route_info.rename(req.name());
+        self.service.update_info(&route_info)?;
+        Ok(route_info)
+    }
+
+    pub fn add_point(
+        &self,
+        route_id: &RouteId,
+        pos: usize,
+        coord: Coordinate,
+    ) -> ApplicationResult<RouteOperationResponse> {
         let mut route = self.service.find_route(route_id)?;
-        route.rename(req.name());
-        self.service.update_route(&route)?;
-        Ok(route)
+        route.push_operation(Operation::new_add(pos, coord))?;
+        self.update(&mut route)
     }
 
-    pub fn edit(
+    pub fn remove_point(
         &self,
-        op_code: &str,
         route_id: &RouteId,
-        pos: Option<usize>,
-        new_coord: Option<Coordinate>,
+        pos: usize,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let mut editor = self.service.find_editor(route_id)?;
-
-        let org_polyline = editor.route().waypoints().clone();
-
-        let org_coord = pos.map_or(None, |pos| {
-            org_polyline.get(pos).ok().map(Coordinate::clone)
-        });
-
-        let opst = OperationStruct::new(
-            op_code.into(),
-            pos,
-            org_coord,
-            // TODO: 道路外でも許容する場合（直線モードとか？）としない場合の区別をする
-            new_coord
-                .map(|coord| self.service.correct_coordinate(&coord))
-                .transpose()?,
-            Some(org_polyline),
-        )?;
-        editor.push_operation(opst.try_into()?)?;
-        let mut seg_list = self.service.update_editor(&editor)?;
-        seg_list.attach_distance_from_start()?;
-        let elevation_gain = seg_list.calc_elevation_gain()?;
-
-        Ok(RouteOperationResponse {
-            waypoints: editor.route().waypoints().clone(),
-            segments: seg_list,
-            elevation_gain,
-        })
+        let mut route = self.service.find_route(route_id)?;
+        route.push_operation(Operation::new_remove(pos, route.gather_waypoints()))?;
+        self.update(&mut route)
     }
 
-    pub fn migrate_history(
+    pub fn move_point(
         &self,
         route_id: &RouteId,
-        forward: bool,
+        pos: usize,
+        coord: Coordinate,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let mut editor = self.service.find_editor(route_id)?;
-        if forward {
-            editor.redo_operation()?;
-        } else {
-            editor.undo_operation()?;
-        }
-        let segments = self.service.update_editor(&editor)?;
-        let elevation_gain = segments.calc_elevation_gain()?;
+        let mut route = self.service.find_route(route_id)?;
+        route.push_operation(Operation::new_move(pos, coord, route.gather_waypoints()))?;
+        self.update(&mut route)
+    }
 
-        Ok(RouteOperationResponse {
-            waypoints: editor.route().waypoints().clone(),
-            segments,
-            elevation_gain,
-        })
+    pub fn clear_route(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse> {
+        let mut route = self.service.find_route(route_id)?;
+        route.push_operation(Operation::new_clear(route.gather_waypoints()))?;
+        self.update(&mut route)
+    }
+
+    pub fn redo_operation(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse> {
+        let mut route = self.service.find_route(route_id)?;
+        route.redo_operation()?;
+        self.update(&mut route)
+    }
+
+    pub fn undo_operation(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse> {
+        let mut route = self.service.find_route(route_id)?;
+        route.undo_operation()?;
+        self.update(&mut route)
     }
 
     pub fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        self.service.delete_editor(route_id)
+        self.service.delete_route(route_id)
+    }
+
+    fn update(&self, route: &mut Route) -> ApplicationResult<RouteOperationResponse> {
+        // TODO: posのrangeチェック
+
+        self.service.update_route(route)?;
+        let elevation_gain = route.calc_elevation_gain();
+
+        // NOTE: どうせここでcloneが必要なので、update_routeの戻り値にSegmentListを指定してもいいかもしれない
+        let seg_list = route.seg_list().clone();
+        let waypoints = seg_list.gather_waypoints();
+        let segments = seg_list.into_segments_in_between();
+
+        Ok(RouteOperationResponse {
+            waypoints,
+            segments,
+            elevation_gain,
+        })
     }
 }
 
 #[derive(Serialize)]
 pub struct RouteGetResponse {
     #[serde(flatten)]
-    route: Route,
-    segments: SegmentList,
+    route_info: RouteInfo,
+    waypoints: Vec<Coordinate>,
+    segments: Vec<Segment>,
     elevation_gain: Elevation,
 }
 
 #[derive(Serialize)]
 pub struct RouteGetAllResponse {
-    routes: Vec<Route>,
+    #[serde(rename = "routes")]
+    route_infos: Vec<RouteInfo>,
 }
 
 #[derive(Getters, Deserialize)]
@@ -150,16 +170,15 @@ pub struct RouteCreateResponse {
     pub id: RouteId,
 }
 
-#[derive(Getters, Deserialize)]
-#[get = "pub"]
+#[derive(Deserialize)]
 pub struct NewPointRequest {
-    coord: Coordinate,
+    pub coord: Coordinate,
 }
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    waypoints: LineString,
-    segments: SegmentList,
+    waypoints: Vec<Coordinate>,
+    segments: Vec<Segment>,
     elevation_gain: Elevation,
 }
 

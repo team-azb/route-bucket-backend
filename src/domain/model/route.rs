@@ -1,25 +1,28 @@
-use getset::Getters;
+use derive_more::From;
+use getset::{Getters, MutGetters};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::linestring::LineString;
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::types::RouteId;
+use crate::domain::model::segment::SegmentList;
+use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::{ApplicationError, ApplicationResult};
 
-#[derive(Debug, Getters)]
+#[derive(Debug, From, Getters, MutGetters)]
 #[get = "pub"]
-pub struct RouteEditor {
-    route: Route,
+pub struct Route {
+    info: RouteInfo,
     op_list: Vec<Operation>,
-    last_op: Option<Operation>,
+    #[getset(get_mut = "pub")]
+    seg_list: SegmentList,
 }
 
-impl RouteEditor {
-    pub fn new(route: Route, op_list: Vec<Operation>) -> Self {
+impl Route {
+    pub fn new(info: RouteInfo, op_list: Vec<Operation>, seg_list: SegmentList) -> Self {
         Self {
-            route,
+            info,
             op_list,
-            last_op: None,
+            seg_list,
         }
     }
 
@@ -35,14 +38,14 @@ impl RouteEditor {
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {
         // pos以降の要素は全て捨てる
-        self.op_list.truncate(self.route.op_num);
+        self.op_list.truncate(self.info.op_num);
         self.op_list.push(op);
 
         self.apply_operation(false)
     }
 
     pub fn redo_operation(&mut self) -> ApplicationResult<()> {
-        if self.route.op_num < self.op_list.len() {
+        if self.info.op_num < self.op_list.len() {
             self.apply_operation(false)
         } else {
             Err(ApplicationError::InvalidOperation(
@@ -52,7 +55,7 @@ impl RouteEditor {
     }
 
     pub fn undo_operation(&mut self) -> ApplicationResult<()> {
-        if self.route.op_num > 0 {
+        if self.info.op_num > 0 {
             self.apply_operation(true)
         } else {
             Err(ApplicationError::InvalidOperation(
@@ -61,18 +64,26 @@ impl RouteEditor {
         }
     }
 
+    pub fn calc_elevation_gain(&self) -> Elevation {
+        self.seg_list.calc_elevation_gain()
+    }
+
+    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
+        self.seg_list.gather_waypoints()
+    }
+
     fn apply_operation(&mut self, reverse: bool) -> ApplicationResult<()> {
-        let op;
+        let mut op;
         if reverse {
-            self.route.op_num -= 1;
-            op = self.get_operation(self.route.op_num)?.reverse();
+            self.info.op_num -= 1;
+            op = self.get_operation(self.info.op_num)?.clone();
+            op.reverse()
         } else {
-            op = self.get_operation(self.route.op_num)?.clone();
-            self.route.op_num += 1;
+            op = self.get_operation(self.info.op_num)?.clone();
+            self.info.op_num += 1;
         };
 
-        op.apply(&mut self.route.waypoints)?;
-        self.last_op.insert(op);
+        op.apply(&mut self.seg_list)?;
 
         Ok(())
     }
@@ -80,20 +91,18 @@ impl RouteEditor {
 
 #[derive(Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
-pub struct Route {
+pub struct RouteInfo {
     id: RouteId,
     name: String,
-    waypoints: LineString,
     #[serde(skip_serializing)]
     op_num: usize,
 }
 
-impl Route {
-    pub fn new(id: RouteId, name: &String, waypoints: LineString, op_num: usize) -> Route {
-        Route {
+impl RouteInfo {
+    pub fn new(id: RouteId, name: &String, op_num: usize) -> RouteInfo {
+        RouteInfo {
             id,
             name: name.clone(),
-            waypoints,
             op_num,
         }
     }

@@ -1,9 +1,11 @@
-use crate::domain::model::operation::{Operation, OperationStruct};
+use std::convert::TryFrom;
+
+use crate::domain::model::coordinate::Coordinate;
+use crate::domain::model::operation::{Operation, OperationType};
 use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::operations;
 use crate::utils::error::ApplicationResult;
-use std::convert::{TryFrom, TryInto};
 
 /// 座標のdto構造体
 #[derive(Identifiable, Queryable, Insertable, Associations, Debug)]
@@ -14,20 +16,31 @@ pub struct OperationDto {
     route_id: String,
     index: u32,
     code: String,
-    pos: Option<u32>,
+    pos: u32,
     polyline: String,
 }
 
 impl OperationDto {
     pub fn to_model(&self) -> ApplicationResult<Operation> {
-        OperationStruct::new(
-            self.code.clone(),
-            self.pos.map(|u| u as usize),
-            None,
-            None,
-            Some(Polyline::from(self.polyline.clone()).try_into()?),
+        let op_type = OperationType::try_from(self.code.clone())?;
+
+        let [org_coords, new_coords] = <[Vec<Coordinate>; 2]>::try_from(
+            self.polyline
+                .clone()
+                .split(" ")
+                .map(String::from)
+                .map(Polyline::from)
+                .map(Vec::try_from)
+                .collect::<ApplicationResult<Vec<_>>>()?,
         )
-        .map(OperationStruct::try_into)?
+        .unwrap();
+
+        Ok(Operation::new(
+            op_type,
+            self.pos as usize,
+            org_coords,
+            new_coords,
+        ))
     }
 
     pub fn from_model(
@@ -35,13 +48,15 @@ impl OperationDto {
         route_id: &RouteId,
         index: u32,
     ) -> ApplicationResult<OperationDto> {
-        let opst = OperationStruct::try_from(operation.clone())?;
+        let org_polyline: String = Polyline::from(operation.org_coords().clone()).into();
+        let new_polyline: String = Polyline::from(operation.new_coords().clone()).into();
+
         Ok(OperationDto {
             route_id: route_id.to_string(),
             index,
-            code: opst.code().clone(),
-            pos: opst.pos().clone().map(|u| u as u32),
-            polyline: Polyline::from(opst.polyline().clone()).into(),
+            code: operation.op_type().clone().into(),
+            pos: *operation.start_pos() as u32,
+            polyline: [org_polyline, new_polyline].join(" "),
         })
     }
 }

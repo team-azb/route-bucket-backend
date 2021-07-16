@@ -45,36 +45,41 @@ where
         Ok(HttpResponse::Ok().json(self.usecase.rename(&id, &req)?))
     }
 
-    async fn patch_new_point(
+    async fn patch_add(
         &self,
         path_params: web::Path<(RouteId, usize)>,
         req: web::Json<NewPointRequest>,
-        op_code: &str,
     ) -> Result<HttpResponse> {
-        let (id, pos) = path_params.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.edit(
-            op_code,
-            &id,
-            Some(pos),
-            Some(req.coord().clone()),
-        )?))
+        let (route_id, pos) = path_params.into_inner();
+        let req = req.into_inner();
+        Ok(HttpResponse::Ok().json(self.usecase.add_point(&route_id, pos, req.coord)?))
     }
 
     async fn patch_remove(&self, path_params: web::Path<(RouteId, usize)>) -> Result<HttpResponse> {
-        let (id, pos) = path_params.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.edit("rm", &id, Some(pos), None)?))
+        let (route_id, pos) = path_params.into_inner();
+        Ok(HttpResponse::Ok().json(self.usecase.remove_point(&route_id, pos)?))
     }
 
-    async fn patch_clear(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.edit("clear", &id, None, None)?))
+    async fn patch_move(
+        &self,
+        path_params: web::Path<(RouteId, usize)>,
+        req: web::Json<NewPointRequest>,
+    ) -> Result<HttpResponse> {
+        let (route_id, pos) = path_params.into_inner();
+        let req = req.into_inner();
+        Ok(HttpResponse::Ok().json(self.usecase.move_point(&route_id, pos, req.coord)?))
     }
 
-    async fn patch_undo(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.migrate_history(&id, false)?))
+    async fn patch_clear(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok().json(self.usecase.clear_route(&route_id)?))
     }
 
-    async fn patch_redo(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.migrate_history(&id, true)?))
+    async fn patch_undo(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok().json(self.usecase.undo_operation(&route_id)?))
+    }
+
+    async fn patch_redo(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
+        Ok(HttpResponse::Ok().json(self.usecase.redo_operation(&route_id)?))
     }
 
     async fn delete(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
@@ -113,9 +118,8 @@ where
                     .route(web::patch().to(move |id, req| self.patch_rename(id, req))),
             )
             .service(
-                web::resource("/{id}/add/{pos}").route(
-                    web::patch().to(move |path, req| self.patch_new_point(path, req, "add")),
-                ),
+                web::resource("/{id}/add/{pos}")
+                    .route(web::patch().to(move |path, req| self.patch_add(path, req))),
             )
             .service(
                 web::resource("/{id}/remove/{pos}")
@@ -123,7 +127,7 @@ where
             )
             .service(
                 web::resource("/{id}/move/{pos}")
-                    .route(web::patch().to(move |path, req| self.patch_new_point(path, req, "mv"))),
+                    .route(web::patch().to(move |path, req| self.patch_move(path, req))),
             )
             .service(
                 web::resource("/{id}/clear/")

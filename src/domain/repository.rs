@@ -1,18 +1,19 @@
-use crate::domain::model::linestring::Coordinate;
+use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::Operation;
-use crate::domain::model::route::Route;
+use crate::domain::model::route::RouteInfo;
 use crate::domain::model::segment::{Segment, SegmentList};
 use crate::domain::model::types::{Elevation, RouteId};
 use crate::utils::error::ApplicationResult;
+use std::ops::Range;
 
 pub trait RouteRepository {
-    fn find(&self, id: &RouteId) -> ApplicationResult<Route>;
+    fn find(&self, id: &RouteId) -> ApplicationResult<RouteInfo>;
 
-    fn find_all(&self) -> ApplicationResult<Vec<Route>>;
+    fn find_all(&self) -> ApplicationResult<Vec<RouteInfo>>;
 
-    fn register(&self, route: &Route) -> ApplicationResult<()>;
+    fn register(&self, route_info: &RouteInfo) -> ApplicationResult<()>;
 
-    fn update(&self, route: &Route) -> ApplicationResult<()>;
+    fn update(&self, route_info: &RouteInfo) -> ApplicationResult<()>;
 
     fn delete(&self, id: &RouteId) -> ApplicationResult<()>;
 }
@@ -45,12 +46,18 @@ pub trait SegmentRepository {
     ) -> ApplicationResult<()>;
 
     fn delete_by_route_id(&self, route_id: &RouteId) -> ApplicationResult<()>;
+
+    fn delete_by_route_id_and_range(
+        &self,
+        route_id: &RouteId,
+        range: Range<u32>,
+    ) -> ApplicationResult<()>;
 }
 
 pub trait RouteInterpolationApi {
     fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
 
-    fn interpolate(&self, from: Coordinate, to: Coordinate) -> ApplicationResult<Segment>;
+    fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
 }
 
 pub trait ElevationApi {

@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use derive_more::{Add, AddAssign, Display, From, Into, Sub};
+use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -40,12 +40,24 @@ pub type Latitude = NumericValueObject<f64, 90>;
 pub type Longitude = NumericValueObject<f64, 180>;
 // NOTE: genericsの特殊化が実装されたら、この0は消せる
 // 参考: https://github.com/rust-lang/rust/issues/31844
-pub type Elevation = NumericValueObject<i32, 0>;
+pub type Elevation = NumericValueObject<i32, 1000000>;
 pub type Distance = NumericValueObject<f64, 0>;
 
 /// Value Object for BigDecimal type
 #[derive(
-    Add, AddAssign, Sub, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+    Add,
+    AddAssign,
+    Sub,
+    Sum,
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
 )]
 pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 

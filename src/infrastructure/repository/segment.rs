@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use diesel::associations::HasTable;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
@@ -25,28 +27,42 @@ impl SegmentRepositoryMysql {
         &self,
         route_id: &RouteId,
         start_pos: u32,
-        right_shift: bool,
+        step: i32,
         conn: &PooledConnection<ConnectionManager<MysqlConnection>>,
     ) -> ApplicationResult<usize> {
-        let src = SegmentDto::table()
-            .filter(segments::route_id.eq(route_id.to_string()))
-            .filter(segments::index.ge(start_pos as i32));
-        let err_msg = format!(
-            "Failed to update Segments that belong to Route {}",
-            route_id.to_string()
-        );
+        // TODO: PRIMARY KEYのconfilictが起きないように、一旦
+        //     : -idxに飛ばしてから処理している
+        //     : ここのもう少し賢い方法を考える
+        //     : PRIMARY KEYを(route_id, idx, segment_id)の順にすれば良さそう
+        diesel::update(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.ge(start_pos as i32)),
+        )
+        .set(segments::index.eq(segments::index * (-1)))
+        .execute(conn)
+        .map_err(|err| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to shift Segments that belong to Route {}, {:?}",
+                route_id.to_string(),
+                err
+            ))
+        })?;
 
-        if right_shift {
-            diesel::update(src)
-                .set(segments::index.eq(segments::index + 1))
-                .execute(conn)
-                .map_err(|_| ApplicationError::DataBaseError(err_msg))
-        } else {
-            diesel::update(src)
-                .set(segments::index.eq(segments::index - 1))
-                .execute(conn)
-                .map_err(|_| ApplicationError::DataBaseError(err_msg))
-        }
+        diesel::update(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.le(-(start_pos as i32))),
+        )
+        .set(segments::index.eq(segments::index * (-1) + step))
+        .execute(conn)
+        .map_err(|err| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to shift Segments that belong to Route {}, {:?}",
+                route_id.to_string(),
+                err
+            ))
+        })
     }
 }
 
@@ -76,7 +92,7 @@ impl SegmentRepository for SegmentRepositoryMysql {
     fn insert(&self, route_id: &RouteId, pos: u32, seg: &Segment) -> ApplicationResult<()> {
         let conn = self.pool.get_connection()?;
 
-        self.shift_segments(route_id, pos, true, &conn)?;
+        self.shift_segments(route_id, pos, 1, &conn)?;
 
         let seg_dto = SegmentDto::from_model(seg, route_id, pos)?;
 
@@ -109,7 +125,7 @@ impl SegmentRepository for SegmentRepositoryMysql {
             ))
         })?;
 
-        self.shift_segments(route_id, pos, false, &conn)?;
+        self.shift_segments(route_id, pos, -1, &conn)?;
 
         Ok(())
     }
@@ -164,6 +180,32 @@ impl SegmentRepository for SegmentRepositoryMysql {
                     route_id.to_string()
                 ))
             })?;
+
+        Ok(())
+    }
+
+    fn delete_by_route_id_and_range(
+        &self,
+        route_id: &RouteId,
+        range: Range<u32>,
+    ) -> ApplicationResult<()> {
+        let conn = self.pool.get_connection()?;
+
+        let width = range.end - range.start;
+        diesel::delete(
+            SegmentDto::table()
+                .filter(segments::route_id.eq(route_id.to_string()))
+                .filter(segments::index.between(range.start as i32, range.end as i32 - 1)),
+        )
+        .execute(&conn)
+        .map_err(|_| {
+            ApplicationError::DataBaseError(format!(
+                "Failed to delete Segments that belong to Route {}",
+                route_id.to_string()
+            ))
+        })?;
+
+        self.shift_segments(route_id, range.end, -(width as i32), &conn)?;
 
         Ok(())
     }

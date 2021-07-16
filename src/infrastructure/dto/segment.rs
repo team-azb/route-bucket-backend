@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::domain::model::segment::Segment;
-use crate::domain::model::types::{Distance, Polyline, RouteId};
+use crate::domain::model::types::{Polyline, RouteId};
 use crate::infrastructure::dto::route::RouteDto;
 use crate::infrastructure::schema::segments;
 use crate::utils::error::ApplicationResult;
@@ -14,18 +14,14 @@ use crate::utils::error::ApplicationResult;
 pub struct SegmentDto {
     route_id: String,
     // UNSIGNEDにすると、なぜかdieselでインクリメントのアップデートができない
-    // 参考：
+    // 参考：https://github.com/diesel-rs/diesel/issues/2382
     index: i32,
     polyline: String,
-    distance: f64,
 }
 
 impl SegmentDto {
     pub fn to_model(&self) -> ApplicationResult<Segment> {
-        Segment::try_from((
-            Polyline::from(self.polyline.clone()),
-            Distance::try_from(self.distance)?,
-        ))
+        Segment::try_from(Polyline::from(self.polyline.clone()))
     }
 
     pub fn from_model(
@@ -37,7 +33,6 @@ impl SegmentDto {
             route_id: route_id.to_string(),
             index: index as i32,
             polyline: Polyline::from(segment.points().clone()).into(),
-            distance: segment.distance().value(),
         })
     }
 }
