@@ -23,8 +23,6 @@ impl TryFrom<Route> for RouteGpx {
         let mut org_gpx_buf = Vec::new();
         gpx::write(&route.into(), &mut org_gpx_buf).unwrap();
 
-        println!("{}", from_utf8(&org_gpx_buf).unwrap());
-
         let mut reader = Reader::from_str(from_utf8(&org_gpx_buf).unwrap());
         let mut writer = Writer::new(Cursor::new(Vec::new()));
 
