@@ -114,10 +114,11 @@ pub trait RouteRepository: Repository {
     ) -> ApplicationResult<()>;
 }
 
-pub trait RouteInterpolationApi {
-    fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
+#[async_trait]
+pub trait RouteInterpolationApi: Send + Sync {
+    async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
 
-    fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
+    async fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
 }
 
 pub trait ElevationApi: Send + Sync {
