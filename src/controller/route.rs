@@ -1,4 +1,4 @@
-use actix_web::{dev, web, HttpResponse, Result, Scope};
+use actix_web::{dev, http, web, HttpResponse, Result, Scope};
 use once_cell::sync::Lazy;
 
 use crate::domain::model::types::RouteId;
@@ -31,6 +31,18 @@ where
 
     async fn get_all(&self) -> Result<HttpResponse> {
         Ok(HttpResponse::Ok().json(self.usecase.find_all()?))
+    }
+
+    async fn get_gpx(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
+        let gpx_resp = self.usecase.find_gpx(id.as_ref())?;
+
+        Ok(HttpResponse::Ok()
+            .set_header(
+                http::header::CONTENT_DISPOSITION,
+                "attachment;filename=\"route.gpx\"",
+            )
+            .content_type("application/gpx+xml")
+            .body(dev::Body::from_slice(gpx_resp.as_slice())))
     }
 
     async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
@@ -113,6 +125,7 @@ where
                     .route(web::get().to(move |id| self.get(id)))
                     .route(web::delete().to(move |id| self.delete(id))),
             )
+            .service(web::resource("/{id}/gpx/").route(web::get().to(move |id| self.get_gpx(id))))
             .service(
                 web::resource("/{id}/rename/")
                     .route(web::patch().to(move |id, req| self.patch_rename(id, req))),

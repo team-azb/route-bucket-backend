@@ -5,6 +5,7 @@ use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
+use gpx::{Track, TrackSegment, Waypoint};
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
@@ -142,6 +143,22 @@ impl From<Vec<Segment>> for SegmentList {
 impl From<SegmentList> for Vec<Segment> {
     fn from(seg_list: SegmentList) -> Self {
         seg_list.segments
+    }
+}
+
+impl From<SegmentList> for Track {
+    fn from(seg_list: SegmentList) -> Self {
+        let mut trk = Self::new();
+        trk.segments.push(TrackSegment::new());
+        trk.segments[0].points = seg_list
+            .segments
+            .into_iter()
+            .map(|seg| seg.points)
+            .concat()
+            .into_iter()
+            .map(Waypoint::from)
+            .collect_vec();
+        trk
     }
 }
 

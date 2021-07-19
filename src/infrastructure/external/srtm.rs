@@ -109,8 +109,8 @@ impl SrtmFile {
         let mut file = File::open(&self.path)
             .map_err(Self::cvt_err(format!("Failed to open {:?}", self.path)))?;
 
-        let (lat_scale, lon_scale): (f64, f64) = self.pixel_scale.clone().into();
-        let (lat, lon): (f64, f64) = coord.clone().into();
+        let (lon_scale, lat_scale): (f64, f64) = self.pixel_scale.clone().into();
+        let (lon, lat): (f64, f64) = coord.clone().into();
 
         let lon_idx = ((lon - self.lon_range.start.value()) / lon_scale) as u32;
         let lat_idx = ((self.lat_range.end.value() - lat) / lat_scale) as usize;
