@@ -1,4 +1,4 @@
-use actix_web::{dev, http, HttpResponse, ResponseError};
+use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use derive_more::Display;
 use thiserror::Error;
 
@@ -48,8 +48,8 @@ impl ResponseError for ApplicationError {
         }
     }
     fn error_response(&self) -> HttpResponse {
-        dev::HttpResponseBuilder::new(self.status_code())
-            .set_header(http::header::CONTENT_TYPE, "text/html; charset=utf-8")
+        HttpResponseBuilder::new(self.status_code())
+            .content_type("text/html; charset=utf-8")
             .json(hashmap! {"message" => self.to_string()})
     }
 }
