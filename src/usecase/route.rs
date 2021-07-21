@@ -46,7 +46,7 @@ where
             route_info: route.info().clone(),
             waypoints: route.seg_list().gather_waypoints(),
             segments: route.seg_list().clone().into_segments_in_between(),
-            elevation_gain: route.calc_elevation_gain()?,
+            elevation_gain: route.calc_elevation_gain(),
         })
     }
 
@@ -318,7 +318,7 @@ where
         )
         .await?;
 
-        let elevation_gain = route.calc_elevation_gain()?;
+        let elevation_gain = route.calc_elevation_gain();
 
         // NOTE: どうせここでcloneが必要なので、update_routeの戻り値にSegmentListを指定してもいいかもしれない
         let seg_list = route.seg_list().clone();
