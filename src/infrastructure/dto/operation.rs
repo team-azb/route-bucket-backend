@@ -1,17 +1,15 @@
 use std::convert::TryFrom;
 
+use getset::Getters;
+
 use crate::domain::model::coordinate::Coordinate;
 use crate::domain::model::operation::{Operation, OperationType};
 use crate::domain::model::types::{Polyline, RouteId};
-use crate::infrastructure::dto::route::RouteDto;
-use crate::infrastructure::schema::operations;
 use crate::utils::error::ApplicationResult;
 
 /// 座標のdto構造体
-#[derive(Identifiable, Queryable, Insertable, Associations, Debug)]
-#[table_name = "operations"]
-#[primary_key(route_id, index)]
-#[belongs_to(RouteDto, foreign_key = "route_id")]
+#[derive(sqlx::FromRow, Getters)]
+#[get = "pub"]
 pub struct OperationDto {
     route_id: String,
     index: u32,
@@ -21,12 +19,17 @@ pub struct OperationDto {
 }
 
 impl OperationDto {
-    pub fn to_model(&self) -> ApplicationResult<Operation> {
-        let op_type = OperationType::try_from(self.code.clone())?;
+    pub fn into_model(self) -> ApplicationResult<Operation> {
+        let OperationDto {
+            code,
+            pos,
+            polyline,
+            ..
+        } = self;
+        let op_type = OperationType::try_from(code)?;
 
         let [org_coords, new_coords] = <[Vec<Coordinate>; 2]>::try_from(
-            self.polyline
-                .clone()
+            polyline
                 .split(" ")
                 .map(String::from)
                 .map(Polyline::from)
@@ -37,7 +40,7 @@ impl OperationDto {
 
         Ok(Operation::new(
             op_type,
-            self.pos as usize,
+            pos as usize,
             org_coords,
             new_coords,
         ))

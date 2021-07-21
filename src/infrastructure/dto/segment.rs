@@ -1,16 +1,14 @@
 use std::convert::TryFrom;
 
+use getset::Getters;
+
 use crate::domain::model::segment::Segment;
 use crate::domain::model::types::{Polyline, RouteId};
-use crate::infrastructure::dto::route::RouteDto;
-use crate::infrastructure::schema::segments;
 use crate::utils::error::ApplicationResult;
 
 /// 座標のdto構造体
-#[derive(Identifiable, Queryable, Insertable, Associations, Debug, AsChangeset)]
-#[table_name = "segments"]
-#[primary_key(route_id, index)]
-#[belongs_to(RouteDto, foreign_key = "route_id")]
+#[derive(sqlx::FromRow, Getters)]
+#[get = "pub"]
 pub struct SegmentDto {
     route_id: String,
     // UNSIGNEDにすると、なぜかdieselでインクリメントのアップデートができない
@@ -20,8 +18,8 @@ pub struct SegmentDto {
 }
 
 impl SegmentDto {
-    pub fn to_model(&self) -> ApplicationResult<Segment> {
-        Segment::try_from(Polyline::from(self.polyline.clone()))
+    pub fn into_model(self) -> ApplicationResult<Segment> {
+        Segment::try_from(Polyline::from(self.polyline))
     }
 
     pub fn from_model(

@@ -1,11 +1,12 @@
+use getset::Getters;
+
 use crate::domain::model::route::RouteInfo;
 use crate::domain::model::types::RouteId;
-use crate::infrastructure::schema::routes;
 use crate::utils::error::ApplicationResult;
 
 /// ルートのdto構造体
-#[derive(Identifiable, Queryable, Insertable, Debug, AsChangeset)]
-#[table_name = "routes"]
+#[derive(sqlx::FromRow, Getters)]
+#[get = "pub"]
 pub struct RouteDto {
     id: String,
     name: String,
@@ -13,11 +14,16 @@ pub struct RouteDto {
 }
 
 impl RouteDto {
-    pub fn to_model(&self) -> ApplicationResult<RouteInfo> {
+    pub fn into_model(self) -> ApplicationResult<RouteInfo> {
+        let Self {
+            id,
+            name,
+            operation_pos,
+        } = self;
         Ok(RouteInfo::new(
-            RouteId::from_string(self.id.clone()),
-            &self.name,
-            self.operation_pos as usize,
+            RouteId::from_string(id),
+            &name,
+            operation_pos as usize,
         ))
     }
 

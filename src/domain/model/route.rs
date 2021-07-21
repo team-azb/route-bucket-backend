@@ -101,7 +101,7 @@ impl From<Route> for Gpx {
     }
 }
 
-#[derive(Debug, Getters, Deserialize, Serialize)]
+#[derive(Clone, Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
 pub struct RouteInfo {
     id: RouteId,

@@ -1,52 +1,48 @@
 use actix_web::{dev, http, web, HttpResponse, Result, Scope};
-use once_cell::sync::Lazy;
 
 use crate::domain::model::types::RouteId;
-use crate::domain::repository::{
-    ElevationApi, OperationRepository, RouteInterpolationApi, RouteRepository, SegmentRepository,
-};
+use crate::domain::repository::{ElevationApi, RouteInterpolationApi, RouteRepository};
 use crate::usecase::route::{
     NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
+use tokio::sync::OnceCell;
 
-pub struct RouteController<R, O, S, I, E> {
-    usecase: RouteUseCase<R, O, S, I, E>,
+pub struct RouteController<R, I, E> {
+    usecase: RouteUseCase<R, I, E>,
 }
 
-impl<R, O, S, I, E> RouteController<R, O, S, I, E>
+impl<R, I, E> RouteController<R, I, E>
 where
     R: RouteRepository,
-    O: OperationRepository,
-    S: SegmentRepository,
     I: RouteInterpolationApi,
     E: ElevationApi,
 {
-    pub fn new(usecase: RouteUseCase<R, O, S, I, E>) -> Self {
+    pub fn new(usecase: RouteUseCase<R, I, E>) -> Self {
         Self { usecase }
     }
 
     async fn get(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.find(id.as_ref())?))
+        Ok(HttpResponse::Ok().json(self.usecase.find(id.as_ref()).await?))
     }
 
     async fn get_all(&self) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.find_all()?))
+        Ok(HttpResponse::Ok().json(self.usecase.find_all().await?))
     }
 
     async fn get_gpx(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        let gpx_resp = self.usecase.find_gpx(id.as_ref())?;
+        let gpx_resp = self.usecase.find_gpx(id.as_ref()).await?;
 
         Ok(HttpResponse::Ok()
-            .set_header(
+            .insert_header((
                 http::header::CONTENT_DISPOSITION,
                 "attachment;filename=\"route.gpx\"",
-            )
+            ))
             .content_type("application/gpx+xml")
             .body(dev::Body::from_slice(gpx_resp.as_slice())))
     }
 
     async fn post(&self, req: web::Json<RouteCreateRequest>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Created().json(self.usecase.create(&req)?))
+        Ok(HttpResponse::Created().json(self.usecase.create(&req).await?))
     }
 
     async fn patch_rename(
@@ -54,7 +50,7 @@ where
         id: web::Path<RouteId>,
         req: web::Json<RouteRenameRequest>,
     ) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.rename(&id, &req)?))
+        Ok(HttpResponse::Ok().json(self.usecase.rename(&id, &req).await?))
     }
 
     async fn patch_add(
@@ -64,12 +60,12 @@ where
     ) -> Result<HttpResponse> {
         let (route_id, pos) = path_params.into_inner();
         let req = req.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.add_point(&route_id, pos, req.coord)?))
+        Ok(HttpResponse::Ok().json(self.usecase.add_point(&route_id, pos, req.coord).await?))
     }
 
     async fn patch_remove(&self, path_params: web::Path<(RouteId, usize)>) -> Result<HttpResponse> {
         let (route_id, pos) = path_params.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.remove_point(&route_id, pos)?))
+        Ok(HttpResponse::Ok().json(self.usecase.remove_point(&route_id, pos).await?))
     }
 
     async fn patch_move(
@@ -79,23 +75,23 @@ where
     ) -> Result<HttpResponse> {
         let (route_id, pos) = path_params.into_inner();
         let req = req.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.move_point(&route_id, pos, req.coord)?))
+        Ok(HttpResponse::Ok().json(self.usecase.move_point(&route_id, pos, req.coord).await?))
     }
 
     async fn patch_clear(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.clear_route(&route_id)?))
+        Ok(HttpResponse::Ok().json(self.usecase.clear_route(&route_id).await?))
     }
 
     async fn patch_undo(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.undo_operation(&route_id)?))
+        Ok(HttpResponse::Ok().json(self.usecase.undo_operation(&route_id).await?))
     }
 
     async fn patch_redo(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {
-        Ok(HttpResponse::Ok().json(self.usecase.redo_operation(&route_id)?))
+        Ok(HttpResponse::Ok().json(self.usecase.redo_operation(&route_id).await?))
     }
 
     async fn delete(&self, id: web::Path<RouteId>) -> Result<HttpResponse> {
-        self.usecase.delete(&id)?;
+        self.usecase.delete(&id).await?;
         Ok(HttpResponse::Ok().finish())
     }
 }
@@ -104,53 +100,56 @@ pub trait BuildService<S: dev::HttpServiceFactory + 'static> {
     fn build_service(self) -> S;
 }
 
-impl<R, O, S, I, E> BuildService<Scope> for &'static Lazy<RouteController<R, O, S, I, E>>
+impl<R, I, E> BuildService<Scope> for &'static OnceCell<RouteController<R, I, E>>
 where
     R: RouteRepository,
-    O: OperationRepository,
-    S: SegmentRepository,
     I: RouteInterpolationApi,
     E: ElevationApi,
 {
     fn build_service(self) -> Scope {
+        let controller = self.get().unwrap();
         // TODO: /の過不足は許容する ex) "/{id}/"
         web::scope("/routes")
             .service(
                 web::resource("/")
-                    .route(web::get().to(move || self.get_all()))
-                    .route(web::post().to(move |req| self.post(req))),
+                    .route(web::get().to(move || controller.get_all()))
+                    .route(web::post().to(move |req| controller.post(req))),
             )
             .service(
                 web::resource("/{id}")
-                    .route(web::get().to(move |id| self.get(id)))
-                    .route(web::delete().to(move |id| self.delete(id))),
+                    .route(web::get().to(move |id| controller.get(id)))
+                    .route(web::delete().to(move |id| controller.delete(id))),
             )
-            .service(web::resource("/{id}/gpx/").route(web::get().to(move |id| self.get_gpx(id))))
+            .service(
+                web::resource("/{id}/gpx/").route(web::get().to(move |id| controller.get_gpx(id))),
+            )
             .service(
                 web::resource("/{id}/rename/")
-                    .route(web::patch().to(move |id, req| self.patch_rename(id, req))),
+                    .route(web::patch().to(move |id, req| controller.patch_rename(id, req))),
             )
             .service(
                 web::resource("/{id}/add/{pos}")
-                    .route(web::patch().to(move |path, req| self.patch_add(path, req))),
+                    .route(web::patch().to(move |path, req| controller.patch_add(path, req))),
             )
             .service(
                 web::resource("/{id}/remove/{pos}")
-                    .route(web::patch().to(move |path| self.patch_remove(path))),
+                    .route(web::patch().to(move |path| controller.patch_remove(path))),
             )
             .service(
                 web::resource("/{id}/move/{pos}")
-                    .route(web::patch().to(move |path, req| self.patch_move(path, req))),
+                    .route(web::patch().to(move |path, req| controller.patch_move(path, req))),
             )
             .service(
                 web::resource("/{id}/clear/")
-                    .route(web::patch().to(move |id| self.patch_clear(id))),
+                    .route(web::patch().to(move |id| controller.patch_clear(id))),
             )
             .service(
-                web::resource("/{id}/undo/").route(web::patch().to(move |id| self.patch_undo(id))),
+                web::resource("/{id}/undo/")
+                    .route(web::patch().to(move |id| controller.patch_undo(id))),
             )
             .service(
-                web::resource("/{id}/redo/").route(web::patch().to(move |id| self.patch_redo(id))),
+                web::resource("/{id}/redo/")
+                    .route(web::patch().to(move |id| controller.patch_redo(id))),
             )
     }
 }
