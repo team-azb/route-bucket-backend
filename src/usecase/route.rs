@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use futures::future::BoxFuture;
 use futures::FutureExt;
 use getset::Getters;
 use itertools::Itertools;
