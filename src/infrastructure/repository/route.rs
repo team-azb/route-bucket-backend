@@ -72,8 +72,9 @@ impl RouteRepositoryMySql {
         let mut conn = conn.lock().await;
 
         sqlx::query_as::<_, OperationDto>(
+            // TODO: FOR UPDATEをオプションにする（読むだけの時はいらないはず）
             r"
-            SELECT * FROM operations WHERE route_id = ?
+            SELECT * FROM operations WHERE route_id = ? FOR UPDATE
             ",
         )
         .bind(id.to_string())
@@ -98,6 +99,7 @@ impl RouteRepositoryMySql {
             FROM segments 
             WHERE route_id = ? 
             ORDER BY route_id, `index`
+            FOR UPDATE
             ",
         )
         .bind(id.to_string())
@@ -275,7 +277,7 @@ impl RouteRepository for RouteRepositoryMySql {
 
         sqlx::query_as::<_, RouteDto>(
             r"
-            SELECT * FROM routes WHERE id = ?
+            SELECT * FROM routes WHERE id = ? FOR UPDATE
             ",
         )
         .bind(id.to_string())
