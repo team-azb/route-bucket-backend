@@ -1,11 +1,13 @@
-use std::ops::Range;
+use std::ops::{DerefMut, Range};
 
 use async_trait::async_trait;
+use futures::future::BoxFuture;
 use futures::FutureExt;
 use itertools::Itertools;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, MySqlPool};
+use tokio::sync::Mutex;
 
 use crate::domain::model::operation::Operation;
 use crate::domain::model::route::{Route, RouteInfo};
@@ -38,8 +40,10 @@ impl RouteRepositoryMySql {
         start_pos: u32,
         to_right: bool,
         width: u32,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
+
         let query = format!(
             r"
             UPDATE segments 
@@ -54,16 +58,19 @@ impl RouteRepositoryMySql {
             .bind(width)
             .bind(id.to_string())
             .bind(start_pos)
-            .execute(conn)
+            .execute(&mut *conn)
             .await
             .map_err(repository::gen_err_mapper("failed to shift segments"))?;
+
         Ok(())
     }
 
     async fn find_op_list(
         id: &RouteId,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<Vec<Operation>> {
+        let mut conn = conn.lock().await;
+
         sqlx::query_as::<_, OperationDto>(
             r"
             SELECT * FROM operations WHERE route_id = ?
@@ -71,7 +78,7 @@ impl RouteRepositoryMySql {
         )
         .bind(id.to_string())
         // NOTE: ここで一旦collectしてしまっている, これ避けられないか
-        .fetch_all(conn)
+        .fetch_all(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to find operations"))?
         .into_iter()
@@ -81,8 +88,10 @@ impl RouteRepositoryMySql {
 
     async fn find_seg_list(
         id: &RouteId,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<SegmentList> {
+        let mut conn = conn.lock().await;
+
         sqlx::query_as::<_, SegmentDto>(
             r"
             SELECT *
@@ -92,7 +101,7 @@ impl RouteRepositoryMySql {
             ",
         )
         .bind(id.to_string())
-        .fetch_all(conn)
+        .fetch_all(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to find segments"))?
         .into_iter()
@@ -103,8 +112,10 @@ impl RouteRepositoryMySql {
 
     async fn insert_operation(
         dto: &OperationDto,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
+
         sqlx::query(
             r"
             INSERT INTO operations
@@ -116,7 +127,7 @@ impl RouteRepositoryMySql {
         .bind(dto.code())
         .bind(dto.pos())
         .bind(dto.polyline())
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to insert Operation"))?;
 
@@ -127,8 +138,9 @@ impl RouteRepositoryMySql {
         id: &RouteId,
         pos: u32,
         seg: &Segment,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
         let dto = SegmentDto::from_model(seg, id, pos)?;
 
         sqlx::query(
@@ -139,7 +151,7 @@ impl RouteRepositoryMySql {
         .bind(dto.route_id())
         .bind(dto.index())
         .bind(dto.polyline())
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to insert Segment"))?;
 
@@ -149,8 +161,10 @@ impl RouteRepositoryMySql {
     async fn delete_operations_by_start(
         route_id: &RouteId,
         start_pos: u32,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
+
         sqlx::query(
             r"
             DELETE FROM operations WHERE `route_id` = ? AND `index` >= ?
@@ -158,7 +172,7 @@ impl RouteRepositoryMySql {
         )
         .bind(route_id.to_string())
         .bind(start_pos)
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to insert Operation"))?;
 
@@ -168,8 +182,10 @@ impl RouteRepositoryMySql {
     async fn delete_segments_by_range(
         id: &RouteId,
         range: Range<u32>,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
+
         sqlx::query(
             r"
             DELETE FROM segments 
@@ -181,7 +197,7 @@ impl RouteRepositoryMySql {
         .bind(id.to_string())
         .bind(range.start)
         .bind(range.end)
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper(
             "failed to delete segments by range",
@@ -193,8 +209,10 @@ impl RouteRepositoryMySql {
     async fn delete_by_route_id(
         id: &RouteId,
         table_name: &str,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
+
         let id_name = match table_name {
             "routes" => Ok("id"),
             "operations" | "segments" => Ok("route_id"),
@@ -207,7 +225,7 @@ impl RouteRepositoryMySql {
 
         sqlx::query(&query)
             .bind(id.to_string())
-            .execute(conn)
+            .execute(&mut *conn)
             .await
             .map_err(repository::gen_err_mapper("failed to delete route"))?;
 
@@ -217,12 +235,13 @@ impl RouteRepositoryMySql {
 
 #[async_trait]
 impl Repository for RouteRepositoryMySql {
-    type Connection = PoolConnection<MySql>;
+    type Connection = Mutex<PoolConnection<MySql>>;
 
     async fn get_connection(&self) -> ApplicationResult<Self::Connection> {
         self.0
             .acquire()
             .await
+            .map(Mutex::new)
             .map_err(repository::gen_err_mapper("failed to get connection"))
     }
 }
@@ -232,31 +251,35 @@ impl RouteRepository for RouteRepositoryMySql {
     async fn find(
         &self,
         id: &RouteId,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<Route> {
-        conn.begin_transaction().await?;
+        conn.transaction(|conn| {
+            async move {
+                let info = self.find_info(id, conn).await?;
+                let op_list = Self::find_op_list(id, conn).await?;
+                let seg_list = Self::find_seg_list(id, conn).await?;
 
-        let info = self.find_info(id, conn).await?;
-        let op_list = Self::find_op_list(id, conn).await?;
-        let seg_list = Self::find_seg_list(id, conn).await?;
-
-        conn.commit_transaction().await?;
-
-        Ok(Route::new(info, op_list, seg_list))
+                Ok(Route::new(info, op_list, seg_list))
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn find_info(
         &self,
         id: &RouteId,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<RouteInfo> {
+        let mut conn = conn.lock().await;
+
         sqlx::query_as::<_, RouteDto>(
             r"
             SELECT * FROM routes WHERE id = ?
             ",
         )
         .bind(id.to_string())
-        .fetch_one(conn)
+        .fetch_one(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to find info"))?
         .into_model()
@@ -264,14 +287,16 @@ impl RouteRepository for RouteRepositoryMySql {
 
     async fn find_all_infos(
         &self,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<Vec<RouteInfo>> {
+        let mut conn = conn.lock().await;
+
         sqlx::query_as::<_, RouteDto>(
             r"
             SELECT * FROM routes
             ",
         )
-        .fetch_all(conn)
+        .fetch_all(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to find infos"))?
         .into_iter()
@@ -282,8 +307,9 @@ impl RouteRepository for RouteRepositoryMySql {
     async fn insert_info(
         &self,
         info: &RouteInfo,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
         let dto = RouteDto::from_model(info)?;
 
         sqlx::query(
@@ -294,7 +320,7 @@ impl RouteRepository for RouteRepositoryMySql {
         .bind(dto.id())
         .bind(dto.name())
         .bind(dto.operation_pos())
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to insert RouteInfo"))?;
         Ok(())
@@ -305,16 +331,18 @@ impl RouteRepository for RouteRepositoryMySql {
         id: &RouteId,
         pos: u32,
         seg: &Segment,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
-        conn.begin_transaction().await?;
+        conn.transaction(|conn| {
+            async move {
+                Self::shift_segments(id, pos, true, 1, conn).await?;
+                Self::insert_segment(id, pos, seg, conn).await?;
 
-        Self::shift_segments(id, pos, true, 1, conn).await?;
-        Self::insert_segment(id, pos, seg, conn).await?;
-
-        conn.commit_transaction().await?;
-
-        Ok(())
+                Ok(())
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn insert_and_truncate_operations(
@@ -322,25 +350,28 @@ impl RouteRepository for RouteRepositoryMySql {
         id: &RouteId,
         pos: u32,
         op: &Operation,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
         let dto = OperationDto::from_model(op, id, pos)?;
 
-        conn.begin_transaction().await?;
+        conn.transaction(|conn| {
+            async move {
+                Self::delete_operations_by_start(id, pos, conn).await?;
+                Self::insert_operation(&dto, conn).await?;
 
-        Self::delete_operations_by_start(id, pos, conn).await?;
-        Self::insert_operation(&dto, conn).await?;
-
-        conn.commit_transaction().await?;
-
-        Ok(())
+                Ok(())
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn update_info(
         &self,
         info: &RouteInfo,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
+        let mut conn = conn.lock().await;
         let dto = RouteDto::from_model(info)?;
 
         sqlx::query(
@@ -353,7 +384,7 @@ impl RouteRepository for RouteRepositoryMySql {
         .bind(dto.name())
         .bind(dto.operation_pos())
         .bind(dto.id())
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map_err(repository::gen_err_mapper("failed to update Operation"))?;
 
@@ -363,28 +394,36 @@ impl RouteRepository for RouteRepositoryMySql {
     async fn delete(
         &self,
         id: &RouteId,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
-        Self::delete_by_route_id(id, "routes", conn).await?;
-        Self::delete_by_route_id(id, "operations", conn).await?;
-        Self::delete_by_route_id(id, "segments", conn).await?;
+        conn.transaction(|conn| {
+            async move {
+                Self::delete_by_route_id(id, "routes", conn).await?;
+                Self::delete_by_route_id(id, "operations", conn).await?;
+                Self::delete_by_route_id(id, "segments", conn).await?;
 
-        Ok(())
+                Ok(())
+            }
+            .boxed()
+        })
+        .await
     }
 
     async fn delete_and_shift_segments_by_range(
         &self,
         id: &RouteId,
         range: Range<u32>,
-        conn: &mut PoolConnection<MySql>,
+        conn: &Mutex<PoolConnection<MySql>>,
     ) -> ApplicationResult<()> {
-        conn.begin_transaction().await?;
+        conn.transaction(|conn| {
+            async move {
+                Self::delete_segments_by_range(id, range.clone(), conn).await?;
+                Self::shift_segments(id, range.end, false, range.end - range.start, conn).await?;
 
-        Self::delete_segments_by_range(id, range.clone(), conn).await?;
-        Self::shift_segments(id, range.end, false, range.end - range.start, conn).await?;
-
-        conn.commit_transaction().await?;
-
-        Ok(())
+                Ok(())
+            }
+            .boxed()
+        })
+        .await
     }
 }
