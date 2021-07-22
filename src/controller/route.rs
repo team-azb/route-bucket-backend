@@ -59,8 +59,7 @@ where
         req: web::Json<NewPointRequest>,
     ) -> Result<HttpResponse> {
         let (route_id, pos) = path_params.into_inner();
-        let req = req.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.add_point(&route_id, pos, req.coord).await?))
+        Ok(HttpResponse::Ok().json(self.usecase.add_point(&route_id, pos, &req).await?))
     }
 
     async fn patch_remove(&self, path_params: web::Path<(RouteId, usize)>) -> Result<HttpResponse> {
@@ -74,8 +73,7 @@ where
         req: web::Json<NewPointRequest>,
     ) -> Result<HttpResponse> {
         let (route_id, pos) = path_params.into_inner();
-        let req = req.into_inner();
-        Ok(HttpResponse::Ok().json(self.usecase.move_point(&route_id, pos, req.coord).await?))
+        Ok(HttpResponse::Ok().json(self.usecase.move_point(&route_id, pos, &req).await?))
     }
 
     async fn patch_clear(&self, route_id: web::Path<RouteId>) -> Result<HttpResponse> {

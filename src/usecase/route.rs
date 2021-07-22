@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use derive_more::From;
 use futures::FutureExt;
 use getset::Getters;
 use itertools::Itertools;
@@ -100,14 +101,18 @@ where
         &self,
         route_id: &RouteId,
         pos: usize,
-        coord: Coordinate,
+        req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.repository.get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut route = self.repository.find(route_id, conn).await?;
                 let resp = self
-                    .push_op_and_save(&mut route, Operation::new_add(pos, coord), conn)
+                    .push_op_and_save(
+                        &mut route,
+                        Operation::new_add(pos, req.coord().clone()),
+                        conn,
+                    )
                     .await?;
 
                 conn.commit_transaction().await?;
@@ -146,7 +151,7 @@ where
         &self,
         route_id: &RouteId,
         pos: usize,
-        coord: Coordinate,
+        req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.repository.get_connection().await?;
         conn.transaction(|conn| {
@@ -156,7 +161,7 @@ where
                 let resp = self
                     .push_op_and_save(
                         &mut route,
-                        Operation::new_move(pos, coord, org_waypoints),
+                        Operation::new_move(pos, req.coord().clone(), org_waypoints),
                         conn,
                     )
                     .await?;
@@ -367,7 +372,7 @@ pub struct RouteGetAllResponse {
 
 pub type RouteGetGpxResponse = RouteGpx;
 
-#[derive(Getters, Deserialize)]
+#[derive(From, Getters, Deserialize)]
 #[get = "pub"]
 pub struct RouteCreateRequest {
     name: String,
@@ -378,9 +383,10 @@ pub struct RouteCreateResponse {
     pub id: RouteId,
 }
 
-#[derive(Deserialize)]
+#[derive(From, Getters, Deserialize)]
+#[get = "pub"]
 pub struct NewPointRequest {
-    pub coord: Coordinate,
+    coord: Coordinate,
 }
 
 #[derive(Serialize)]
@@ -390,7 +396,7 @@ pub struct RouteOperationResponse {
     elevation_gain: Elevation,
 }
 
-#[derive(Getters, Deserialize)]
+#[derive(From, Getters, Deserialize)]
 #[get = "pub"]
 pub struct RouteRenameRequest {
     name: String,
