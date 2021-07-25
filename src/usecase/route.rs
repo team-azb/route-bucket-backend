@@ -12,7 +12,7 @@ use crate::domain::model::gpx::RouteGpx;
 use crate::domain::model::operation::Operation;
 use crate::domain::model::route::{Route, RouteInfo};
 use crate::domain::model::segment::{Segment, SegmentList};
-use crate::domain::model::types::{Elevation, RouteId};
+use crate::domain::model::types::{Distance, Elevation, RouteId};
 use crate::domain::repository::{Connection, ElevationApi, RouteInterpolationApi, RouteRepository};
 use crate::utils::error::ApplicationResult;
 
@@ -47,6 +47,7 @@ where
             waypoints: route.seg_list().gather_waypoints(),
             segments: route.seg_list().clone().into_segments_in_between(),
             elevation_gain: route.calc_elevation_gain(),
+            total_distance: route.seg_list().get_total_distance()?,
         })
     }
 
@@ -322,17 +323,14 @@ where
         )
         .await?;
 
-        let elevation_gain = route.calc_elevation_gain();
-
         // NOTE: どうせここでcloneが必要なので、update_routeの戻り値にSegmentListを指定してもいいかもしれない
         let seg_list = route.seg_list().clone();
-        let waypoints = seg_list.gather_waypoints();
-        let segments = seg_list.into_segments_in_between();
 
         Ok(RouteOperationResponse {
-            waypoints,
-            segments,
-            elevation_gain,
+            waypoints: seg_list.gather_waypoints(),
+            segments: seg_list.into_segments_in_between(),
+            elevation_gain: route.calc_elevation_gain(),
+            total_distance: route.seg_list().get_total_distance()?,
         })
     }
 
@@ -362,6 +360,7 @@ pub struct RouteGetResponse {
     waypoints: Vec<Coordinate>,
     segments: Vec<Segment>,
     elevation_gain: Elevation,
+    total_distance: Distance,
 }
 
 #[derive(Serialize)]
@@ -394,6 +393,7 @@ pub struct RouteOperationResponse {
     waypoints: Vec<Coordinate>,
     segments: Vec<Segment>,
     elevation_gain: Elevation,
+    total_distance: Distance,
 }
 
 #[derive(From, Getters, Deserialize)]

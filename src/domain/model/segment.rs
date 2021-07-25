@@ -22,6 +22,21 @@ pub struct SegmentList {
 }
 
 impl SegmentList {
+    pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
+        self.segments
+            .last()
+            .map(|seg| {
+                seg.points
+                    .last()
+                    .map(|coord| coord.distance_from_start().clone())
+                    .flatten()
+            })
+            .flatten()
+            .ok_or(ApplicationError::DomainError(
+                "Failed to calculate total distance.".into(),
+            ))
+    }
+
     pub fn calc_elevation_gain(&self) -> Elevation {
         self.iter()
             .par_bridge()
