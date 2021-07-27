@@ -10,9 +10,10 @@ use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::types::{Distance, Elevation, Polyline};
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
+use crate::model::coordinate::Coordinate;
+use crate::model::types::{Distance, Elevation, Polyline};
 
 #[derive(Clone, Debug, Serialize, Getters)]
 #[get = "pub"]

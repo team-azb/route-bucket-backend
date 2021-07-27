@@ -3,11 +3,12 @@ use getset::{Getters, MutGetters};
 use gpx::{Gpx, GpxVersion, Metadata};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::operation::Operation;
-use crate::domain::model::segment::SegmentList;
-use crate::domain::model::types::{Elevation, RouteId};
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
+use crate::model::coordinate::Coordinate;
+use crate::model::operation::Operation;
+use crate::model::segment::SegmentList;
+use crate::model::types::{Elevation, RouteId};
 
 #[derive(Debug, From, Getters, MutGetters)]
 #[get = "pub"]

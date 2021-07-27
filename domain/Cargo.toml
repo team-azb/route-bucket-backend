@@ -1,0 +1,25 @@
+[package]
+name = "route-bucket-domain"
+version = "0.1.0"
+authors = ["shugo256 <shugo256@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+async-trait = "0.1.50"
+derive_more = "0.99.16"
+futures = "0.3.16"
+geo = "0.17.1"
+getset = "0.1.1"
+gpx = "0.8.1"
+itertools = "0.10.1"
+nanoid = "0.3.0"
+num-traits = "0.2.14"
+polyline = "0.9.0"
+quick-xml = "0.22.0"
+rayon = "1.5.1"
+route-bucket-utils = { path = "../utils" }
+serde = { version = "1.0.124", features = ["derive"] }
+

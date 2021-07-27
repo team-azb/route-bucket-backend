@@ -5,7 +5,7 @@ use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい

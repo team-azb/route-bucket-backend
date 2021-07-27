@@ -8,8 +8,9 @@ use num_traits::FromPrimitive;
 use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 
-use crate::domain::model::types::{Distance, Elevation, Latitude, Longitude, Polyline};
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
+use crate::model::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 /// Value Object for Coordinates
 #[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]

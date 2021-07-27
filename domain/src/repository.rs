@@ -3,12 +3,13 @@ use std::ops::Range;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::operation::Operation;
-use crate::domain::model::route::{Route, RouteInfo};
-use crate::domain::model::segment::Segment;
-use crate::domain::model::types::{Elevation, RouteId};
-use crate::utils::error::ApplicationResult;
+use route_bucket_utils::ApplicationResult;
+
+use crate::model::coordinate::Coordinate;
+use crate::model::operation::Operation;
+use crate::model::route::{Route, RouteInfo};
+use crate::model::segment::Segment;
+use crate::model::types::{Elevation, RouteId};
 
 #[async_trait]
 pub trait Connection: Sync {
