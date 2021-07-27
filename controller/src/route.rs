@@ -1,11 +1,9 @@
 use actix_web::{dev, http, web, HttpResponse, Result, Scope};
-
-use crate::domain::model::types::RouteId;
-use crate::domain::repository::{ElevationApi, RouteInterpolationApi, RouteRepository};
-use crate::usecase::route::{
-    NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
-};
 use tokio::sync::OnceCell;
+
+use route_bucket_domain::model::RouteId;
+use route_bucket_domain::repository::{ElevationApi, RouteInterpolationApi, RouteRepository};
+use route_bucket_usecase::{NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase};
 
 pub struct RouteController<R, I, E> {
     usecase: RouteUseCase<R, I, E>,
