@@ -7,14 +7,14 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::gpx::RouteGpx;
-use crate::domain::model::operation::Operation;
-use crate::domain::model::route::{Route, RouteInfo};
-use crate::domain::model::segment::{Segment, SegmentList};
-use crate::domain::model::types::{Distance, Elevation, RouteId};
-use crate::domain::repository::{Connection, ElevationApi, RouteInterpolationApi, RouteRepository};
-use crate::utils::error::ApplicationResult;
+use route_bucket_domain::model::{
+    Coordinate, Distance, Elevation, Operation, Route, RouteGpx, RouteId, RouteInfo, Segment,
+    SegmentList,
+};
+use route_bucket_domain::repository::{
+    Connection, ElevationApi, RouteInterpolationApi, RouteRepository,
+};
+use route_bucket_utils::ApplicationResult;
 
 pub struct RouteUseCase<R, I, E> {
     repository: R,
