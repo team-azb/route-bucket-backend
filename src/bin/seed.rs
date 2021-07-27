@@ -1,8 +1,6 @@
-use route_bucket_backend::domain::model::coordinate::Coordinate;
-use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
-use route_bucket_backend::infrastructure::external::srtm::SrtmReader;
-use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMySql;
-use route_bucket_backend::usecase::route::RouteUseCase;
+use route_bucket_domain::model::Coordinate;
+use route_bucket_infrastructure::{OsrmApi, RouteRepositoryMySql, SrtmReader};
+use route_bucket_usecase::RouteUseCase;
 
 macro_rules! coord {
     ( $lat: expr, $lon: expr ) => {

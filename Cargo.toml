@@ -6,30 +6,22 @@ edition = "2018"
 default-run = "route-bucket-backend"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = [
+    "controller",
+    "domain",
+    "infrastructure",
+    "usecase",
+    "utils",
+]
 
 [dependencies]
 actix-cors = "0.6.0-beta.2"
 actix-web = "4.0.0-beta.8"
-async-trait = "0.1.50"
-byteorder = "1.4.3"
-derive_more = "0.99.16"
-env_logger = "0.8.3"
-futures = "0.3.15"
-geo = "0.17.1"
-getset = "0.1.1"
-gpx = "0.8.1"
-itertools = "0.10.1"
+env_logger = "0.9.0"
 log = "0.4.14"
-nanoid = "0.3.0"
-num-derive = "0.3.3"
-num-traits = "0.2.14"
-polyline = "0.9.0"
-quick-xml = "0.22.0"
-r2d2 = "0.8.9"
-rayon = "1.5.1"
-reqwest = { version = "0.11.3", features = ["json"] }
-serde = { version = "1.0.124", features = ["derive"] }
-serde_json = "1.0.64"
-sqlx = { version = "0.5.5", features = ["runtime-tokio-native-tls", "mysql", "macros"] }
-thiserror = "1.0.24"
+route-bucket-controller = { path = "./controller" }
+route-bucket-domain = { path = "./domain" }
+route-bucket-infrastructure = { path = "./infrastructure" }
+route-bucket-usecase = { path = "./usecase" }
 tokio = "1.8.1"

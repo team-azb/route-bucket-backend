@@ -1,12 +1,12 @@
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{App, Error, HttpServer, Result};
-use route_bucket_backend::controller::route::{BuildService, RouteController};
-use route_bucket_backend::infrastructure::external::osrm::OsrmApi;
-use route_bucket_backend::infrastructure::external::srtm::SrtmReader;
-use route_bucket_backend::infrastructure::repository::route::RouteRepositoryMySql;
-use route_bucket_backend::usecase::route::RouteUseCase;
 use tokio::sync::OnceCell;
+
+use route_bucket_controller::{BuildService, RouteController};
+use route_bucket_infrastructure::OsrmApi;
+use route_bucket_infrastructure::{RouteRepositoryMySql, SrtmReader};
+use route_bucket_usecase::RouteUseCase;
 
 // TODO: ControllerとRepositoryMysql系のstructに共通trait実装してcontrollerの初期化を↓みたいに共通化したい
 // fn create_static_controller<Controller, Repository>() -> Lazy<Controller> {
