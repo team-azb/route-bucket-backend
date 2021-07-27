@@ -2,9 +2,8 @@ use std::convert::TryFrom;
 
 use getset::Getters;
 
-use crate::domain::model::segment::Segment;
-use crate::domain::model::types::{Polyline, RouteId};
-use crate::utils::error::ApplicationResult;
+use route_bucket_domain::model::{Polyline, RouteId, Segment};
+use route_bucket_utils::ApplicationResult;
 
 /// 座標のdto構造体
 #[derive(sqlx::FromRow, Getters)]

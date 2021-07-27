@@ -1,8 +1,7 @@
 use getset::Getters;
 
-use crate::domain::model::route::RouteInfo;
-use crate::domain::model::types::RouteId;
-use crate::utils::error::ApplicationResult;
+use route_bucket_domain::model::{RouteId, RouteInfo};
+use route_bucket_utils::ApplicationResult;
 
 /// ルートのdto構造体
 #[derive(sqlx::FromRow, Getters)]

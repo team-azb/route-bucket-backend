@@ -2,11 +2,9 @@ use std::convert::TryInto;
 
 use async_trait::async_trait;
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::segment::Segment;
-use crate::domain::model::types::Polyline;
-use crate::domain::repository::RouteInterpolationApi;
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_domain::model::{Coordinate, Polyline, Segment};
+use route_bucket_domain::repository::RouteInterpolationApi;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 /// osrmでルート補間をするための構造体
 pub struct OsrmApi {

@@ -8,12 +8,11 @@ use std::path::{Path, PathBuf};
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num_traits::FromPrimitive;
 
-use crate::domain::model::coordinate::Coordinate;
-use crate::domain::model::types::{Elevation, Latitude, Longitude};
-use crate::domain::repository::ElevationApi;
-use crate::utils::error::{ApplicationError, ApplicationResult};
+use route_bucket_domain::model::{Coordinate, Elevation, Latitude, Longitude};
+use route_bucket_domain::repository::ElevationApi;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-#[derive(FromPrimitive)]
+#[derive(num_derive::FromPrimitive)]
 enum SrtmByteOrder {
     LittleEndian = 0x4949,
     BigEndian = 0x4D4D,
@@ -22,6 +21,7 @@ enum SrtmByteOrder {
 trait GetSrtmByteOrder {
     fn get_srtm_byte_order() -> SrtmByteOrder;
 }
+
 impl GetSrtmByteOrder for BigEndian {
     fn get_srtm_byte_order() -> SrtmByteOrder {
         SrtmByteOrder::BigEndian
@@ -33,7 +33,7 @@ impl GetSrtmByteOrder for LittleEndian {
     }
 }
 
-#[derive(Clone, Debug, FromPrimitive, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, num_derive::FromPrimitive, Eq, PartialEq, Hash)]
 enum IfdTag {
     ImageWidth = 0x0100,
     ImageHeight = 0x0101,
