@@ -1,2 +1,2 @@
 api/target
-api/resources/srtm_data
+api/resources/srtm_data/*.tif

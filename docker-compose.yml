@@ -35,7 +35,7 @@ services:
       OSRM_ROOT: http://osrm:5000
     command: >
       bash -c "
-        ./wait_for_db.sh &&
+        resources/scripts/wait_for_db.sh &&
         /app/target/release/route-bucket-backend"
     depends_on:
       - db
@@ -58,7 +58,9 @@ services:
     command: osrm-routed --algorithm mld /data/map.osm.pbf
 
   db_manager:
-    build: db/manager
+    build:
+      context: db
+      dockerfile: manager/Dockerfile
     depends_on:
       - db
     profiles:

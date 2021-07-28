@@ -1,5 +1,5 @@
-mkdir -p srtm_data
-cd srtm_data \
+mkdir -p resources/srtm_data
+cd resources/srtm_data \
 && wget https://srtm.csi.cgiar.org/wp-content/uploads/files/srtm_30x30/TIFF/N30E120.zip \
     -O srtm.zip \
 && unzip srtm.zip \

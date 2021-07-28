@@ -9,4 +9,4 @@ RUN wget -O - https://github.com/k0kubun/sqldef/releases/latest/download/mysqlde
 
 RUN mv mysqldef ./bin/
 
-COPY mysql mysql
+COPY schema.sql mysql/schema.sql
