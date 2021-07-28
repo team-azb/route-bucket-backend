@@ -13,7 +13,7 @@ pub struct SegmentDto {
     route_id: String,
     // UNSIGNEDにすると、なぜかdieselでインクリメントのアップデートができない
     // 参考：https://github.com/diesel-rs/diesel/issues/2382
-    index: i32,
+    index: u32,
     polyline: String,
 }
 
@@ -29,7 +29,7 @@ impl SegmentDto {
     ) -> ApplicationResult<SegmentDto> {
         Ok(SegmentDto {
             route_id: route_id.to_string(),
-            index: index as i32,
+            index: index,
             polyline: Polyline::from(segment.points().clone()).into(),
         })
     }
