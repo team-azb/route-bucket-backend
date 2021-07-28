@@ -25,10 +25,10 @@ The root of the app will be at `http://localhost:8080/`.
 ```bash
 make seed
 ```
-See `src/bin/seed.rs`.
+See `api/src/bin/seed.rs`.
 
 ### (Optional) Change DB schema
-After modifying `mysql/schema.sql`, run
+After modifying `db/schema.sql`, run
 ```bash
 make migrate-dry-run
 ```
