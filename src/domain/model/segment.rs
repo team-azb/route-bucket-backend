@@ -23,18 +23,24 @@ pub struct SegmentList {
 
 impl SegmentList {
     pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
-        self.segments
-            .last()
-            .map(|seg| {
-                seg.points
+        if let Some(last_seg) = self.segments.last() {
+            let last_point =
+                last_seg
+                    .points
                     .last()
-                    .map(|coord| coord.distance_from_start().clone())
-                    .flatten()
-            })
-            .flatten()
-            .ok_or(ApplicationError::DomainError(
-                "Failed to calculate total distance.".into(),
-            ))
+                    .ok_or(ApplicationError::DomainError(format!(
+                        "Last segment cannot be empty at get_total_distance! ({:?})",
+                        last_seg
+                    )))?;
+            last_point
+                .distance_from_start()
+                .clone()
+                .ok_or(ApplicationError::DomainError(
+                    format!("Failed to calculate total distance. {:?}", self).into(),
+                ))
+        } else {
+            Ok(Distance::zero())
+        }
     }
 
     pub fn calc_elevation_gain(&self) -> Elevation {
