@@ -1,3 +1,2 @@
-target/*
-*.Dockerfile
-.dockerignore
+api/target
+api/resources/srtm_data

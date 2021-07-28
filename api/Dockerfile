@@ -8,11 +8,10 @@ RUN apt update && \
 WORKDIR app
 
 # SRTM elevation data
-COPY docker docker
-RUN ./docker/download_srtm_datas.sh
+COPY resources/scripts .
+RUN ./download_srtm_datas.sh
 
 COPY . .
-COPY ./docker/wait_for_db.sh .
 
 ENV TMP_DIR /tmp
 

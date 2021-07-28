@@ -1,11 +1,9 @@
-use std::convert::TryFrom;
-
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
-use serde::{Deserialize, Serialize};
-
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい

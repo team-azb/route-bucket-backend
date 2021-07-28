@@ -1,9 +1,7 @@
+use getset::Getters;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 use std::convert::TryFrom;
 use std::mem::swap;
-
-use getset::Getters;
-
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::coordinate::Coordinate;
 use crate::model::segment::SegmentList;

@@ -1,9 +1,8 @@
 use derive_more::From;
 use getset::{Getters, MutGetters};
 use gpx::{Gpx, GpxVersion, Metadata};
-use serde::{Deserialize, Serialize};
-
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use serde::{Deserialize, Serialize};
 
 use crate::model::coordinate::Coordinate;
 use crate::model::operation::Operation;

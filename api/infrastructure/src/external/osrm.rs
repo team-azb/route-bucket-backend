@@ -1,10 +1,8 @@
-use std::convert::TryInto;
-
 use async_trait::async_trait;
-
 use route_bucket_domain::model::{Coordinate, Polyline, Segment};
 use route_bucket_domain::repository::RouteInterpolationApi;
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use std::convert::TryInto;
 
 /// osrmでルート補間をするための構造体
 pub struct OsrmApi {

@@ -1,12 +1,11 @@
 use async_trait::async_trait;
 use derive_more::Deref;
+use route_bucket_domain::repository::Connection;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 use sqlx::mysql::MySqlTransactionManager;
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, TransactionManager};
 use tokio::sync::Mutex;
-
-use route_bucket_domain::repository::Connection;
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 pub mod route;
 

@@ -1,16 +1,14 @@
-use std::cmp::max;
-use std::convert::{TryFrom, TryInto};
-use std::ops::Range;
-use std::slice::{Iter, IterMut};
-
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use gpx::{Track, TrackSegment, Waypoint};
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use serde::Serialize;
-
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use serde::Serialize;
+use std::cmp::max;
+use std::convert::{TryFrom, TryInto};
+use std::ops::Range;
+use std::slice::{Iter, IterMut};
 
 use crate::model::coordinate::Coordinate;
 use crate::model::types::{Distance, Elevation, Polyline};

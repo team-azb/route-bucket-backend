@@ -1,9 +1,7 @@
-use std::ops::Range;
-
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-
 use route_bucket_utils::ApplicationResult;
+use std::ops::Range;
 
 use crate::model::coordinate::Coordinate;
 use crate::model::operation::Operation;

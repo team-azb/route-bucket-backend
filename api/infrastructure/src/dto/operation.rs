@@ -1,9 +1,7 @@
-use std::convert::TryFrom;
-
 use getset::Getters;
-
 use route_bucket_domain::model::{Coordinate, Operation, OperationType, Polyline, RouteId};
 use route_bucket_utils::ApplicationResult;
+use std::convert::TryFrom;
 
 /// 座標のdto構造体
 #[derive(sqlx::FromRow, Getters)]

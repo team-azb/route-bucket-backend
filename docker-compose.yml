@@ -28,11 +28,9 @@ services:
   api:
     ports:
       - "8080:8080"
-    build:
-      context: .
-      dockerfile: ./docker/api.Dockerfile
+    build: api
     environment:
-      DATABASE_URL: mysql://root:password@db:3306/route_bucket_db
+      DATABASE_URL: db://root:password@db:3306/route_bucket_db
       RUST_LOG: info
       OSRM_ROOT: http://osrm:5000
     command: >
@@ -48,23 +46,19 @@ services:
     ports:
       - "4000:8080"
     volumes:
-      - ./openapi/:/openapi/
+      - ./swagger/:/swagger/
     environment:
       # yamlなのにjsonに指定するのなぜ
-      SWAGGER_JSON: /openapi/root.yml
+      SWAGGER_JSON: /swagger/root.yml
 
   osrm:
     ports:
       - "5000:5000"
-    build:
-      context: .
-      dockerfile: ./docker/osrm.Dockerfile
+    build: osrm
     command: osrm-routed --algorithm mld /data/map.osm.pbf
 
   db_manager:
-    build:
-      context: .
-      dockerfile: ./docker/db_manager.Dockerfile
+    build: db/manager
     depends_on:
       - db
     profiles:
