@@ -32,4 +32,6 @@ RouteWithPolyline:
       items:
         $ref: ./linestring.yml#/Segment
     elevation_gain:
-      $ref: ./elevation_gain.yml#/ElevationGain
+      $ref: ./geo_types.yml#/ElevationGain
+    total_distance:
+      $ref: ./geo_types.yml#/TotalDistance

@@ -1,4 +1,0 @@
-ElevationGain:
-  type: integer
-  minimum: 0
-  description: 獲得標高
