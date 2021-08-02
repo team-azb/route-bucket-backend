@@ -1,15 +1,15 @@
+use std::convert::TryFrom;
+
 use getset::Getters;
+
 use route_bucket_domain::model::{Polyline, RouteId, Segment};
 use route_bucket_utils::ApplicationResult;
-use std::convert::TryFrom;
 
 /// 座標のdto構造体
 #[derive(sqlx::FromRow, Getters)]
 #[get = "pub"]
 pub struct SegmentDto {
     route_id: String,
-    // UNSIGNEDにすると、なぜかdieselでインクリメントのアップデートができない
-    // 参考：https://github.com/diesel-rs/diesel/issues/2382
     index: u32,
     polyline: String,
 }
