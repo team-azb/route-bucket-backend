@@ -1,0 +1,23 @@
+[package]
+name = "route-bucket-infrastructure"
+version = "0.1.0"
+authors = ["shugo256 <shugo256@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.50"
+byteorder = "1.4.3"
+derive_more = "0.99.16"
+futures = "0.3.15"
+getset = "0.1.1"
+itertools = "0.10.1"
+num-derive = "0.3.3"
+num-traits = "0.2.14"
+reqwest = { version = "0.11.3", features = ["json"] }
+route-bucket-domain = { path = "../domain" }
+route-bucket-utils = { path = "../utils" }
+serde_json = "1.0.64"
+sqlx = { version = "0.5.5", features = ["runtime-tokio-native-tls", "mysql", "macros"] }
+tokio = "1.8.1"

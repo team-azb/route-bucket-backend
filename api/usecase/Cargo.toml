@@ -1,0 +1,17 @@
+[package]
+name = "route-bucket-usecase"
+version = "0.1.0"
+authors = ["shugo256 <shugo256@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+derive_more = "0.99.16"
+futures = "0.3.15"
+getset = "0.1.1"
+itertools = "0.10.1"
+route-bucket-domain = { path = "../domain" }
+route-bucket-utils = { path = "../utils" }
+serde = { version = "1.0.124", features = ["derive"] }
+tokio = "1.8.1"

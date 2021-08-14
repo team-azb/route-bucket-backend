@@ -1,0 +1,12 @@
+[package]
+name = "route-bucket-utils"
+version = "0.1.0"
+authors = ["shugo256 <shugo256@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.0-beta.8"
+derive_more = "0.99.16"
+thiserror = "1.0.24"
