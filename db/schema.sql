@@ -20,6 +20,6 @@ CREATE TABLE operations
     `index`    INTEGER UNSIGNED                 NOT NULL,
     `code`     CHAR(2) CHARACTER SET ascii      NOT NULL,
     `pos`      INTEGER UNSIGNED                 NOT NULL,
-    `polyline` VARCHAR(100) CHARACTER SET ascii NOT NULL,
+    `polyline` VARCHAR(65000) CHARACTER SET ascii NOT NULL,
     PRIMARY KEY (`route_id`, `index`)
 );
