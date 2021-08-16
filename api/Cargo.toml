@@ -24,4 +24,3 @@ route-bucket-controller = { path = "./controller" }
 route-bucket-domain = { path = "./domain" }
 route-bucket-infrastructure = { path = "./infrastructure" }
 route-bucket-usecase = { path = "./usecase" }
-tokio = "1.8.1"
