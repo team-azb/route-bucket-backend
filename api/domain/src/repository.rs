@@ -1,13 +1,10 @@
 use async_trait::async_trait;
 use futures::future::BoxFuture;
-use route_bucket_utils::ApplicationResult;
-use std::ops::Range;
 
-use crate::model::coordinate::Coordinate;
-use crate::model::operation::Operation;
-use crate::model::route::{Route, RouteInfo};
-use crate::model::segment::Segment;
-use crate::model::types::{Elevation, RouteId};
+pub use route::RouteRepository;
+use route_bucket_utils::ApplicationResult;
+
+pub(crate) mod route;
 
 #[async_trait]
 pub trait Connection: Sync {
@@ -46,77 +43,4 @@ pub trait Repository: Send + Sync {
         conn.begin_transaction().await?;
         Ok(conn)
     }
-}
-
-#[async_trait]
-pub trait RouteRepository: Repository {
-    // type Connection = <Self as Repository>::Connection;
-    // | error[E0658]: associated type defaults are unstable
-    // | see issue #29661 <https://github.com/rust-lang/rust/issues/29661> for more information
-
-    async fn find(
-        &self,
-        id: &RouteId,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<Route>;
-
-    async fn find_info(
-        &self,
-        id: &RouteId,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<RouteInfo>;
-
-    async fn find_all_infos(&self, conn: &Self::Connection) -> ApplicationResult<Vec<RouteInfo>>;
-
-    async fn insert_info(
-        &self,
-        info: &RouteInfo,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn insert_and_shift_segments(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        seg: &Segment,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn insert_and_truncate_operations(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        op: &Operation,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn update_info(
-        &self,
-        info: &RouteInfo,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn delete(
-        &self,
-        id: &RouteId,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn delete_and_shift_segments_by_range(
-        &self,
-        id: &RouteId,
-        range: Range<u32>,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-}
-
-#[async_trait]
-pub trait RouteInterpolationApi: Send + Sync {
-    async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
-
-    async fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
-}
-
-pub trait ElevationApi: Send + Sync {
-    fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
 }
