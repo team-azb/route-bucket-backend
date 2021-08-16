@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 
-pub use route::RouteRepository;
+pub use route::{CallRouteRepository, RouteRepository};
 use route_bucket_utils::ApplicationResult;
 
 pub(crate) mod route;
