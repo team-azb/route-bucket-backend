@@ -1,18 +1,19 @@
+use std::convert::TryInto;
+
 use derive_more::From;
 use futures::FutureExt;
 use getset::Getters;
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
+
+use route_bucket_domain::external::{ElevationApi, RouteInterpolationApi};
 use route_bucket_domain::model::{
     Coordinate, Distance, Elevation, Operation, Route, RouteGpx, RouteId, RouteInfo, Segment,
     SegmentList,
 };
-use route_bucket_domain::repository::{
-    Connection, ElevationApi, RouteInterpolationApi, RouteRepository,
-};
+use route_bucket_domain::repository::{Connection, RouteRepository};
 use route_bucket_utils::ApplicationResult;
-use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
-use tokio::sync::Mutex;
 
 pub struct RouteUseCase<R, I, E> {
     repository: R,

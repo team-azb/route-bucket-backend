@@ -1,8 +1,9 @@
 use actix_web::{dev, http, web, HttpResponse, Result, Scope};
 use tokio::sync::OnceCell;
 
+use route_bucket_domain::external::{ElevationApi, RouteInterpolationApi};
 use route_bucket_domain::model::RouteId;
-use route_bucket_domain::repository::{ElevationApi, RouteInterpolationApi, RouteRepository};
+use route_bucket_domain::repository::RouteRepository;
 use route_bucket_usecase::{NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase};
 
 pub struct RouteController<R, I, E> {
