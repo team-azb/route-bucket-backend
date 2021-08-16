@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use async_trait::async_trait;
 use derive_more::From;
 use futures::FutureExt;
 use getset::Getters;
@@ -7,38 +8,30 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use route_bucket_domain::external::{ElevationApi, RouteInterpolationApi};
+use route_bucket_domain::external::{
+    CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
+};
 use route_bucket_domain::model::{
     Coordinate, Distance, Elevation, Operation, Route, RouteGpx, RouteId, RouteInfo, Segment,
     SegmentList,
 };
-use route_bucket_domain::repository::{Connection, RouteRepository};
+use route_bucket_domain::repository::{
+    CallRouteRepository, Connection, Repository, RouteRepository,
+};
 use route_bucket_utils::ApplicationResult;
 
-pub struct RouteUseCase<R, I, E> {
-    repository: R,
-    interpolation_api: I,
-    elevation_api: E,
-}
-
-impl<R, I, E> RouteUseCase<R, I, E>
-where
-    R: RouteRepository,
-    I: RouteInterpolationApi,
-    E: ElevationApi,
+#[async_trait]
+pub trait RouteUseCase:
+    CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + Sync
 {
-    pub fn new(repository: R, interpolation_api: I, elevation_api: E) -> Self {
-        Self {
-            repository,
-            interpolation_api,
-            elevation_api,
-        }
-    }
+    // type Connection = <<Self as CallRouteRepository>::RouteRepository as Repository>::Connection;
+    // --> error[E0658]: associated type defaults are unstable
+    // --> = note: see issue #29661 <https://github.com/rust-lang/rust/issues/29661> for more information
 
-    pub async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
-        let conn = self.repository.get_connection().await?;
+    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
+        let conn = self.route_repository().get_connection().await?;
 
-        let mut route = self.repository.find(route_id, &conn).await?;
+        let mut route = self.route_repository().find(route_id, &conn).await?;
         self.attach_segment_details(route.seg_list_mut()).await?;
 
         Ok(RouteGetResponse {
@@ -50,45 +43,49 @@ where
         })
     }
 
-    pub async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
-        let conn = self.repository.get_connection().await?;
+    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
+        let conn = self.route_repository().get_connection().await?;
 
         Ok(RouteGetAllResponse {
-            route_infos: self.repository.find_all_infos(&conn).await?,
+            route_infos: self.route_repository().find_all_infos(&conn).await?,
         })
     }
 
-    pub async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse> {
-        let conn = self.repository.get_connection().await?;
+    async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse> {
+        let conn = self.route_repository().get_connection().await?;
 
-        let mut route = self.repository.find(route_id, &conn).await?;
+        let mut route = self.route_repository().find(route_id, &conn).await?;
         self.attach_segment_details(route.seg_list_mut()).await?;
 
         route.try_into()
     }
 
-    pub async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
+    async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
         let route_info = RouteInfo::new(RouteId::new(), req.name(), 0);
 
-        let conn = self.repository.get_connection().await?;
-        self.repository.insert_info(&route_info, &conn).await?;
+        let conn = self.route_repository().get_connection().await?;
+        self.route_repository()
+            .insert_info(&route_info, &conn)
+            .await?;
 
         Ok(RouteCreateResponse {
             id: route_info.id().clone(),
         })
     }
 
-    pub async fn rename(
+    async fn rename(
         &self,
         route_id: &RouteId,
         req: &RouteRenameRequest,
     ) -> ApplicationResult<RouteInfo> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route_info = self.repository.find_info(route_id, conn).await?;
+                let mut route_info = self.route_repository().find_info(route_id, conn).await?;
                 route_info.rename(req.name());
-                self.repository.update_info(&route_info, conn).await?;
+                self.route_repository()
+                    .update_info(&route_info, conn)
+                    .await?;
 
                 Ok(route_info)
             }
@@ -97,16 +94,16 @@ where
         .await
     }
 
-    pub async fn add_point(
+    async fn add_point(
         &self,
         route_id: &RouteId,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 let resp = self
                     .push_op_and_save(
                         &mut route,
@@ -124,15 +121,15 @@ where
         .await
     }
 
-    pub async fn remove_point(
+    async fn remove_point(
         &self,
         route_id: &RouteId,
         pos: usize,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 let org_waypoints = route.gather_waypoints();
                 let resp = self
                     .push_op_and_save(&mut route, Operation::new_remove(pos, org_waypoints), conn)
@@ -147,16 +144,16 @@ where
         .await
     }
 
-    pub async fn move_point(
+    async fn move_point(
         &self,
         route_id: &RouteId,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 let org_waypoints = route.gather_waypoints();
                 let resp = self
                     .push_op_and_save(
@@ -173,14 +170,11 @@ where
         .await
     }
 
-    pub async fn clear_route(
-        &self,
-        route_id: &RouteId,
-    ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+    async fn clear_route(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse> {
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 let org_waypoints = route.gather_waypoints();
                 let resp = self
                     .push_op_and_save(&mut route, Operation::new_clear(org_waypoints), conn)
@@ -193,14 +187,14 @@ where
         .await
     }
 
-    pub async fn redo_operation(
+    async fn redo_operation(
         &self,
         route_id: &RouteId,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 route.redo_operation()?;
                 let resp = self.save_edited(&mut route, conn).await?;
 
@@ -211,14 +205,14 @@ where
         .await
     }
 
-    pub async fn undo_operation(
+    async fn undo_operation(
         &self,
         route_id: &RouteId,
     ) -> ApplicationResult<RouteOperationResponse> {
-        let conn = self.repository.get_connection().await?;
+        let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.repository.find(route_id, conn).await?;
+                let mut route = self.route_repository().find(route_id, conn).await?;
                 route.undo_operation()?;
                 let resp = self.save_edited(&mut route, conn).await?;
 
@@ -229,9 +223,9 @@ where
         .await
     }
 
-    pub async fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        let mut conn = self.repository.get_connection().await?;
-        self.repository.delete(route_id, &mut conn).await
+    async fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+        let mut conn = self.route_repository().get_connection().await?;
+        self.route_repository().delete(route_id, &mut conn).await
     }
 
     async fn attach_segment_details(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
@@ -239,7 +233,9 @@ where
         seg_list.iter_mut().try_for_each(|seg| {
             seg.iter_mut()
                 .filter(|coord| coord.elevation().is_none())
-                .try_for_each(|coord| coord.set_elevation(self.elevation_api.get_elevation(coord)?))
+                .try_for_each(|coord| {
+                    coord.set_elevation(self.elevation_api().get_elevation(coord)?)
+                })
         })
     }
 
@@ -248,20 +244,20 @@ where
         route_id: &RouteId,
         pos: u32,
         seg: &mut Segment,
-        conn: &R::Connection,
+        conn: &<<Self as CallRouteRepository>::RouteRepository as Repository>::Connection,
     ) -> ApplicationResult<()> {
         let corrected_start = self
-            .interpolation_api
+            .route_interpolation_api()
             .correct_coordinate(seg.start())
             .await?;
         let corrected_goal = self
-            .interpolation_api
+            .route_interpolation_api()
             .correct_coordinate(seg.goal())
             .await?;
         seg.reset_endpoints(Some(corrected_start), Some(corrected_goal));
 
-        self.interpolation_api.interpolate(seg).await?;
-        self.repository
+        self.route_interpolation_api().interpolate(seg).await?;
+        self.route_repository()
             .insert_and_shift_segments(route_id, pos, seg, conn)
             .await?;
         Ok(())
@@ -271,11 +267,11 @@ where
         &self,
         route_id: &RouteId,
         seg_list: &mut SegmentList,
-        conn: &R::Connection,
+        conn: &<<Self as CallRouteRepository>::RouteRepository as Repository>::Connection,
     ) -> ApplicationResult<()> {
         let range =
             (seg_list.replaced_range().start as u32)..(seg_list.replaced_range().end as u32);
-        self.repository
+        self.route_repository()
             .delete_and_shift_segments_by_range(route_id, range, conn)
             .await?;
 
@@ -310,11 +306,13 @@ where
     async fn save_edited(
         &self,
         route: &mut Route,
-        conn: &R::Connection,
+        conn: &<<Self as CallRouteRepository>::RouteRepository as Repository>::Connection,
     ) -> ApplicationResult<RouteOperationResponse> {
         // TODO: posのrangeチェック
 
-        self.repository.update_info(route.info(), conn).await?;
+        self.route_repository()
+            .update_info(route.info(), conn)
+            .await?;
         self.interpolate_and_update_seg_list(
             &route.info().id().clone(),
             route.seg_list_mut(),
@@ -337,9 +335,9 @@ where
         &self,
         route: &mut Route,
         op: Operation,
-        conn: &R::Connection,
+        conn: &<<Self as CallRouteRepository>::RouteRepository as Repository>::Connection,
     ) -> ApplicationResult<RouteOperationResponse> {
-        self.repository
+        self.route_repository()
             .insert_and_truncate_operations(
                 route.info().id(),
                 *route.info().op_num() as u32,
@@ -350,6 +348,11 @@ where
         route.push_operation(op)?;
         self.save_edited(route, conn).await
     }
+}
+
+impl<T> RouteUseCase for T where
+    T: CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + Sync
+{
 }
 
 #[derive(Serialize)]
