@@ -68,3 +68,9 @@ pub trait RouteRepository: Repository {
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()>;
 }
+
+pub trait CallRouteRepository {
+    type RouteRepository: RouteRepository;
+
+    fn route_repository(&self) -> &Self::RouteRepository;
+}
