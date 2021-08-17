@@ -1,32 +1,65 @@
 use std::convert::TryInto;
 
 use async_trait::async_trait;
-use derive_more::From;
 use futures::FutureExt;
-use getset::Getters;
-use itertools::Itertools;
-use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 
+pub use requests::*;
+pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::{
-    Coordinate, Distance, Elevation, Operation, Route, RouteGpx, RouteId, RouteInfo, Segment,
-    SegmentList,
-};
+use route_bucket_domain::model::{Operation, RouteId, RouteInfo};
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
 use route_bucket_utils::ApplicationResult;
 
+mod requests;
+mod responses;
+
 #[async_trait]
-pub trait RouteUseCase:
-    CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + Sync
-{
-    // type Connection = <<Self as CallRouteRepository>::RouteRepository as Repository>::Connection;
-    // --> error[E0658]: associated type defaults are unstable
-    // --> = note: see issue #29661 <https://github.com/rust-lang/rust/issues/29661> for more information
+pub trait RouteUseCase {
+    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse>;
+
+    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse>;
+
+    async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
+
+    async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse>;
+
+    async fn rename(
+        &self,
+        route_id: &RouteId,
+        req: &RouteRenameRequest,
+    ) -> ApplicationResult<RouteInfo>;
+
+    async fn add_point(
+        &self,
+        route_id: &RouteId,
+        pos: usize,
+        req: &NewPointRequest,
+    ) -> ApplicationResult<RouteOperationResponse>;
+
+    async fn remove_point(
+        &self,
+        route_id: &RouteId,
+        pos: usize,
+    ) -> ApplicationResult<RouteOperationResponse>;
+
+    async fn move_point(
+        &self,
+        route_id: &RouteId,
+        pos: usize,
+        req: &NewPointRequest,
+    ) -> ApplicationResult<RouteOperationResponse>;
+
+    async fn clear_route(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse>;
+
+    async fn redo_operation(&self, route_id: &RouteId)
+        -> ApplicationResult<RouteOperationResponse>;
+
+    async fn undo_operation(&self, route_id: &RouteId)
+        -> ApplicationResult<RouteOperationResponse>;
 
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
