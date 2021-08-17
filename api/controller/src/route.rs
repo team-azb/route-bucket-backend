@@ -1,7 +1,9 @@
 use actix_web::{dev, http, web, HttpResponse, Result};
 
 use route_bucket_domain::model::RouteId;
-use route_bucket_usecase::{NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase};
+use route_bucket_usecase::route::{
+    NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
+};
 
 use crate::AddService;
 
