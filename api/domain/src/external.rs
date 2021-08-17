@@ -1,14 +1,27 @@
 use async_trait::async_trait;
+use itertools::Itertools;
 
 use route_bucket_utils::ApplicationResult;
 
-use crate::model::{Coordinate, Elevation, Segment};
+use crate::model::{Coordinate, Elevation, Route, Segment};
 
 #[async_trait]
 pub trait RouteInterpolationApi: Send + Sync {
     async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
 
     async fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
+
+    async fn interpolate_empty_segments(&self, route: &mut Route) -> ApplicationResult<()> {
+        let seg_future_iter = route
+            .iter_seg_mut()
+            .filter(|seg| seg.is_empty())
+            .map(|seg| async move { self.interpolate(seg).await });
+
+        futures::future::join_all(seg_future_iter)
+            .await
+            .into_iter()
+            .try_collect()
+    }
 }
 
 pub trait CallRouteInterpolationApi {
@@ -19,6 +32,14 @@ pub trait CallRouteInterpolationApi {
 
 pub trait ElevationApi: Send + Sync {
     fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
+
+    fn attach_elevations(&self, route: &mut Route) -> ApplicationResult<()> {
+        route.iter_seg_mut().try_for_each(|seg| {
+            seg.iter_mut()
+                .filter(|coord| coord.elevation().is_none())
+                .try_for_each(|coord| coord.set_elevation(self.get_elevation(coord)?))
+        })
+    }
 }
 
 pub trait CallElevationApi {
