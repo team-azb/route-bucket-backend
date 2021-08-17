@@ -1,10 +1,8 @@
-use std::ops::Range;
-
 use async_trait::async_trait;
 
 use route_bucket_utils::ApplicationResult;
 
-use crate::model::{Operation, Route, RouteId, RouteInfo, Segment};
+use crate::model::{Route, RouteId, RouteInfo};
 use crate::repository::Repository;
 
 #[async_trait]
@@ -33,38 +31,17 @@ pub trait RouteRepository: Repository {
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()>;
 
-    async fn insert_and_shift_segments(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        seg: &Segment,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn insert_and_truncate_operations(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        op: &Operation,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
     async fn update_info(
         &self,
         info: &RouteInfo,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()>;
 
+    async fn update(&self, route: &Route, conn: &Self::Connection) -> ApplicationResult<()>;
+
     async fn delete(
         &self,
         id: &RouteId,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
-
-    async fn delete_and_shift_segments_by_range(
-        &self,
-        id: &RouteId,
-        range: Range<u32>,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()>;
 }

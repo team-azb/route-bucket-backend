@@ -1,13 +1,15 @@
+use std::ops::Range;
+
 use async_trait::async_trait;
 use futures::FutureExt;
-use itertools::Itertools;
+use itertools::{zip, Itertools};
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::MySqlPool;
+use tokio::sync::Mutex;
+
 use route_bucket_domain::model::{Operation, Route, RouteId, RouteInfo, Segment, SegmentList};
 use route_bucket_domain::repository::{Connection, Repository, RouteRepository};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
-use sqlx::mysql::MySqlPoolOptions;
-use sqlx::MySqlPool;
-use std::ops::Range;
-use tokio::sync::Mutex;
 
 use crate::dto::operation::OperationDto;
 use crate::dto::route::RouteDto;
@@ -130,6 +132,19 @@ impl RouteRepositoryMySql {
         Ok(())
     }
 
+    async fn insert_and_truncate_operations(
+        id: &RouteId,
+        pos: u32,
+        op: &Operation,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<()> {
+        let dto = OperationDto::from_model(op, id, pos)?;
+        Self::delete_operations_by_start(id, pos, conn).await?;
+        Self::insert_operation(&dto, conn).await?;
+
+        Ok(())
+    }
+
     async fn insert_segment(
         id: &RouteId,
         pos: u32,
@@ -150,6 +165,32 @@ impl RouteRepositoryMySql {
         .execute(&mut *conn)
         .await
         .map_err(gen_err_mapper("failed to insert Segment"))?;
+
+        Ok(())
+    }
+
+    async fn update_segment_list(
+        id: &RouteId,
+        seg_list: &SegmentList,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<()> {
+        if let Some(removed_range) = seg_list.removed_range() {
+            let start = removed_range.start as u32;
+            let end = removed_range.end as u32;
+            Self::delete_segments_by_range(id, start..end, conn).await?;
+            Self::shift_segments(id, end, false, end - start, conn).await?;
+        }
+
+        if let Some(inserted_range) = seg_list.inserted_range() {
+            let start = inserted_range.start as u32;
+            let end = inserted_range.end as u32;
+            Self::shift_segments(id, start, true, end - start, conn).await?;
+
+            // SQLx cannot bulk insert yet.
+            for (pos, seg) in zip(start..end, seg_list.get_inserted_slice()?) {
+                Self::insert_segment(id, pos, seg, conn).await?;
+            }
+        }
 
         Ok(())
     }
@@ -314,46 +355,6 @@ impl RouteRepository for RouteRepositoryMySql {
         Ok(())
     }
 
-    async fn insert_and_shift_segments(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        seg: &Segment,
-        conn: &Self::Connection,
-    ) -> ApplicationResult<()> {
-        conn.transaction(|conn| {
-            async move {
-                Self::shift_segments(id, pos, true, 1, conn).await?;
-                Self::insert_segment(id, pos, seg, conn).await?;
-
-                Ok(())
-            }
-            .boxed()
-        })
-        .await
-    }
-
-    async fn insert_and_truncate_operations(
-        &self,
-        id: &RouteId,
-        pos: u32,
-        op: &Operation,
-        conn: &Self::Connection,
-    ) -> ApplicationResult<()> {
-        let dto = OperationDto::from_model(op, id, pos)?;
-
-        conn.transaction(|conn| {
-            async move {
-                Self::delete_operations_by_start(id, pos, conn).await?;
-                Self::insert_operation(&dto, conn).await?;
-
-                Ok(())
-            }
-            .boxed()
-        })
-        .await
-    }
-
     async fn update_info(
         &self,
         info: &RouteInfo,
@@ -379,13 +380,23 @@ impl RouteRepository for RouteRepositoryMySql {
         Ok(())
     }
 
-    async fn delete(&self, id: &RouteId, conn: &Self::Connection) -> ApplicationResult<()> {
+    async fn update(&self, route: &Route, conn: &Self::Connection) -> ApplicationResult<()> {
         conn.transaction(|conn| {
             async move {
-                Self::delete_by_route_id(id, "routes", conn).await?;
-                Self::delete_by_route_id(id, "operations", conn).await?;
-                Self::delete_by_route_id(id, "segments", conn).await?;
+                self.update_info(route.info(), conn).await?;
+                Self::update_segment_list(route.info().id(), route.seg_list(), conn).await?;
 
+                if *route.info().op_num() == route.op_list().len() {
+                    if let Some(last_op) = route.op_list().last() {
+                        Self::insert_and_truncate_operations(
+                            route.info().id(),
+                            route.op_list().len() as u32 - 1,
+                            last_op,
+                            conn,
+                        )
+                        .await?;
+                    }
+                }
                 Ok(())
             }
             .boxed()
@@ -393,16 +404,12 @@ impl RouteRepository for RouteRepositoryMySql {
         .await
     }
 
-    async fn delete_and_shift_segments_by_range(
-        &self,
-        id: &RouteId,
-        range: Range<u32>,
-        conn: &Self::Connection,
-    ) -> ApplicationResult<()> {
+    async fn delete(&self, id: &RouteId, conn: &Self::Connection) -> ApplicationResult<()> {
         conn.transaction(|conn| {
             async move {
-                Self::delete_segments_by_range(id, range.clone(), conn).await?;
-                Self::shift_segments(id, range.end, false, range.end - range.start, conn).await?;
+                Self::delete_by_route_id(id, "routes", conn).await?;
+                Self::delete_by_route_id(id, "operations", conn).await?;
+                Self::delete_by_route_id(id, "segments", conn).await?;
 
                 Ok(())
             }
