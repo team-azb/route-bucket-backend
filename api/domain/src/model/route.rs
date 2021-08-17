@@ -1,20 +1,23 @@
-use derive_more::From;
-use getset::{Getters, MutGetters};
+use std::slice::IterMut;
+
+use derive_more::{From, Into};
+use getset::Getters;
 use gpx::{Gpx, GpxVersion, Metadata};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::coordinate::Coordinate;
 use crate::model::operation::Operation;
 use crate::model::segment::SegmentList;
 use crate::model::types::{Elevation, RouteId};
+use crate::model::{Distance, Segment};
 
-#[derive(Debug, From, Getters, MutGetters)]
+#[derive(Debug, From, Into, Getters)]
 #[get = "pub"]
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
-    #[getset(get_mut = "pub")]
     seg_list: SegmentList,
 }
 
@@ -65,14 +68,6 @@ impl Route {
         }
     }
 
-    pub fn calc_elevation_gain(&self) -> Elevation {
-        self.seg_list.calc_elevation_gain()
-    }
-
-    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
-        self.seg_list.gather_waypoints()
-    }
-
     fn apply_operation(&mut self, reverse: bool) -> ApplicationResult<()> {
         let mut op;
         if reverse {
@@ -87,6 +82,32 @@ impl Route {
         op.apply(&mut self.seg_list)?;
 
         Ok(())
+    }
+
+    // methods from SegmentList
+
+    pub fn calc_elevation_gain(&self) -> Elevation {
+        self.seg_list.calc_elevation_gain()
+    }
+
+    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+        self.seg_list.attach_distance_from_start()
+    }
+
+    pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
+        self.seg_list.get_total_distance()
+    }
+
+    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
+        self.seg_list.gather_waypoints()
+    }
+
+    pub fn iter_seg_mut(&mut self) -> IterMut<Segment> {
+        self.seg_list.iter_mut()
+    }
+
+    pub fn into_segments_in_between(self) -> Vec<Segment> {
+        self.seg_list.into_segments_in_between()
     }
 }
 
