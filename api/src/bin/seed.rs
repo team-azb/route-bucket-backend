@@ -1,6 +1,6 @@
 use route_bucket_backend::server::Server;
 use route_bucket_domain::model::Coordinate;
-use route_bucket_usecase::RouteUseCase;
+use route_bucket_usecase::route::RouteUseCase;
 
 macro_rules! coord {
     ( $lat: expr, $lon: expr ) => {

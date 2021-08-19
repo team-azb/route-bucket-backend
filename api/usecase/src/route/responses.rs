@@ -10,32 +10,32 @@ use route_bucket_utils::ApplicationError;
 #[derive(Serialize)]
 pub struct RouteGetResponse {
     #[serde(flatten)]
-    pub(super) route_info: RouteInfo,
-    pub(super) waypoints: Vec<Coordinate>,
-    pub(super) segments: Vec<Segment>,
-    pub(super) elevation_gain: Elevation,
-    pub(super) total_distance: Distance,
+    pub route_info: RouteInfo,
+    pub waypoints: Vec<Coordinate>,
+    pub segments: Vec<Segment>,
+    pub elevation_gain: Elevation,
+    pub total_distance: Distance,
 }
 
 #[derive(Serialize)]
 pub struct RouteGetAllResponse {
     #[serde(rename = "routes")]
-    pub(super) route_infos: Vec<RouteInfo>,
+    pub route_infos: Vec<RouteInfo>,
 }
 
 pub type RouteGetGpxResponse = RouteGpx;
 
 #[derive(Serialize)]
 pub struct RouteCreateResponse {
-    pub(super) id: RouteId,
+    pub id: RouteId,
 }
 
 #[derive(Serialize)]
 pub struct RouteOperationResponse {
-    pub(super) waypoints: Vec<Coordinate>,
-    pub(super) segments: Vec<Segment>,
-    pub(super) elevation_gain: Elevation,
-    pub(super) total_distance: Distance,
+    pub waypoints: Vec<Coordinate>,
+    pub segments: Vec<Segment>,
+    pub elevation_gain: Elevation,
+    pub total_distance: Distance,
 }
 
 impl TryFrom<Route> for RouteGetResponse {
