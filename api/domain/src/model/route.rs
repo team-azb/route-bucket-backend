@@ -7,11 +7,17 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::coordinate::Coordinate;
-use crate::model::operation::Operation;
-use crate::model::segment::SegmentList;
 use crate::model::types::{Elevation, RouteId};
-use crate::model::{Distance, Segment};
+use crate::model::Distance;
+
+use self::coordinate::Coordinate;
+use self::operation::Operation;
+use self::segment_list::{Segment, SegmentList};
+
+pub(crate) mod coordinate;
+pub(crate) mod operation;
+pub(crate) mod route_gpx;
+pub(crate) mod segment_list;
 
 #[derive(Debug, From, Into, Getters)]
 #[get = "pub"]

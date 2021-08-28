@@ -3,7 +3,8 @@ use itertools::Itertools;
 
 use route_bucket_utils::ApplicationResult;
 
-use crate::model::{Coordinate, Elevation, Route, Segment};
+use crate::model::route::segment_list::Segment;
+use crate::model::{Coordinate, Elevation, Route};
 
 #[async_trait]
 pub trait RouteInterpolationApi: Send + Sync {
