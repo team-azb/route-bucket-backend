@@ -39,6 +39,11 @@ make migrate
 to migrate the database running on the `db` container.
 
 ## Documentation
+### API Documentation
 `swagger` container will be up with `make start`.
 To see the documentation(SwaggerUI),
 go to http://localhost:4000/
+
+### Design Principles
+You can see the documentation on our design principles 
+[here](./docs/architecture.md) ([japanese version](./docs/architecture-ja.md) also available).
