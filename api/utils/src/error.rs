@@ -10,6 +10,9 @@ pub type ApplicationResult<T> = Result<T, ApplicationError>;
 /// actix-webを用いて直接リクエストに変換できる自作エラークラス
 #[derive(Clone, Debug, Display, Error)]
 pub enum ApplicationError {
+    #[display(fmt = "AuthError: {}", _0)]
+    AuthError(String),
+
     #[display(fmt = "DataBaseError: {}", _0)]
     DataBaseError(String),
 
@@ -38,6 +41,7 @@ pub enum ApplicationError {
 impl ResponseError for ApplicationError {
     fn status_code(&self) -> http::StatusCode {
         match *self {
+            ApplicationError::AuthError(..) => http::StatusCode::UNAUTHORIZED,
             ApplicationError::InvalidOperation(..) => http::StatusCode::BAD_REQUEST,
             ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
             ApplicationError::DataBaseError(..)

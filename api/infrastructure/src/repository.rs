@@ -1,13 +1,15 @@
 use async_trait::async_trait;
 use derive_more::Deref;
-use route_bucket_domain::repository::Connection;
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use sqlx::mysql::MySqlTransactionManager;
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, TransactionManager};
 use tokio::sync::Mutex;
 
+use route_bucket_domain::repository::Connection;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
 pub mod route;
+pub mod user;
 
 fn gen_err_mapper(msg: &'static str) -> impl FnOnce(sqlx::Error) -> ApplicationError {
     move |err| ApplicationError::DataBaseError(format!("{} ({:?})", msg, err))

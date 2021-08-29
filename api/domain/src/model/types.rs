@@ -1,19 +1,37 @@
+use std::convert::TryFrom;
+
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 // TODO: Value Object用のderive macroを作る
 // ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい
 // ただのgenericsでSelf(val)やself.0.clone()をしようとすると怒られるので、
 // derive macro + traitでやるしかなさそう
 
+// TODO: RouteIdとUserIdの実装共通化
 #[derive(Display, Debug, Clone, Serialize, Deserialize)]
 pub struct RouteId(String);
 
 impl RouteId {
+    pub fn new() -> RouteId {
+        RouteId(nanoid!(11))
+    }
+    pub fn from_string(id: String) -> Self {
+        Self(id)
+    }
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+#[derive(Display, Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UserId(String);
+
+impl UserId {
     pub fn new() -> RouteId {
         RouteId(nanoid!(11))
     }

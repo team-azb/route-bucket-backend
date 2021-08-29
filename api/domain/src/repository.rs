@@ -3,8 +3,10 @@ use futures::future::BoxFuture;
 
 pub use route::{CallRouteRepository, RouteRepository};
 use route_bucket_utils::ApplicationResult;
+pub use user::{CallUserRepository, UserRepository};
 
 pub(crate) mod route;
+pub(crate) mod user;
 
 #[async_trait]
 pub trait Connection: Sync {
