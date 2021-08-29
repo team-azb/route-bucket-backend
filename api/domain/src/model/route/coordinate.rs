@@ -1,12 +1,14 @@
+use std::convert::{TryFrom, TryInto};
+use std::iter::FromIterator;
+
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
 use polyline::{decode_polyline, encode_coordinates};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::iter::FromIterator;
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 

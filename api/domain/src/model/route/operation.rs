@@ -1,10 +1,12 @@
-use getset::Getters;
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use std::convert::TryFrom;
 use std::mem::swap;
 
-use crate::model::coordinate::Coordinate;
-use crate::model::segment::SegmentList;
+use getset::Getters;
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
+use super::coordinate::Coordinate;
+use super::segment_list::SegmentList;
 
 #[derive(Clone, Debug)]
 pub enum OperationType {
