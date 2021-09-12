@@ -110,6 +110,29 @@ paths:
         required: true
         schema:
           type: string
+  '/routes/{id}/gpx/':
+    parameters:
+      - $ref: ./components/parameters/route_id.yml
+    get:
+      summary: RouteのGPX出力
+      tags:
+        - route
+      responses:
+        '200':
+          description: |-
+            OK
+
+            `Route`を表すGPXファイルを返す
+            GPXは少なくともGarmin Connectで動作確認済み
+            スキーマは省略
+          content:
+            application/gpx+xml:
+              schema:
+                type: object
+                properties: {}
+      operationId: get-routes-id-gpx
+      description: ''
+      parameters: []
   '/routes/{id}/rename/':
     patch:
       operationId: routesRename
