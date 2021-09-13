@@ -9,11 +9,18 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::route::Route;
 
-pub struct RouteGpx(Vec<u8>);
+pub struct RouteGpx {
+    name: String,
+    data: Vec<u8>,
+}
 
 impl RouteGpx {
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
     pub fn as_slice(&self) -> &[u8] {
-        self.0.as_slice()
+        self.data.as_slice()
     }
 }
 
@@ -22,6 +29,7 @@ impl TryFrom<Route> for RouteGpx {
 
     fn try_from(route: Route) -> ApplicationResult<Self> {
         let mut org_gpx_buf = Vec::new();
+        let file_name = route.info.name.clone();
         gpx::write(&route.into(), &mut org_gpx_buf).unwrap();
 
         let mut reader = Reader::from_str(from_utf8(&org_gpx_buf).unwrap());
@@ -67,6 +75,9 @@ impl TryFrom<Route> for RouteGpx {
             .unwrap();
         writer.write(&read_buf).map_err(to_write_err)?;
 
-        Ok(Self(writer.into_inner().into_inner()))
+        Ok(Self {
+            name: file_name,
+            data: writer.into_inner().into_inner(),
+        })
     }
 }

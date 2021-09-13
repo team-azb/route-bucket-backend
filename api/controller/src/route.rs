@@ -27,7 +27,7 @@ async fn get_gpx<U: 'static + RouteUseCase>(
     Ok(HttpResponse::Ok()
         .insert_header((
             http::header::CONTENT_DISPOSITION,
-            "attachment;filename=\"route.gpx\"",
+            format!("attachment;filename=\"{}.gpx\"", gpx_resp.name()),
         ))
         .content_type("application/gpx+xml")
         .body(dev::Body::from_slice(gpx_resp.as_slice())))
