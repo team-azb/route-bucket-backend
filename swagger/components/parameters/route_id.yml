@@ -1,6 +1,0 @@
-in: path
-name: id
-description: RouteのID
-required: true
-schema:
-  type: string
