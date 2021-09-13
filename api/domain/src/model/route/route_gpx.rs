@@ -1,9 +1,11 @@
-use quick_xml::events::Event;
-use quick_xml::{Reader, Writer};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use std::convert::TryFrom;
 use std::io::{Cursor, Read};
 use std::str::from_utf8;
+
+use quick_xml::events::Event;
+use quick_xml::{Reader, Writer};
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::route::Route;
 

@@ -2,16 +2,23 @@ use std::slice::IterMut;
 
 use derive_more::{From, Into};
 use getset::Getters;
-use gpx::{Gpx, GpxVersion, Metadata};
-use serde::{Deserialize, Serialize};
+use gpx::{Gpx, GpxVersion};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::coordinate::Coordinate;
-use crate::model::operation::Operation;
-use crate::model::segment::SegmentList;
-use crate::model::types::{Elevation, RouteId};
-use crate::model::{Distance, Segment};
+use crate::model::types::Elevation;
+use crate::model::Distance;
+
+use self::coordinate::Coordinate;
+use self::operation::Operation;
+use self::route_info::RouteInfo;
+use self::segment_list::{Segment, SegmentList};
+
+pub(crate) mod coordinate;
+pub(crate) mod operation;
+pub(crate) mod route_gpx;
+pub(crate) mod route_info;
+pub(crate) mod segment_list;
 
 #[derive(Debug, From, Into, Getters)]
 #[get = "pub"]
@@ -118,44 +125,6 @@ impl From<Route> for Gpx {
             metadata: Some(route.info.into()),
             tracks: vec![route.seg_list.into()],
             ..Default::default()
-        }
-    }
-}
-
-#[derive(Clone, Debug, Getters, Deserialize, Serialize)]
-#[get = "pub"]
-pub struct RouteInfo {
-    id: RouteId,
-    name: String,
-    #[serde(skip_serializing)]
-    op_num: usize,
-}
-
-impl RouteInfo {
-    pub fn new(id: RouteId, name: &String, op_num: usize) -> RouteInfo {
-        RouteInfo {
-            id,
-            name: name.clone(),
-            op_num,
-        }
-    }
-
-    pub fn rename(&mut self, name: &String) {
-        self.name = name.clone();
-    }
-}
-
-impl From<RouteInfo> for Metadata {
-    fn from(route_info: RouteInfo) -> Self {
-        Self {
-            name: Some(route_info.name),
-            description: None,
-            // TODO: ここにRouteBucketのリンクを入れられると良さそう
-            author: None,
-            links: vec![],
-            time: None,
-            keywords: None,
-            bounds: None,
         }
     }
 }
