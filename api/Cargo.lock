@@ -1948,17 +1948,16 @@ dependencies = [
  "route-bucket-domain",
  "route-bucket-infrastructure",
  "route-bucket-usecase",
- "tokio",
 ]
 
 [[package]]
 name = "route-bucket-controller"
 version = "0.1.0"
 dependencies = [
+ "actix-service",
  "actix-web",
  "route-bucket-domain",
  "route-bucket-usecase",
- "tokio",
 ]
 
 [[package]]
@@ -2005,6 +2004,7 @@ dependencies = [
 name = "route-bucket-usecase"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "derive_more",
  "futures",
  "getset",

@@ -1,14 +1,16 @@
-use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
-use num_traits::FromPrimitive;
-use route_bucket_domain::model::{Coordinate, Elevation, Latitude, Longitude};
-use route_bucket_domain::repository::ElevationApi;
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+
+use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
+use num_traits::FromPrimitive;
+
+use route_bucket_domain::external::ElevationApi;
+use route_bucket_domain::model::{Coordinate, Elevation, Latitude, Longitude};
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 #[derive(num_derive::FromPrimitive)]
 enum SrtmByteOrder {
