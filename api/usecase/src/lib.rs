@@ -1,3 +1,1 @@
-pub use route::*;
-
-mod route;
+pub mod route;

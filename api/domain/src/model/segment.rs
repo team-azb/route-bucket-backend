@@ -1,14 +1,16 @@
+use std::cmp::max;
+use std::convert::{TryFrom, TryInto};
+use std::ops::Range;
+use std::slice::{Iter, IterMut};
+
 use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use gpx::{Track, TrackSegment, Waypoint};
 use itertools::Itertools;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::Serialize;
-use std::cmp::max;
-use std::convert::{TryFrom, TryInto};
-use std::ops::Range;
-use std::slice::{Iter, IterMut};
+
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::coordinate::Coordinate;
 use crate::model::types::{Distance, Elevation, Polyline};
@@ -17,7 +19,8 @@ use crate::model::types::{Distance, Elevation, Polyline};
 #[get = "pub"]
 pub struct SegmentList {
     segments: Vec<Segment>,
-    replaced_range: Range<usize>,
+    removed_range: Option<Range<usize>>,
+    inserted_range: Option<Range<usize>>,
 }
 
 impl SegmentList {
@@ -100,6 +103,11 @@ impl SegmentList {
         mut range: Range<usize>,
         mut waypoints: Vec<Coordinate>,
     ) -> ApplicationResult<()> {
+        if self.removed_range.is_some() || self.inserted_range.is_some() {
+            return Err(ApplicationError::DomainError(
+                "SegmentList has already been modified".into(),
+            ));
+        }
         if range.start > self.segments.len() {
             return Err(ApplicationError::DomainError(
                 "Invalid Range at replace_range!".into(),
@@ -124,10 +132,22 @@ impl SegmentList {
             .map(|(start, goal)| Segment::new_empty(start, goal))
             .collect_vec();
 
-        self.segments.splice(range.clone(), replace_with);
+        self.removed_range.insert(range.clone());
+        self.inserted_range
+            .insert(range.start..(range.start + replace_with.len()));
 
-        self.replaced_range = range;
+        self.segments.splice(range.clone(), replace_with);
         Ok(())
+    }
+
+    pub fn get_inserted_slice(&self) -> ApplicationResult<&[Segment]> {
+        if let Some(inserted_range) = self.inserted_range.clone() {
+            Ok(&self.segments[inserted_range])
+        } else {
+            Err(ApplicationError::DomainError(
+                "SegmentList still hasn't been inserted at get_inserted_slice".into(),
+            ))
+        }
     }
 
     pub fn gather_waypoints(&self) -> Vec<Coordinate> {
@@ -155,7 +175,8 @@ impl From<Vec<Segment>> for SegmentList {
     fn from(segments: Vec<Segment>) -> Self {
         Self {
             segments,
-            replaced_range: (0..0),
+            removed_range: None,
+            inserted_range: None,
         }
     }
 }
