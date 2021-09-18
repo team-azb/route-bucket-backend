@@ -24,6 +24,7 @@ mod segment;
 #[get = "pub"]
 pub struct SegmentList {
     segments: Vec<Segment>,
+    // TODO: この二つをなくす
     removed_range: Option<Range<usize>>,
     inserted_range: Option<Range<usize>>,
 }
@@ -103,46 +104,66 @@ impl SegmentList {
         Ok(())
     }
 
-    pub fn replace_range(
-        &mut self,
-        mut range: Range<usize>,
-        mut waypoints: Vec<Coordinate>,
-    ) -> ApplicationResult<()> {
-        if self.removed_range.is_some() || self.inserted_range.is_some() {
+    pub fn insert_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
+        if pos <= self.segments.len() {
+            if pos == 0 {
+                let goal = self
+                    .segments
+                    .first()
+                    .map(|seg| seg.start.clone())
+                    .unwrap_or(coord.clone());
+                self.segments.insert(0, Segment::new_empty(coord, goal));
+                self.inserted_range.insert(0..1);
+            } else {
+                let goal = if pos == self.segments.len() {
+                    coord.clone()
+                } else {
+                    self.segments[pos - 1].start.clone()
+                };
+                self.segments[pos - 1].reset_endpoints(None, Some(coord.clone()));
+                self.segments.insert(pos, Segment::new_empty(coord, goal));
+                self.inserted_range.insert(pos - 1..pos + 1);
+            }
+            Ok(())
+        } else {
+            Err(ApplicationError::DomainError(format!(
+                "pos({}) cannot be greater than segment.len()({})",
+                pos,
+                self.segments.len()
+            )))
+        }
+    }
+
+    pub fn remove_waypoint(&mut self, pos: usize) -> ApplicationResult<()> {
+        if self.segments.len() == 0 {
             return Err(ApplicationError::DomainError(
-                "SegmentList has already been modified".into(),
+                "segments.len() cannot be 0 at SegmentList::remove_waypoint".into(),
             ));
         }
-        if range.start > self.segments.len() {
-            return Err(ApplicationError::DomainError(
-                "Invalid Range at replace_range!".into(),
-            ));
+
+        if pos <= self.segments.len() {
+            let removed_seg = self.segments.remove(pos);
+            if pos > 0 {
+                let goal = if pos == self.segments.len() {
+                    self.segments[pos - 1].start.clone()
+                } else {
+                    removed_seg.goal
+                };
+                self.segments[pos - 1].reset_endpoints(None, Some(goal));
+            }
+            Ok(())
+        } else {
+            Err(ApplicationError::DomainError(format!(
+                "pos({}) cannot be greater than segment.len()({})",
+                pos,
+                self.segments.len()
+            )))
         }
+    }
 
-        if range.start > 0 {
-            range.start -= 1;
-            waypoints.insert(0, self.segments[range.start].start.clone())
-        }
-
-        if range.end < self.segments.len() {
-            waypoints.push(self.segments[range.end].start.clone())
-        } else if let Some(last_ref) = waypoints.last() {
-            let last = last_ref.clone();
-            waypoints.push(last)
-        }
-
-        let replace_with = waypoints
-            .into_iter()
-            .tuple_windows()
-            .map(|(start, goal)| Segment::new_empty(start, goal))
-            .collect_vec();
-
-        self.removed_range.insert(range.clone());
-        self.inserted_range
-            .insert(range.start..(range.start + replace_with.len()));
-
-        self.segments.splice(range.clone(), replace_with);
-        Ok(())
+    pub fn move_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
+        self.remove_waypoint(pos)?;
+        self.insert_waypoint(pos, coord)
     }
 
     pub fn get_inserted_slice(&self) -> ApplicationResult<&[Segment]> {
