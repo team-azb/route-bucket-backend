@@ -8,7 +8,7 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::{Operation, RouteId, RouteInfo};
+use route_bucket_domain::model::{Distance, Elevation, Operation, RouteId, RouteInfo};
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -229,19 +229,18 @@ where
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let mut route = self.route_repository().find(route_id, conn).await?;
-                let op = Operation::new_clear(route.gather_waypoints());
-                route.push_operation(op)?;
+                let mut info = self.route_repository().find_info(route_id, conn).await?;
+                info.clear_route();
+                self.route_repository().delete(route_id, conn).await?;
+                self.route_repository().insert_info(&info, conn).await?;
 
-                self.route_interpolation_api()
-                    .interpolate_empty_segments(&mut route)
-                    .await?;
-                self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
-
-                self.route_repository().update(&mut route, conn).await?;
-
-                route.try_into()
+                // TODO: ここは正直無駄なので、APIを変更する
+                Ok(RouteOperationResponse {
+                    waypoints: Vec::new(),
+                    segments: Vec::new(),
+                    elevation_gain: Elevation::zero(),
+                    total_distance: Distance::zero(),
+                })
             }
             .boxed()
         })

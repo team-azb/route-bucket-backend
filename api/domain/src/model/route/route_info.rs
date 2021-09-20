@@ -25,6 +25,10 @@ impl RouteInfo {
     pub fn rename(&mut self, name: &String) {
         self.name = name.clone();
     }
+
+    pub fn clear_route(&mut self) {
+        self.op_num = 0;
+    }
 }
 
 impl From<RouteInfo> for Metadata {
