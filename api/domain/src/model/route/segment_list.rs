@@ -118,11 +118,12 @@ impl SegmentList {
                 let goal = if pos == self.segments.len() {
                     coord.clone()
                 } else {
-                    self.segments[pos - 1].start.clone()
+                    self.segments[pos - 1].goal.clone()
                 };
                 self.segments[pos - 1].reset_endpoints(None, Some(coord.clone()));
                 self.segments.insert(pos, Segment::new_empty(coord, goal));
                 self.inserted_range.insert(pos - 1..pos + 1);
+                self.removed_range.insert(pos - 1..pos);
             }
             Ok(())
         } else {
@@ -150,6 +151,11 @@ impl SegmentList {
                     removed_seg.goal
                 };
                 self.segments[pos - 1].reset_endpoints(None, Some(goal));
+                self.inserted_range.insert(pos - 1..pos);
+                self.removed_range.insert(pos - 1..pos + 1);
+            } else {
+                self.inserted_range.insert(pos..pos);
+                self.removed_range.insert(pos..pos + 1);
             }
             Ok(())
         } else {
@@ -163,7 +169,14 @@ impl SegmentList {
 
     pub fn move_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
         self.remove_waypoint(pos)?;
-        self.insert_waypoint(pos, coord)
+        self.insert_waypoint(pos, coord)?;
+
+        let range_start = pos.checked_sub(1).unwrap_or(0);
+        let range_end = pos.checked_add(1).unwrap_or(self.segments.len());
+        self.inserted_range.insert(range_start..range_end);
+        self.removed_range.insert(range_start..range_end);
+
+        Ok(())
     }
 
     pub fn get_inserted_slice(&self) -> ApplicationResult<&[Segment]> {
