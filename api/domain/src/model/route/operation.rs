@@ -5,6 +5,8 @@ use getset::Getters;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
+use crate::model::types::OperationId;
+
 use super::coordinate::Coordinate;
 use super::segment_list::SegmentList;
 
@@ -55,6 +57,7 @@ impl From<OperationType> for String {
 #[derive(Clone, Debug, Getters)]
 #[get = "pub"]
 pub struct Operation {
+    id: OperationId,
     op_type: OperationType,
     pos: usize,
     org_coord: Option<Coordinate>,
@@ -69,6 +72,7 @@ impl Operation {
         new_coord: Option<Coordinate>,
     ) -> Self {
         Self {
+            id: OperationId::new(),
             op_type,
             pos,
             org_coord,

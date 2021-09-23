@@ -117,9 +117,10 @@ impl RouteRepositoryMySql {
         sqlx::query(
             r"
             INSERT INTO operations
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             ",
         )
+        .bind(dto.id())
         .bind(dto.route_id())
         .bind(dto.index())
         .bind(dto.code())
