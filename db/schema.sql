@@ -23,7 +23,7 @@ CREATE TABLE operations
     `index`    INTEGER UNSIGNED                   NOT NULL,
     `code`     CHAR(2) CHARACTER SET ascii        NOT NULL,
     `pos`      INTEGER UNSIGNED                   NOT NULL,
-    `polyline` VARCHAR(65000) CHARACTER SET ascii NOT NULL,
+    `polyline` VARCHAR(30) CHARACTER SET ascii NOT NULL,
     INDEX segment_idx (`route_id`, `index`),
     PRIMARY KEY (`id`)
 );
