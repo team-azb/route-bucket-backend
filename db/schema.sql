@@ -8,18 +8,22 @@ CREATE TABLE routes
 
 CREATE TABLE segments
 (
+    `id`       VARCHAR(21)                        NOT NULL,
     `route_id` VARCHAR(11)                        NOT NULL,
     `index`    INTEGER UNSIGNED                   NOT NULL,
     `polyline` VARCHAR(65000) CHARACTER SET ascii NOT NULL,
-    INDEX segment_idx (`route_id`, `index`)
+    INDEX segment_idx (`route_id`, `index`),
+    PRIMARY KEY (`id`)
 );
 
 CREATE TABLE operations
 (
-    `route_id` VARCHAR(11)                      NOT NULL,
-    `index`    INTEGER UNSIGNED                 NOT NULL,
-    `code`     CHAR(2) CHARACTER SET ascii      NOT NULL,
-    `pos`      INTEGER UNSIGNED                 NOT NULL,
+    `id`       VARCHAR(21)                        NOT NULL,
+    `route_id` VARCHAR(11)                        NOT NULL,
+    `index`    INTEGER UNSIGNED                   NOT NULL,
+    `code`     CHAR(2) CHARACTER SET ascii        NOT NULL,
+    `pos`      INTEGER UNSIGNED                   NOT NULL,
     `polyline` VARCHAR(65000) CHARACTER SET ascii NOT NULL,
-    PRIMARY KEY (`route_id`, `index`)
+    INDEX segment_idx (`route_id`, `index`),
+    PRIMARY KEY (`id`)
 );
