@@ -105,7 +105,8 @@ impl SegmentList {
     }
 
     pub fn insert_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
-        if pos <= self.segments.len() {
+        let org_len = self.segments.len();
+        if pos <= org_len {
             if pos == 0 {
                 let goal = self
                     .segments
@@ -115,12 +116,15 @@ impl SegmentList {
                 self.segments.insert(0, Segment::new_empty(coord, goal));
                 self.inserted_range.insert(0..1);
             } else {
-                let goal = if pos == self.segments.len() {
+                let org_seg = self.segments.remove(pos - 1);
+                let start = org_seg.start.clone();
+                let goal = if pos == org_len {
                     coord.clone()
                 } else {
-                    self.segments[pos - 1].goal.clone()
+                    org_seg.goal
                 };
-                self.segments[pos - 1].reset_endpoints(None, Some(coord.clone()));
+                self.segments
+                    .insert(pos - 1, Segment::new_empty(start, coord.clone()));
                 self.segments.insert(pos, Segment::new_empty(coord, goal));
                 self.inserted_range.insert(pos - 1..pos + 1);
                 self.removed_range.insert(pos - 1..pos);
@@ -136,21 +140,25 @@ impl SegmentList {
     }
 
     pub fn remove_waypoint(&mut self, pos: usize) -> ApplicationResult<()> {
-        if self.segments.len() == 0 {
+        let org_len = self.segments.len();
+        if org_len == 0 {
             return Err(ApplicationError::DomainError(
                 "segments.len() cannot be 0 at SegmentList::remove_waypoint".into(),
             ));
         }
 
-        if pos <= self.segments.len() {
-            let removed_seg = self.segments.remove(pos);
+        if pos < org_len {
+            let org_second_seg = self.segments.remove(pos);
             if pos > 0 {
-                let goal = if pos == self.segments.len() {
-                    self.segments[pos - 1].start.clone()
+                let org_first_seg = self.segments.remove(pos - 1);
+                let start = org_first_seg.start.clone();
+                let goal = if pos == org_len - 1 {
+                    org_first_seg.start
                 } else {
-                    removed_seg.goal
+                    org_second_seg.goal
                 };
-                self.segments[pos - 1].reset_endpoints(None, Some(goal));
+                self.segments
+                    .insert(pos - 1, Segment::new_empty(start, goal));
                 self.inserted_range.insert(pos - 1..pos);
                 self.removed_range.insert(pos - 1..pos + 1);
             } else {

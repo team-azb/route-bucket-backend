@@ -50,13 +50,6 @@ impl Segment {
         }
     }
 
-    pub fn reset_endpoints(&mut self, start_op: Option<Coordinate>, goal_op: Option<Coordinate>) {
-        self.start = start_op.unwrap_or(self.start.clone());
-        self.goal = goal_op.unwrap_or(self.goal.clone());
-
-        self.points.clear();
-    }
-
     pub fn is_empty(&self) -> bool {
         self.points.is_empty()
     }
