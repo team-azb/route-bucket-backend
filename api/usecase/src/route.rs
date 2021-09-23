@@ -8,7 +8,7 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::{Distance, Elevation, Operation, RouteId, RouteInfo};
+use route_bucket_domain::model::{Distance, Elevation, Operation, Route, RouteId, RouteInfo};
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -231,16 +231,11 @@ where
             async move {
                 let mut info = self.route_repository().find_info(route_id, conn).await?;
                 info.clear_route();
-                self.route_repository().delete(route_id, conn).await?;
-                self.route_repository().insert_info(&info, conn).await?;
+                let cleared_route = Route::new(info, vec![], vec![].into());
+                self.route_repository().update(&cleared_route, conn).await?;
 
-                // TODO: ここは正直無駄なので、APIを変更する
-                Ok(RouteOperationResponse {
-                    waypoints: Vec::new(),
-                    segments: Vec::new(),
-                    elevation_gain: Elevation::zero(),
-                    total_distance: Distance::zero(),
-                })
+                // TODO: ここは正直無駄なので、APIを変更するべき？
+                cleared_route.try_into()
             }
             .boxed()
         })
