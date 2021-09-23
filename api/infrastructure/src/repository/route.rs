@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use async_trait::async_trait;
 use futures::FutureExt;
-use itertools::{zip, Itertools};
+use itertools::{enumerate, Itertools};
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
 use tokio::sync::Mutex;
@@ -28,37 +28,6 @@ impl RouteRepositoryMySql {
             .map(|res| res.map(Self))
             .await
             .unwrap()
-    }
-
-    // TODO: この辺を、テーブル名とかWHERE以下を変数にして関数にまとめる
-    async fn shift_segments(
-        id: &RouteId,
-        start_pos: u32,
-        to_right: bool,
-        width: u32,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()> {
-        let mut conn = conn.lock().await;
-
-        let query = format!(
-            r"
-            UPDATE segments 
-            SET `index` = `index` {} ? 
-            WHERE route_id = ? AND `index` >= ?
-            ORDER BY `route_id` {}
-            ",
-            if to_right { "+" } else { "-" },
-            if to_right { "DESC" } else { "ASC" }
-        );
-        sqlx::query(&query)
-            .bind(width)
-            .bind(id.to_string())
-            .bind(start_pos)
-            .execute(&mut *conn)
-            .await
-            .map_err(gen_err_mapper("failed to shift segments"))?;
-
-        Ok(())
     }
 
     async fn find_op_list(
@@ -146,7 +115,7 @@ impl RouteRepositoryMySql {
         Ok(())
     }
 
-    async fn insert_segment(
+    async fn insert_or_update_segment(
         id: &RouteId,
         pos: u32,
         seg: &Segment,
@@ -158,12 +127,14 @@ impl RouteRepositoryMySql {
         sqlx::query(
             r"
             INSERT INTO segments VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE `index` = ?
             ",
         )
         .bind(dto.id())
         .bind(dto.route_id())
         .bind(dto.index())
         .bind(dto.polyline())
+        .bind(dto.index())
         .execute(&mut *conn)
         .await
         .map_err(gen_err_mapper("failed to insert Segment"))?;
@@ -176,24 +147,11 @@ impl RouteRepositoryMySql {
         seg_list: &SegmentList,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()> {
-        if let Some(removed_range) = seg_list.removed_range() {
-            let start = removed_range.start as u32;
-            let end = removed_range.end as u32;
-            Self::delete_segments_by_range(id, start..end, conn).await?;
-            Self::shift_segments(id, end, false, end - start, conn).await?;
+        // SQLx cannot bulk insert yet.
+        for (pos, seg) in enumerate(seg_list.segments()) {
+            Self::insert_or_update_segment(id, pos as u32, seg, conn).await?;
         }
-
-        if let Some(inserted_range) = seg_list.inserted_range() {
-            let start = inserted_range.start as u32;
-            let end = inserted_range.end as u32;
-            Self::shift_segments(id, start, true, end - start, conn).await?;
-
-            // SQLx cannot bulk insert yet.
-            for (pos, seg) in zip(start..end, seg_list.get_inserted_slice()?) {
-                Self::insert_segment(id, pos, seg, conn).await?;
-            }
-        }
-
+        Self::delete_segments_except_for(id, seg_list, conn).await?;
         Ok(())
     }
 
@@ -218,27 +176,39 @@ impl RouteRepositoryMySql {
         Ok(())
     }
 
-    async fn delete_segments_by_range(
+    async fn delete_segments_except_for(
         id: &RouteId,
-        range: Range<u32>,
+        segment_list: &SegmentList,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()> {
         let mut conn = conn.lock().await;
 
-        sqlx::query(
+        // NOTE: hacky solution in order to use the IN statement
+        //     : waiting for vec binding on SQLx...
+        let seg_id_exception_clause = if segment_list.segments().is_empty() {
+            "TRUE".into()
+        } else {
+            let seg_ids = segment_list
+                .iter()
+                .map(|seg| format!("'{}'", seg.id().to_string()))
+                .collect_vec()
+                .join(",");
+            format!("id NOT IN ({})", seg_ids)
+        };
+
+        let query = format!(
             r"
             DELETE FROM segments 
             WHERE 
-                  `route_id` = ? AND 
-                  ? <= `index` AND `index` < ?
+                  `route_id` = ? AND {}
             ",
-        )
-        .bind(id.to_string())
-        .bind(range.start)
-        .bind(range.end)
-        .execute(&mut *conn)
-        .await
-        .map_err(gen_err_mapper("failed to delete segments by range"))?;
+            seg_id_exception_clause
+        );
+        sqlx::query(&query)
+            .bind(&id.to_string())
+            .execute(&mut *conn)
+            .await
+            .map_err(gen_err_mapper("failed to delete segments"))?;
 
         Ok(())
     }
