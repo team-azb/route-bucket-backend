@@ -156,9 +156,10 @@ impl RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO segments VALUES (?, ?, ?)
+            INSERT INTO segments VALUES (?, ?, ?, ?)
             ",
         )
+        .bind(dto.id())
         .bind(dto.route_id())
         .bind(dto.index())
         .bind(dto.polyline())
