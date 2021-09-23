@@ -102,19 +102,6 @@ impl RouteRepositoryMySql {
         Ok(())
     }
 
-    async fn insert_and_truncate_operations(
-        id: &RouteId,
-        pos: u32,
-        op: &Operation,
-        conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()> {
-        let dto = OperationDto::from_model(op, id, pos)?;
-        Self::delete_operations_by_start(id, pos, conn).await?;
-        Self::insert_operation(&dto, conn).await?;
-
-        Ok(())
-    }
-
     async fn insert_or_update_segment(
         id: &RouteId,
         pos: u32,
@@ -153,6 +140,21 @@ impl RouteRepositoryMySql {
         }
         Self::delete_segments_except_for(id, seg_list, conn).await?;
         Ok(())
+    }
+
+    async fn update_operations(
+        id: &RouteId,
+        operations: &Vec<Operation>,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<()> {
+        if let Some(last_op) = operations.last() {
+            let pos = operations.len() as u32 - 1;
+            let dto = OperationDto::from_model(last_op, id, pos)?;
+            Self::delete_operations_by_start(id, pos, conn).await?;
+            Self::insert_operation(&dto, conn).await
+        } else {
+            Self::delete_operations_by_start(id, 0, conn).await
+        }
     }
 
     async fn delete_operations_by_start(
@@ -359,15 +361,7 @@ impl RouteRepository for RouteRepositoryMySql {
                 Self::update_segment_list(route.info().id(), route.seg_list(), conn).await?;
 
                 if *route.info().op_num() == route.op_list().len() {
-                    if let Some(last_op) = route.op_list().last() {
-                        Self::insert_and_truncate_operations(
-                            route.info().id(),
-                            route.op_list().len() as u32 - 1,
-                            last_op,
-                            conn,
-                        )
-                        .await?;
-                    }
+                    Self::update_operations(route.info().id(), route.op_list(), conn).await?;
                 }
                 Ok(())
             }
