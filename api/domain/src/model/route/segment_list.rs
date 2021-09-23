@@ -167,9 +167,6 @@ impl SegmentList {
         self.remove_waypoint(pos)?;
         self.insert_waypoint(pos, coord)?;
 
-        let range_start = pos.checked_sub(1).unwrap_or(0);
-        let range_end = pos.checked_add(1).unwrap_or(self.segments.len());
-
         Ok(())
     }
 

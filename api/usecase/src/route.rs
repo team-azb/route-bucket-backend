@@ -8,7 +8,7 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::{Distance, Elevation, Operation, Route, RouteId, RouteInfo};
+use route_bucket_domain::model::{Operation, Route, RouteId, RouteInfo};
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
