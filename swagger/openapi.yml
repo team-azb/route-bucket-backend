@@ -1,0 +1,554 @@
+openapi: 3.0.3
+info:
+  title: RouteBucketBackend
+  description: RouteBucketBackend
+  version: 0.1.0
+servers:
+  - url: 'http://localhost:8080/'
+    description: development
+tags:
+  - name: route
+    description: ルートに関するエンドポイントたち
+paths:
+  /routes/:
+    get:
+      operationId: routesGetAll
+      summary: 全Route一覧
+      tags:
+        - route
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteInfo'
+                required:
+                  - routes
+      description: 全`Route`の`RouteInfo`を一覧で返す
+    post:
+      operationId: routesPost
+      summary: Routeの作成
+      tags:
+        - route
+      description: |
+        指定した名前のRouteを作成し、そのidを返す
+      requestBody:
+        description: Routeの情報
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Route作成リクエスト
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 50
+                  description: Routeの名前
+      responses:
+        '201':
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Route作成レスポンス
+                properties:
+                  id:
+                    $ref: '#/components/schemas/RouteId'
+                required:
+                  - id
+  '/routes/{id}':
+    get:
+      operationId: routesGet
+      summary: Routeの取得
+      tags:
+        - route
+      description: |
+        指定したRouteの情報を取得する
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: routesDelete
+      summary: Routeの削除
+      tags:
+        - route
+      responses:
+        '200':
+          description: ok
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - in: path
+        name: id
+        description: RouteのID
+        required: true
+        schema:
+          type: string
+  '/routes/{id}/gpx/':
+    parameters:
+      - $ref: ./components/parameters/route_id.yml
+    get:
+      summary: RouteのGPX出力
+      tags:
+        - route
+      responses:
+        '200':
+          description: |-
+            OK
+
+            `Route`を表すGPXファイルを返す
+            GPXは少なくともGarmin Connectで動作確認済み
+            スキーマは省略
+          content:
+            application/gpx+xml:
+              schema:
+                type: object
+                properties: {}
+      operationId: get-routes-id-gpx
+      description: ''
+      parameters: []
+  '/routes/{id}/rename/':
+    patch:
+      operationId: routesRename
+      summary: Routeの名前変更
+      description: |
+        指定したRouteの名前を変更する
+      tags:
+        - route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Route改名リクエスト
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: 変更したい名前
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteInfo'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+  '/routes/{id}/add/{pos}':
+    patch:
+      operationId: routesAdd
+      summary: 新たな点の追加
+      tags:
+        - route
+      description: |
+        指定したRouteのpos番目の位置に新たな点を追加する
+      requestBody:
+        description: ルートの情報
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 追加したい点の情報
+              properties:
+                coord:
+                  $ref: '#/components/schemas/Coordinate'
+              required:
+                - coord
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '400':
+          description: |
+            更新失敗、posの値がRouteの長さより長い場合など
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/routes/{id}/remove/{pos}':
+    patch:
+      operationId: routesRemove
+      summary: 点の削除
+      tags:
+        - route
+      description: |
+        指定したRouteのpos番目の点を削除する
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '400':
+          description: |
+            更新失敗、posの値がRouteの長さより長い場合など
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+      - $ref: '#/components/parameters/pos'
+  '/routes/{id}/move/{pos}':
+    patch:
+      operationId: routesMove
+      summary: 点の座標の変更
+      description: route_idに対応するRouteのpos番目の点の座標を変更する
+      tags:
+        - route
+      requestBody:
+        description: ルートの情報
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 変更したい点の新しい座標
+              properties:
+                coord:
+                  $ref: '#/components/schemas/Coordinate'
+              required:
+                - coord
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '400':
+          description: |
+            更新失敗、posの値がRouteの長さ以上の場合など
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+      - $ref: '#/components/parameters/pos'
+  '/routes/{id}/clear/':
+    patch:
+      operationId: routesClear
+      summary: 点のクリア
+      tags:
+        - route
+      description: |
+        指定したRouteの全ての点を削除する
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+  '/routes/{id}/redo/':
+    patch:
+      operationId: routesRedo
+      summary: 操作を進む
+      tags:
+        - route
+      description: |
+        指定したRouteの操作を一つ進める
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '400':
+          description: |
+            更新失敗、これ以上redoできない場合など
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+  '/routes/{id}/undo/':
+    patch:
+      operationId: routesUndo
+      summary: 操作を戻る
+      tags:
+        - route
+      description: |
+        指定したRouteの操作を一つ戻す
+      responses:
+        '200':
+          $ref: '#/components/responses/RouteEditResponse'
+        '400':
+          description: |
+            更新失敗、これ以上undoできない場合など
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: |
+            対応するRouteが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    parameters:
+      - $ref: '#/components/parameters/route_id'
+components:
+  schemas:
+    Coordinate:
+      title: Coordinate
+      type: object
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+          format: double
+          description: 緯度
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+          format: double
+          description: 経度
+      required:
+        - latitude
+        - longitude
+      description: 地球上の点を表す座標
+      x-tags:
+        - route
+    CoordinateVerbose:
+      title: CoordinateVerbose
+      type: object
+      description: ルート上の点を表す座標
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+          format: double
+          description: 緯度
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+          format: double
+          description: 経度
+        elevation:
+          type: integer
+          format: int32
+          minimum: 0
+        distance_from_start:
+          type: number
+          format: double
+          minimum: 0
+      required:
+        - latitude
+        - longitude
+        - distance_from_start
+      x-tags:
+        - route
+    Segment:
+      type: object
+      description: waypointに挟まれた一つの区間に対し、補間を行った上で標高を付与した配列
+      properties:
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoordinateVerbose'
+      required:
+        - points
+      x-tags:
+        - route
+    Polyline:
+      type: string
+      description: |
+        Polyline形式で表現された座標のリスト
+        参考：https://developers.google.com/maps/documentation/utilities/polylinealgorithm
+      example: _p~iF~ps|U_ulLnnqC_mqNvxq`@
+      x-tags:
+        - route
+    RouteId:
+      type: string
+      title: RouteId
+      pattern: '^[A-Za-z0-9_-]+'
+      minLength: 11
+      maxLength: 11
+      description: '`Route`のID'
+      x-tags:
+        - route
+      x-examples: {}
+      example: 2baY2o3zfGP
+    RouteInfo:
+      type: object
+      description: Route
+      x-tags:
+        - route
+      properties:
+        id:
+          $ref: '#/components/schemas/RouteId'
+        name:
+          type: string
+          maxLength: 50
+          description: ルートの名前
+      required:
+        - id
+        - name
+    Route:
+      type: object
+      description: Polyline付きのRoute
+      x-tags:
+        - route
+      properties:
+        id:
+          $ref: '#/components/schemas/RouteId'
+        name:
+          type: string
+          maxLength: 50
+          description: ルートの名前
+        waypoints:
+          type: array
+          description: ユーザーの入力した点の配列
+          items:
+            $ref: '#/components/schemas/Coordinate'
+        segments:
+          type: array
+          description: 各waypointsの間のSegmentたち
+          items:
+            $ref: '#/components/schemas/Segment'
+        elevation_gain:
+          type: integer
+          description: 獲得標高
+          minimum: 0
+          format: int32
+        total_distance:
+          type: number
+          description: ルートの総距離
+          minimum: 0
+          format: double
+      required:
+        - id
+        - name
+        - waypoints
+        - segments
+        - elevation_gain
+        - total_distance
+    Error:
+      type: object
+      description: Error
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: エラー内容
+      title: ''
+  parameters:
+    pos:
+      name: pos
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: 操作する点の位置
+    route_id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 11
+        maxLength: 11
+        pattern: '^[A-Za-z0-9_-]+'
+      description: ルートのID
+  responses:
+    RouteEditResponse:
+      description: '`Route`編集系のエンドポイントで返すレスポンス'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              waypoints:
+                type: array
+                description: ユーザーの入力した点の配列
+                items:
+                  $ref: '#/components/schemas/Coordinate'
+              segments:
+                type: array
+                description: 各waypointsの間のSegmentたち
+                items:
+                  $ref: '#/components/schemas/Segment'
+              elevation_gain:
+                type: integer
+                description: 獲得標高
+                minimum: 0
+                format: int32
+              total_distance:
+                type: number
+                description: ルートの総距離
+                minimum: 0
+                format: double
+            required:
+              - waypoints
+              - segments
+              - elevation_gain
+              - total_distance
+  examples: {}

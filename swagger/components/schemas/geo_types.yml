@@ -1,9 +1,0 @@
-ElevationGain:
-  type: integer
-  minimum: 0
-  description: 獲得標高
-
-TotalDistance:
-  type: integer
-  minimum: 0
-  description: 総距離

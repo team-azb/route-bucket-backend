@@ -47,7 +47,7 @@
 | `controller`         | × | ⭕️ | ⭕️ | × | × | × | × |
 | `UseCase`            | × | × | ⭕️ | ⭕️ | ⭕️ | ⭕️ | ⭕️ |
 | `Request`/`Response` | × | × | × | ⭕️ | × | × | × |
-| `DomainModel`        | × | × | × | ⭕️ （所有するモデルのみ） | × | × | × |
+| `DomainModel`        | × | × | × | ⭕️ （自身が所有するモデルのみ） | × | × | × |
 | `DomainService`      | × | × | × | ⭕️ | × | × | × |
 | `struct Repository`  | × | × | × | ⭕️ | × | ⭕️ | × |
 | `struct Api`         | × | × | × | ⭕️ | × | × | ⭕️ |

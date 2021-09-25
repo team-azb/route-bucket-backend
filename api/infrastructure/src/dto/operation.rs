@@ -7,6 +7,7 @@ use std::convert::TryFrom;
 #[derive(sqlx::FromRow, Getters)]
 #[get = "pub"]
 pub struct OperationDto {
+    id: String,
     route_id: String,
     index: u32,
     code: String,
@@ -24,22 +25,17 @@ impl OperationDto {
         } = self;
         let op_type = OperationType::try_from(code)?;
 
-        let [org_coords, new_coords] = <[Vec<Coordinate>; 2]>::try_from(
+        let [org_coord, new_coord] = <[Option<Coordinate>; 2]>::try_from(
             polyline
                 .split(" ")
                 .map(String::from)
                 .map(Polyline::from)
-                .map(Vec::try_from)
+                .map(Option::try_from)
                 .collect::<ApplicationResult<Vec<_>>>()?,
         )
         .unwrap();
 
-        Ok(Operation::new(
-            op_type,
-            pos as usize,
-            org_coords,
-            new_coords,
-        ))
+        Ok(Operation::new(op_type, pos as usize, org_coord, new_coord))
     }
 
     pub fn from_model(
@@ -47,14 +43,15 @@ impl OperationDto {
         route_id: &RouteId,
         index: u32,
     ) -> ApplicationResult<OperationDto> {
-        let org_polyline: String = Polyline::from(operation.org_coords().clone()).into();
-        let new_polyline: String = Polyline::from(operation.new_coords().clone()).into();
+        let org_polyline: String = Polyline::from(operation.org_coord().clone()).into();
+        let new_polyline: String = Polyline::from(operation.new_coord().clone()).into();
 
         Ok(OperationDto {
+            id: operation.id().to_string(),
             route_id: route_id.to_string(),
             index,
             code: operation.op_type().clone().into(),
-            pos: *operation.start_pos() as u32,
+            pos: *operation.pos() as u32,
             polyline: [org_polyline, new_polyline].join(" "),
         })
     }

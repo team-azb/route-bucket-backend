@@ -51,9 +51,6 @@ async fn main() {
         .await
         .unwrap();
 
-    server.clear_route(&route_id2).await.unwrap();
-    server.undo_operation(&route_id2).await.unwrap();
-
     log::info!("Route {} added!", route_id1);
     log::info!("Route {} added!", route_id2);
 }

@@ -49,7 +49,7 @@ services:
       - ./swagger/:/swagger/
     environment:
       # yamlなのにjsonに指定するのなぜ
-      SWAGGER_JSON: /swagger/root.yml
+      SWAGGER_JSON: /swagger/openapi.yml
 
   osrm:
     ports:

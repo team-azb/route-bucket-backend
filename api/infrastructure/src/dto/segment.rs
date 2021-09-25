@@ -9,6 +9,7 @@ use route_bucket_utils::ApplicationResult;
 #[derive(sqlx::FromRow, Getters)]
 #[get = "pub"]
 pub struct SegmentDto {
+    id: String,
     route_id: String,
     index: u32,
     polyline: String,
@@ -16,7 +17,7 @@ pub struct SegmentDto {
 
 impl SegmentDto {
     pub fn into_model(self) -> ApplicationResult<Segment> {
-        Segment::try_from(Polyline::from(self.polyline))
+        Segment::try_from((self.id, self.polyline))
     }
 
     pub fn from_model(
@@ -25,6 +26,7 @@ impl SegmentDto {
         index: u32,
     ) -> ApplicationResult<SegmentDto> {
         Ok(SegmentDto {
+            id: segment.id().to_string(),
             route_id: route_id.to_string(),
             index: index,
             polyline: Polyline::from(segment.points().clone()).into(),

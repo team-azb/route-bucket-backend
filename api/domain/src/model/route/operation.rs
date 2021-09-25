@@ -5,16 +5,16 @@ use getset::Getters;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
+use crate::model::types::OperationId;
+
 use super::coordinate::Coordinate;
 use super::segment_list::SegmentList;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OperationType {
     Add,
     Remove,
     Move,
-    Clear,
-    InitWithList, // reverse operation for Clear
 }
 
 impl OperationType {
@@ -23,8 +23,6 @@ impl OperationType {
             OperationType::Add => OperationType::Remove,
             OperationType::Remove => OperationType::Add,
             OperationType::Move => OperationType::Move,
-            OperationType::Clear => OperationType::InitWithList,
-            OperationType::InitWithList => OperationType::Clear,
         }
     }
 }
@@ -37,8 +35,6 @@ impl TryFrom<String> for OperationType {
             "ad" => Ok(OperationType::Add),
             "rm" => Ok(OperationType::Remove),
             "mv" => Ok(OperationType::Move),
-            "cl" => Ok(OperationType::Clear),
-            "in" => Ok(OperationType::InitWithList),
             _ => Err(ApplicationError::DomainError(format!(
                 "Cannot convert {} into OperationType!",
                 value
@@ -53,65 +49,73 @@ impl From<OperationType> for String {
             OperationType::Add => "ad",
             OperationType::Remove => "rm",
             OperationType::Move => "mv",
-            OperationType::Clear => "cl",
-            OperationType::InitWithList => "in",
         }
         .into()
     }
 }
 
-#[derive(Clone, Debug, Getters, PartialEq)]
+#[derive(Clone, Debug, Getters)]
 #[get = "pub"]
 pub struct Operation {
+    id: OperationId,
     op_type: OperationType,
-    start_pos: usize,
-    org_coords: Vec<Coordinate>,
-    new_coords: Vec<Coordinate>,
+    pos: usize,
+    org_coord: Option<Coordinate>,
+    new_coord: Option<Coordinate>,
 }
 
 impl Operation {
     pub fn new(
         op_type: OperationType,
-        start_pos: usize,
-        org_coords: Vec<Coordinate>,
-        new_coords: Vec<Coordinate>,
+        pos: usize,
+        org_coord: Option<Coordinate>,
+        new_coord: Option<Coordinate>,
     ) -> Self {
         Self {
+            id: OperationId::new(),
             op_type,
-            start_pos,
-            org_coords,
-            new_coords,
+            pos,
+            org_coord,
+            new_coord,
         }
     }
 
     pub fn new_add(pos: usize, coord: Coordinate) -> Self {
-        Self::new(OperationType::Add, pos, Vec::new(), vec![coord])
+        Self::new(OperationType::Add, pos, None, Some(coord))
     }
 
     pub fn new_remove(pos: usize, org_waypoints: Vec<Coordinate>) -> Self {
         let org = org_waypoints[pos].clone();
-        Self::new(OperationType::Remove, pos, vec![org], Vec::new())
+        Self::new(OperationType::Remove, pos, Some(org), None)
     }
 
     pub fn new_move(pos: usize, coord: Coordinate, org_waypoints: Vec<Coordinate>) -> Self {
         let org = org_waypoints[pos].clone();
-        Self::new(OperationType::Move, pos, vec![org], vec![coord])
-    }
-
-    pub fn new_clear(org_waypoints: Vec<Coordinate>) -> Self {
-        Self::new(OperationType::Clear, 0, org_waypoints, Vec::new())
+        Self::new(OperationType::Move, pos, Some(org), Some(coord))
     }
 
     pub fn apply(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
-        seg_list.replace_range(
-            self.start_pos..self.start_pos + self.org_coords.len(),
-            self.new_coords.clone(),
-        )
+        match self.op_type {
+            OperationType::Remove => seg_list.remove_waypoint(self.pos),
+            OperationType::Add | OperationType::Move => {
+                if let Some(new_coord) = self.new_coord.clone() {
+                    if self.op_type == OperationType::Add {
+                        seg_list.insert_waypoint(self.pos, new_coord)
+                    } else {
+                        seg_list.move_waypoint(self.pos, new_coord)
+                    }
+                } else {
+                    Err(ApplicationError::DomainError(
+                        "OperationType::{Add | Move} must have new_coord!".into(),
+                    ))
+                }
+            }
+        }
     }
 
     pub fn reverse(&mut self) {
         self.op_type = self.op_type.reverse();
-        swap(&mut self.org_coords, &mut self.new_coords);
+        swap(&mut self.org_coord, &mut self.new_coord);
     }
 }
 

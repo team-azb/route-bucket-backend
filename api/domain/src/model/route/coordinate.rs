@@ -112,6 +112,42 @@ impl TryFrom<Polyline> for Vec<Coordinate> {
     }
 }
 
+impl From<Coordinate> for Polyline {
+    fn from(value: Coordinate) -> Self {
+        vec![value].into()
+    }
+}
+
+impl TryFrom<Polyline> for Coordinate {
+    type Error = ApplicationError;
+
+    fn try_from(value: Polyline) -> Result<Self, Self::Error> {
+        let mut coords = Vec::try_from(value)?;
+        if !coords.is_empty() {
+            Ok(coords.swap_remove(0))
+        } else {
+            Err(ApplicationError::DomainError(
+                "Cannot convert an empty Polyline into a Coordinate!".into(),
+            ))
+        }
+    }
+}
+
+impl From<Option<Coordinate>> for Polyline {
+    fn from(value: Option<Coordinate>) -> Self {
+        value.map(Polyline::from).unwrap_or(Polyline::new())
+    }
+}
+
+impl TryFrom<Polyline> for Option<Coordinate> {
+    type Error = ApplicationError;
+
+    fn try_from(value: Polyline) -> Result<Self, Self::Error> {
+        let mut coords = Vec::try_from(value)?;
+        Ok((!coords.is_empty()).then(|| coords.swap_remove(0)))
+    }
+}
+
 impl HaversineDistance<Distance> for Coordinate {
     fn haversine_distance(&self, rhs: &Self) -> Distance {
         geo::Point::new(self.longitude.value(), self.latitude.value())

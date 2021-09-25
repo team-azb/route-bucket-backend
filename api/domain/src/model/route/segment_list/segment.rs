@@ -6,11 +6,14 @@ use serde::Serialize;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
+use crate::model::types::SegmentId;
 use crate::model::{Coordinate, Distance, Polyline};
 
-#[derive(Clone, Debug, Getters, Serialize, PartialEq)]
+#[derive(Clone, Debug, Getters, Serialize)]
 #[get = "pub"]
 pub struct Segment {
+    #[serde(skip_serializing)]
+    pub(super) id: SegmentId,
     #[serde(skip_serializing)]
     pub(super) start: Coordinate,
     #[serde(skip_serializing)]
@@ -21,6 +24,7 @@ pub struct Segment {
 impl Segment {
     pub fn new_empty(start: Coordinate, goal: Coordinate) -> Self {
         Self {
+            id: SegmentId::new(),
             start,
             goal,
             points: Vec::new(),
@@ -46,13 +50,6 @@ impl Segment {
         }
     }
 
-    pub fn reset_endpoints(&mut self, start_op: Option<Coordinate>, goal_op: Option<Coordinate>) {
-        self.start = start_op.unwrap_or(self.start.clone());
-        self.goal = goal_op.unwrap_or(self.goal.clone());
-
-        self.points.clear();
-    }
-
     pub fn is_empty(&self) -> bool {
         self.points.is_empty()
     }
@@ -66,34 +63,20 @@ impl Segment {
     }
 }
 
-impl TryFrom<Vec<Coordinate>> for Segment {
+impl TryFrom<(String, String)> for Segment {
     type Error = ApplicationError;
 
-    fn try_from(points: Vec<Coordinate>) -> ApplicationResult<Self> {
+    fn try_from((id_str, polyline_str): (String, String)) -> ApplicationResult<Self> {
         let err = ApplicationError::DomainError(
             "Cannot Initialize Segment from an empty Vec<Coordinate>!".into(),
         );
+        let points = Vec::try_from(Polyline::from(polyline_str))?;
         Ok(Segment {
+            id: SegmentId::from_string(id_str),
             start: points.first().ok_or(err.clone())?.clone(),
             goal: points.last().ok_or(err.clone())?.clone(),
             points,
         })
-    }
-}
-
-impl TryFrom<Polyline> for Segment {
-    type Error = ApplicationError;
-
-    fn try_from(polyline: Polyline) -> ApplicationResult<Self> {
-        Segment::try_from(Vec::try_from(polyline)?)
-    }
-}
-
-impl TryFrom<String> for Segment {
-    type Error = ApplicationError;
-
-    fn try_from(polyline_str: String) -> ApplicationResult<Self> {
-        Segment::try_from(Polyline::from(polyline_str))
     }
 }
 
