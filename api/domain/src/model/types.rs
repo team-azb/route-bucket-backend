@@ -27,7 +27,7 @@ pub type RouteId = NanoId<11>;
 pub type SegmentId = NanoId<21>;
 pub type OperationId = NanoId<21>;
 
-#[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize)]
+#[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Polyline(String);
 
 impl Polyline {

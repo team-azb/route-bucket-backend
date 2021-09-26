@@ -162,143 +162,24 @@ impl HaversineDistance<Distance> for Coordinate {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     use super::*;
 
-    fn init_coord(lat: f64, lon: f64, ele: Option<i32>, dist: Option<f64>) -> Coordinate {
-        Coordinate {
-            latitude: lat.try_into().unwrap(),
-            longitude: lon.try_into().unwrap(),
-            elevation: ele.map(Elevation::try_from).transpose().unwrap(),
-            distance_from_start: dist.map(Distance::try_from).transpose().unwrap(),
-        }
+    #[fixture]
+    fn tokyo() -> Coordinate {
+        Coordinate::tokyo(false, None)
     }
 
-    fn coords_to_tuples(coords: Vec<Coordinate>) -> Vec<(f64, f64)> {
-        coords.into_iter().map(<(f64, f64)>::from).collect()
+    #[fixture]
+    fn tokyo_verbose() -> Coordinate {
+        Coordinate::tokyo(true, Some(0.))
     }
 
-    pub trait CoordinateFixtures {
-        fn tokyo() -> Coordinate {
-            init_coord(35.68048, 139.76906, None, None)
-        }
-
-        fn yokohama() -> Coordinate {
-            init_coord(35.46798, 139.62607, None, None)
-        }
-
-        fn chiba() -> Coordinate {
-            init_coord(35.61311, 140.11135, None, None)
-        }
-
-        fn empty_coords() -> Vec<Coordinate> {
-            vec![]
-        }
-
-        fn yokohama_to_tokyo_coords(set_ele: bool, set_dist: bool) -> Vec<Coordinate> {
-            vec![
-                init_coord(
-                    35.46798,
-                    139.62607,
-                    set_ele.then(|| 1),
-                    set_dist.then(|| 0.),
-                ),
-                init_coord(
-                    35.52735,
-                    139.73837,
-                    set_ele.then(|| 1),
-                    set_dist.then(|| 12121.713407643354),
-                ),
-                init_coord(
-                    35.62426,
-                    139.74990,
-                    set_ele.then(|| 0),
-                    set_dist.then(|| 22947.965176717134),
-                ),
-                init_coord(
-                    35.68048,
-                    139.76906,
-                    set_ele.then(|| 4),
-                    set_dist.then(|| 29434.629256467866),
-                ),
-            ]
-        }
-
-        fn tokyo_to_chiba_coords(set_ele: bool, set_dist: bool) -> Vec<Coordinate> {
-            vec![
-                init_coord(
-                    35.68048,
-                    139.76906,
-                    set_ele.then(|| 4),
-                    set_dist.then(|| 29434.629256467866),
-                ),
-                init_coord(
-                    35.69341,
-                    139.98265,
-                    set_ele.then(|| 1),
-                    set_dist.then(|| 48778.399581350575),
-                ),
-                init_coord(
-                    35.61311,
-                    140.11135,
-                    set_ele.then(|| 11),
-                    set_dist.then(|| 63439.42063598467),
-                ),
-            ]
-        }
-
-        fn yokohama_to_chiba_coords(set_ele: bool, set_dist: bool) -> Vec<Coordinate> {
-            vec![
-                init_coord(
-                    35.46798,
-                    139.62607,
-                    set_ele.then(|| 1),
-                    set_dist.then(|| 0.),
-                ),
-                init_coord(
-                    35.51566,
-                    139.79108,
-                    set_ele.then(|| 3),
-                    set_dist.then(|| 15852.041258204548),
-                ),
-                init_coord(
-                    35.40698,
-                    139.95472,
-                    set_ele.then(|| 6),
-                    set_dist.then(|| 34975.16367611116),
-                ),
-                init_coord(
-                    35.61311,
-                    140.11135,
-                    set_ele.then(|| 11),
-                    set_dist.then(|| 61926.0425172123),
-                ),
-            ]
-        }
-
-        fn yokohama_to_chiba_waypoints() -> Vec<Coordinate> {
-            vec![Self::yokohama(), Self::tokyo(), Self::chiba()]
-        }
-
-        fn empty_polyline() -> Polyline {
-            Polyline::from(String::from(""))
-        }
-
-        fn yokohama_to_tokyo_polyline() -> Polyline {
-            Polyline::from(String::from("{inwE}uesYarJ{|Tu|QagAk~IwvB"))
-        }
-
-        fn yokohama_to_chiba_polyline() -> Polyline {
-            Polyline::from(String::from("{inwE}uesY_iHif_@ffTw}^igg@}q]"))
-        }
-
-        fn tokyo_to_chiba_polyline() -> Polyline {
-            Polyline::from(String::from("_zwxEssatYyoA}uh@ztNkcX"))
-        }
+    #[fixture]
+    fn yokohama() -> Coordinate {
+        Coordinate::yokohama(false, None)
     }
-
-    impl CoordinateFixtures for Coordinate {}
 
     #[rstest]
     #[case::lower_bound(-90.0, -180.0)]
@@ -328,46 +209,35 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::coord_without_elevation(Coordinate::tokyo())]
-    #[should_panic(expected = "DomainError returned.")]
-    #[case::coord_with_elevation(Coordinate::yokohama_to_tokyo_coords(true, false)[0].clone())]
-    fn can_set_elevation_only_once(#[case] mut coord: Coordinate) {
-        let result = coord.set_elevation(Some(Elevation::zero()));
-        match result {
-            Ok(()) => assert_eq!(coord.elevation, Some(Elevation::zero())),
-            Err(ApplicationError::DomainError(_)) => {
-                panic!("DomainError returned.")
-            }
-            Err(err) => {
-                panic!("Unexpected error {:?} returned!", err)
-            }
-        }
+    fn can_set_elevation(#[from(tokyo)] mut empty_coord: Coordinate) {
+        empty_coord.set_elevation(Some(Elevation::zero())).unwrap();
+        assert_eq!(empty_coord.elevation, Some(Elevation::zero()))
     }
 
     #[rstest]
-    #[case::coord_without_distance_from_start(Coordinate::tokyo())]
-    #[case::coord_with_distance_from_start(Coordinate::yokohama_to_tokyo_coords(false, true)[0].clone())]
+    fn cannot_set_elevation_twice(#[from(tokyo_verbose)] mut coord_with_elev: Coordinate) {
+        let result = coord_with_elev.set_elevation(Some(Elevation::zero()));
+        assert!(matches!(result, Err(ApplicationError::DomainError(_))))
+    }
+
+    #[rstest]
+    #[case::coord_without_distance(tokyo())]
+    #[case::coord_with_distance(tokyo_verbose())]
     fn can_set_distance(#[case] mut coord: Coordinate) {
         coord.set_distance_from_start(Distance::zero());
         assert_eq!(coord.distance_from_start, Some(Distance::zero()))
     }
 
     #[rstest]
-    #[case::tokyo_to_yokohama(Coordinate::tokyo(), Coordinate::yokohama(), 26_936)]
-    #[case::yokohama_to_tokyo(Coordinate::yokohama(), Coordinate::tokyo(), 26_936)]
-    fn calc_correct_haversine_distance(
-        #[case] from: Coordinate,
-        #[case] to: Coordinate,
-        #[case] expected_distance: i32, // meters
-    ) {
-        let distance = from.haversine_distance(&to);
-        assert_eq!(distance.value().round() as i32, expected_distance)
+    fn calc_correct_haversine_distance(tokyo: Coordinate, yokohama: Coordinate) {
+        let distance = tokyo.haversine_distance(&yokohama);
+        assert_eq!(distance.value(), 26936.42633640023)
     }
 
     #[rstest]
     #[case::empty(Coordinate::empty_coords(), Coordinate::empty_polyline())]
     #[case::yokohama_to_tokyo(
-        Coordinate::yokohama_to_tokyo_coords(false, false),
+        Coordinate::yokohama_to_tokyo_coords(false, None),
         Coordinate::yokohama_to_tokyo_polyline()
     )]
     fn convert_coords_into_polyline(#[case] coords: Vec<Coordinate>, #[case] polyline: Polyline) {
@@ -378,12 +248,86 @@ pub(crate) mod tests {
     #[case::empty(Coordinate::empty_polyline(), Coordinate::empty_coords())]
     #[case::yokohama_to_tokyo(
         Coordinate::yokohama_to_tokyo_polyline(),
-        Coordinate::yokohama_to_tokyo_coords(false, false)
+        Coordinate::yokohama_to_tokyo_coords(false, None)
     )]
     fn convert_polyline_into_coords(#[case] polyline: Polyline, #[case] coords: Vec<Coordinate>) {
-        assert_eq!(
-            coords_to_tuples(Vec::try_from(polyline).unwrap()),
-            coords_to_tuples(coords)
-        )
+        assert_eq!(Vec::try_from(polyline), Ok(coords))
     }
+
+    fn init_coord(lat: f64, lon: f64, ele: Option<i32>, dist: Option<f64>) -> Coordinate {
+        Coordinate {
+            latitude: lat.try_into().unwrap(),
+            longitude: lon.try_into().unwrap(),
+            elevation: ele.map(Elevation::try_from).transpose().unwrap(),
+            distance_from_start: dist.map(Distance::try_from).transpose().unwrap(),
+        }
+    }
+
+    pub trait CoordinateFixtures {
+        fn yokohama(set_ele: bool, dist: Option<f64>) -> Coordinate {
+            init_coord(35.46798, 139.62607, set_ele.then(|| 1), dist)
+        }
+
+        fn tokyo(set_ele: bool, dist: Option<f64>) -> Coordinate {
+            init_coord(35.68048, 139.76906, set_ele.then(|| 4), dist)
+        }
+
+        fn chiba(set_ele: bool, dist: Option<f64>) -> Coordinate {
+            init_coord(35.61311, 140.11135, set_ele.then(|| 11), dist)
+        }
+
+        fn empty_coords() -> Vec<Coordinate> {
+            vec![]
+        }
+
+        fn yokohama_to_tokyo_coords(set_ele: bool, dist_offset: Option<f64>) -> Vec<Coordinate> {
+            vec![
+                Self::yokohama(set_ele, dist_offset.clone()),
+                Self::tokyo(set_ele, dist_offset.map(|d| d + 26936.42633640023)),
+            ]
+        }
+
+        fn tokyo_to_chiba_coords(set_ele: bool, dist_offset: Option<f64>) -> Vec<Coordinate> {
+            vec![
+                Self::tokyo(set_ele, dist_offset.clone()),
+                Self::chiba(set_ele, dist_offset.map(|d| d + 31823.54759611465)),
+            ]
+        }
+
+        fn yokohama_to_chiba_coords(set_ele: bool, dist_offset: Option<f64>) -> Vec<Coordinate> {
+            vec![
+                Self::yokohama(set_ele, dist_offset.clone()),
+                Self::chiba(set_ele, dist_offset.map(|d| d + 46779.709825324135)),
+            ]
+        }
+
+        fn yokohama_to_chiba_via_tokyo_coords(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+        ) -> Vec<Coordinate> {
+            vec![
+                Self::yokohama(set_ele, dist_offset.clone()),
+                Self::tokyo(set_ele, dist_offset.map(|d| d + 26936.42633640023)),
+                Self::chiba(set_ele, dist_offset.map(|d| d + 58759.97393251488)),
+            ]
+        }
+
+        fn empty_polyline() -> Polyline {
+            Polyline::from(String::from(""))
+        }
+
+        fn yokohama_to_tokyo_polyline() -> Polyline {
+            Polyline::from(String::from("{inwE}uesYcoh@u|Z"))
+        }
+
+        fn yokohama_to_chiba_polyline() -> Polyline {
+            Polyline::from(String::from("{inwE}uesYaj[_x}A"))
+        }
+
+        fn tokyo_to_chiba_polyline() -> Polyline {
+            Polyline::from(String::from("_zwxEssatY`dLizaA"))
+        }
+    }
+
+    impl CoordinateFixtures for Coordinate {}
 }
