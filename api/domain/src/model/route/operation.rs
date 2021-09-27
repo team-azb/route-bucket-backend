@@ -127,17 +127,41 @@ impl Operation {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     use crate::model::route::coordinate::tests::CoordinateFixtures;
     use crate::model::route::segment_list::tests::SegmentListFixture;
 
     use super::*;
 
+    #[fixture]
+    fn add_tokyo() -> Operation {
+        Operation::step3_add_tokyo()
+    }
+
+    #[fixture]
+    fn remove_tokyo() -> Operation {
+        Operation::step4_remove_tokyo()
+    }
+
+    #[fixture]
+    fn move_chiba_to_tokyo() -> Operation {
+        Operation::step5_move_chiba_to_tokyo()
+    }
+
+    #[fixture]
+    fn move_tokyo_to_chiba() -> Operation {
+        Operation::new_move(
+            1,
+            Coordinate::chiba(false, None),
+            Coordinate::yokohama_to_tokyo_coords(false, None),
+        )
+    }
+
     #[rstest]
-    #[case::add(Operation::add_tokyo(), Operation::remove_tokyo())]
-    #[case::remove(Operation::remove_tokyo(), Operation::add_tokyo())]
-    #[case::move_(Operation::move_tokyo_to_chiba(), Operation::move_chiba_to_tokyo())]
+    #[case::add(add_tokyo(), remove_tokyo())]
+    #[case::remove(remove_tokyo(), add_tokyo())]
+    #[case::move_(move_tokyo_to_chiba(), move_chiba_to_tokyo())]
     fn can_reverse_to_inverse_operation(#[case] mut op: Operation, #[case] op_inv: Operation) {
         op.reverse();
         assert_eq!(op, op_inv)
@@ -145,17 +169,17 @@ pub(crate) mod tests {
 
     #[rstest]
     #[case::add(
-        Operation::add_tokyo(),
+        add_tokyo(),
         SegmentList::yokohama_to_chiba(false, false, true),
         SegmentList::yokohama_to_chiba_via_tokyo(false, false, true)
     )]
     #[case::remove(
-        Operation::remove_tokyo(),
+        remove_tokyo(),
         SegmentList::yokohama_to_chiba_via_tokyo(false, false, true),
         SegmentList::yokohama_to_chiba(false, false, true)
     )]
     #[case::move_(
-        Operation::move_chiba_to_tokyo(),
+        move_chiba_to_tokyo(),
         SegmentList::yokohama_to_chiba(false, false, true),
         SegmentList::yokohama_to_tokyo(false, false, true)
     )]
@@ -168,32 +192,70 @@ pub(crate) mod tests {
         assert_eq!(seg_list, expected)
     }
 
+    macro_rules! concat_op_list {
+        ($op_list_name:ident, $op_name:ident) => {
+            vec![Operation::$op_list_name(), vec![Operation::$op_name()]].concat()
+        };
+    }
     pub trait OperationFixtures {
-        fn add_tokyo() -> Operation {
+        fn step1_add_yokohama() -> Operation {
+            Operation::new_add(1, Coordinate::yokohama(false, None))
+        }
+
+        fn step2_add_chiba() -> Operation {
+            Operation::new_add(1, Coordinate::chiba(false, None))
+        }
+
+        fn step3_add_tokyo() -> Operation {
             Operation::new_add(1, Coordinate::tokyo(false, None))
         }
 
-        fn remove_tokyo() -> Operation {
+        fn step4_remove_tokyo() -> Operation {
             Operation::new_remove(
                 1,
                 Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
             )
         }
 
-        fn move_tokyo_to_chiba() -> Operation {
-            Operation::new_move(
-                1,
-                Coordinate::chiba(false, None),
-                Coordinate::yokohama_to_tokyo_coords(false, None),
-            )
-        }
-
-        fn move_chiba_to_tokyo() -> Operation {
+        fn step5_move_chiba_to_tokyo() -> Operation {
             Operation::new_move(
                 1,
                 Coordinate::tokyo(false, None),
                 Coordinate::yokohama_to_chiba_coords(false, None),
             )
+        }
+
+        // step6, step7 is undo
+
+        fn step8_remove_chiba_instead() -> Operation {
+            Operation::new_remove(
+                2,
+                Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
+            )
+        }
+
+        fn after_step1_op_list() -> Vec<Operation> {
+            vec![Self::step1_add_yokohama()]
+        }
+
+        fn after_step2_op_list() -> Vec<Operation> {
+            concat_op_list!(after_step1_op_list, step2_add_chiba)
+        }
+
+        fn after_step3_op_list() -> Vec<Operation> {
+            concat_op_list!(after_step2_op_list, step3_add_tokyo)
+        }
+
+        fn after_step4_op_list() -> Vec<Operation> {
+            concat_op_list!(after_step3_op_list, step4_remove_tokyo)
+        }
+
+        fn after_step5_to_7_op_list() -> Vec<Operation> {
+            concat_op_list!(after_step4_op_list, step5_move_chiba_to_tokyo)
+        }
+
+        fn after_step8_op_list() -> Vec<Operation> {
+            concat_op_list!(after_step3_op_list, step8_remove_chiba_instead)
         }
     }
 
