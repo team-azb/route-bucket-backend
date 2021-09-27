@@ -21,6 +21,7 @@ mod segment;
 
 #[derive(Clone, Debug, Serialize, Getters)]
 #[get = "pub"]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct SegmentList {
     segments: Vec<Segment>,
 }
@@ -221,189 +222,42 @@ impl From<SegmentList> for Track {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     use crate::model::route::coordinate::tests::CoordinateFixtures;
     use crate::model::route::segment_list::segment::tests::SegmentFixtures;
 
     use super::*;
 
-    pub trait SegmentListFixture {
-        fn step0_empty() -> SegmentList {
-            SegmentList {
-                segments: vec![],
-                removed_range: None,
-                inserted_range: None,
-            }
-        }
-
-        fn step1_add_yokohama(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![Segment::new_empty(
-                        Coordinate::yokohama(),
-                        Coordinate::yokohama(),
-                    )]
-                } else {
-                    vec![Segment::yokohama_end(set_ele, set_dist)]
-                },
-                removed_range: after_op.then(|| 0..0),
-                inserted_range: after_op.then(|| 0..1),
-            }
-        }
-
-        fn step2_add_chiba(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::chiba()),
-                        Segment::new_empty(Coordinate::chiba(), Coordinate::chiba()),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_chiba(set_ele, set_dist),
-                        Segment::yokohama_to_chiba_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 0..1),
-                inserted_range: after_op.then(|| 0..2),
-            }
-        }
-
-        fn step3_add_tokyo(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::tokyo()),
-                        Segment::new_empty(Coordinate::tokyo(), Coordinate::chiba()),
-                        Segment::yokohama_to_chiba_via_tokyo_end(false, false),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_tokyo(set_ele, set_dist),
-                        Segment::tokyo_to_chiba(set_ele, set_dist),
-                        Segment::yokohama_to_chiba_via_tokyo_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 0..1),
-                inserted_range: after_op.then(|| 0..2),
-            }
-        }
-
-        fn step4_rm_tokyo(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::chiba()),
-                        Segment::yokohama_to_chiba_end(false, false),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_chiba(set_ele, set_dist),
-                        Segment::yokohama_to_chiba_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 0..2),
-                inserted_range: after_op.then(|| 0..1),
-            }
-        }
-
-        fn step5_rm_chiba(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![Segment::new_empty(
-                        Coordinate::yokohama(),
-                        Coordinate::yokohama(),
-                    )]
-                } else {
-                    vec![Segment::yokohama_end(set_ele, set_dist)]
-                },
-                removed_range: after_op.then(|| 0..2),
-                inserted_range: after_op.then(|| 0..1),
-            }
-        }
-
-        fn step6_rm_yokohama(after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: vec![],
-                removed_range: after_op.then(|| 0..1),
-                inserted_range: after_op.then(|| 0..0),
-            }
-        }
-
-        fn step7_init_yokohama_to_chiba(
-            set_ele: bool,
-            set_dist: bool,
-            after_op: bool,
-        ) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::chiba()),
-                        Segment::new_empty(Coordinate::chiba(), Coordinate::chiba()),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_chiba(set_ele, set_dist),
-                        Segment::yokohama_to_chiba_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 0..0),
-                inserted_range: after_op.then(|| 0..3),
-            }
-        }
-
-        fn step8_mv_chiba_to_tokyo(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::tokyo()),
-                        Segment::new_empty(Coordinate::tokyo(), Coordinate::tokyo()),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_tokyo(set_ele, set_dist),
-                        Segment::yokohama_to_tokyo_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 1..3),
-                inserted_range: after_op.then(|| 1..3),
-            }
-        }
-
-        fn step9_mv_tokyo_to_chiba(set_ele: bool, set_dist: bool, after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: if after_op {
-                    vec![
-                        Segment::new_empty(Coordinate::yokohama(), Coordinate::chiba()),
-                        Segment::new_empty(Coordinate::chiba(), Coordinate::chiba()),
-                    ]
-                } else {
-                    vec![
-                        Segment::yokohama_to_chiba(set_ele, set_dist),
-                        Segment::yokohama_to_chiba_end(set_ele, set_dist),
-                    ]
-                },
-                removed_range: after_op.then(|| 1..3),
-                inserted_range: after_op.then(|| 1..3),
-            }
-        }
-
-        fn step10_clear_all(after_op: bool) -> SegmentList {
-            SegmentList {
-                segments: vec![],
-                removed_range: after_op.then(|| 0..3),
-                inserted_range: after_op.then(|| 0..0),
-            }
-        }
+    #[fixture]
+    fn yokohama_empty() -> SegmentList {
+        SegmentList::yokohama(false, false, true)
     }
 
-    impl SegmentListFixture for SegmentList {}
+    #[fixture]
+    fn yokohama_verbose() -> SegmentList {
+        SegmentList::yokohama(true, true, false)
+    }
+
+    #[fixture]
+    fn yokohama_to_chiba_empty() -> SegmentList {
+        SegmentList::yokohama_to_chiba(false, false, true)
+    }
+
+    #[fixture]
+    fn yokohama_to_chiba_via_tokyo_empty() -> SegmentList {
+        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true)
+    }
+
+    #[fixture]
+    fn yokohama_to_chiba_via_tokyo_verbose() -> SegmentList {
+        SegmentList::yokohama_to_chiba_via_tokyo(true, true, false)
+    }
 
     #[rstest]
-    #[case::empty(SegmentList::step0_empty(), 0.)]
-    #[case::single_point(SegmentList::step1_add_yokohama(false, true, false), 0.)]
-    #[case::yokohama_to_chiba(SegmentList::step2_add_chiba(false, true, false), 61926.0425172123)]
+    #[case::empty(SegmentList::empty(), 0.)]
+    #[case::single_point(yokohama_verbose(), 0.)]
+    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 58759.97393251488)]
     fn can_get_total_distance(#[case] seg_list: SegmentList, #[case] expected_distance: f64) {
         assert_eq!(
             seg_list.get_total_distance().unwrap().value(),
@@ -412,22 +266,33 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::empty(SegmentList::step0_empty(), 0)]
-    #[case::single_point(SegmentList::step1_add_yokohama(true, false, false), 0)]
-    #[case::yokohama_to_chiba(SegmentList::step2_add_chiba(true, false, false), 10)]
+    fn cannot_get_total_distance_if_empty(
+        #[from(yokohama_to_chiba_via_tokyo_empty)] empty_seg_list: SegmentList,
+    ) {
+        assert!(matches!(
+            empty_seg_list.get_total_distance(),
+            Err(ApplicationError::DomainError(_))
+        ))
+    }
+
+    #[rstest]
+    #[case::empty(SegmentList::empty(), 0)]
+    #[case::single_point(yokohama_verbose(), 0)]
+    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 10)]
+    #[case::yokohama_to_chiba_empty(yokohama_to_chiba_via_tokyo_empty(), 0)]
     fn can_calc_elevation_gain(#[case] seg_list: SegmentList, #[case] expected_gain: i32) {
         assert_eq!(seg_list.calc_elevation_gain().value(), expected_gain)
     }
 
     #[rstest]
-    #[case::empty(SegmentList::step0_empty(), SegmentList::step0_empty())]
+    #[case::empty(SegmentList::empty(), SegmentList::empty())]
     #[case::single_point(
-        SegmentList::step1_add_yokohama(false, false, false),
-        SegmentList::step1_add_yokohama(false, true, false)
+        SegmentList::yokohama(false, false, false),
+        SegmentList::yokohama(false, true, false)
     )]
     #[case::yokohama_to_chiba(
-        SegmentList::step2_add_chiba(false, false, false),
-        SegmentList::step2_add_chiba(false, true, false)
+        SegmentList::yokohama_to_chiba(false, false, false),
+        SegmentList::yokohama_to_chiba(false, true, false)
     )]
     fn can_attach_distances(
         #[case] mut seg_list_without_dist: SegmentList,
@@ -438,39 +303,74 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::single_point(
-        SegmentList::step1_add_yokohama(false, false, true),
-        &[Segment::new_empty(Coordinate::yokohama(), Coordinate::yokohama())]
+    #[case::front(
+        SegmentList::tokyo_to_chiba(false, false, true),
+        0,
+        Coordinate::yokohama(false, None)
     )]
-    #[case::yokohama_to_chiba_via_tokyo(
-        SegmentList::step3_add_tokyo(false, false, true),
-        &[
-            Segment::new_empty(Coordinate::yokohama(), Coordinate::tokyo()),
-            Segment::new_empty(Coordinate::tokyo(), Coordinate::chiba())
-        ]
+    #[case::middle(
+        SegmentList::yokohama_to_chiba(false, false, true),
+        1,
+        Coordinate::tokyo(false, None)
     )]
-    fn can_get_inserted_slice(#[case] seg_list: SegmentList, #[case] expected_slice: &[Segment]) {
-        assert_eq!(seg_list.get_inserted_slice().unwrap(), expected_slice)
+    #[case::back(
+        SegmentList::yokohama_to_tokyo(false, false, true),
+        2,
+        Coordinate::chiba(false, None)
+    )]
+    fn can_insert_waypoint(
+        #[case] mut seg_list: SegmentList,
+        #[case] pos: usize,
+        #[case] coord: Coordinate,
+        #[from(yokohama_to_chiba_via_tokyo_empty)] expected_seg_list: SegmentList,
+    ) {
+        seg_list.insert_waypoint(pos, coord).unwrap();
+        assert_eq!(seg_list, expected_seg_list)
     }
 
     #[rstest]
-    #[case::yokohama_to_chiba(SegmentList::step2_add_chiba(false, false, false))]
-    fn cannot_get_inserted_slice_from_unchanged(#[case] seg_list: SegmentList) {
-        assert!(matches!(
-            seg_list.get_inserted_slice(),
-            Err(ApplicationError::DomainError(_))
-        ))
+    #[case::front(0, SegmentList::tokyo_to_chiba(false, false, true))]
+    #[case::middle(1, SegmentList::yokohama_to_chiba(false, false, true))]
+    #[case::back(2, SegmentList::yokohama_to_tokyo(false, false, true))]
+    fn can_remove_waypoint(
+        #[from(yokohama_to_chiba_via_tokyo_empty)] mut seg_list: SegmentList,
+        #[case] pos: usize,
+        #[case] expected_seg_list: SegmentList,
+    ) {
+        seg_list.remove_waypoint(pos).unwrap();
+        assert_eq!(seg_list, expected_seg_list)
     }
 
     #[rstest]
-    #[case::empty(SegmentList::step0_empty(), vec![])]
+    #[case::front(
+        SegmentList::tokyo_to_chiba(false, false, true),
+        0,
+        Coordinate::yokohama(false, None)
+    )]
+    #[case::back(
+        SegmentList::yokohama_to_tokyo(false, false, true),
+        1,
+        Coordinate::chiba(false, None)
+    )]
+    fn can_move_waypoint(
+        #[case] mut seg_list: SegmentList,
+        #[case] pos: usize,
+        #[case] coord: Coordinate,
+        #[from(yokohama_to_chiba_empty)] expected_seg_list: SegmentList,
+    ) {
+        seg_list.move_waypoint(pos, coord).unwrap();
+        assert_eq!(seg_list, expected_seg_list)
+    }
+
+    #[rstest]
+    #[case::empty(SegmentList::empty(), vec![])]
     #[case::single_point(
-        SegmentList::step1_add_yokohama(false, false, false),
-        vec![Coordinate::yokohama()]
+        yokohama_empty(),
+        vec![Coordinate::yokohama(false, None)]
     )]
     #[case::yokohama_to_chiba_via_tokyo(
-        SegmentList::step3_add_tokyo(false, false, false),
-        vec![Coordinate::yokohama(), Coordinate::tokyo(), Coordinate::chiba()]
+        yokohama_to_chiba_via_tokyo_empty(),
+        Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None)
     )]
     fn can_gather_waypoints(
         #[case] seg_list: SegmentList,
@@ -480,14 +380,14 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::empty(SegmentList::step0_empty(), vec![])]
+    #[case::empty(SegmentList::empty(), vec![])]
     #[case::single_point(
-        SegmentList::step1_add_yokohama(false, false, false),
+        SegmentList::yokohama(false, false, false),
         vec![]
     )]
     #[case::yokohama_to_chiba_via_tokyo(
-        SegmentList::step3_add_tokyo(false, false, false),
-        vec![Segment::yokohama_to_tokyo(false, false), Segment::tokyo_to_chiba(false, false)]
+        yokohama_to_chiba_via_tokyo_verbose(),
+        vec![Segment::yokohama_to_tokyo(true, Some(0.), false), Segment::tokyo_to_chiba(true, Some(26936.42633640023), false)]
     )]
     fn can_convert_into_segments_in_between(
         #[case] seg_list: SegmentList,
@@ -496,5 +396,54 @@ pub(crate) mod tests {
         assert_eq!(seg_list.into_segments_in_between(), expected_segments)
     }
 
-    // NOTE: replace_rangeは，これを呼び出すOperation::applyのテストで検証する
+    pub trait SegmentListFixture {
+        fn empty() -> SegmentList {
+            SegmentList { segments: vec![] }
+        }
+
+        fn yokohama(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
+            SegmentList {
+                segments: vec![Segment::yokohama(set_ele, set_dist.then(|| 0.), empty)],
+            }
+        }
+
+        fn yokohama_to_tokyo(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
+            SegmentList {
+                segments: vec![
+                    Segment::yokohama_to_tokyo(set_ele, set_dist.then(|| 0.), empty),
+                    Segment::tokyo(set_ele, set_dist.then(|| 26936.42633640023), empty),
+                ],
+            }
+        }
+
+        fn tokyo_to_chiba(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
+            SegmentList {
+                segments: vec![
+                    Segment::tokyo_to_chiba(set_ele, set_dist.then(|| 0.), empty),
+                    Segment::chiba(set_ele, set_dist.then(|| 31823.54759611465), empty),
+                ],
+            }
+        }
+
+        fn yokohama_to_chiba(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
+            SegmentList {
+                segments: vec![
+                    Segment::yokohama_to_chiba(set_ele, set_dist.then(|| 0.), empty),
+                    Segment::chiba(set_ele, set_dist.then(|| 46779.709825324135), empty),
+                ],
+            }
+        }
+
+        fn yokohama_to_chiba_via_tokyo(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
+            SegmentList {
+                segments: vec![
+                    Segment::yokohama_to_tokyo(set_ele, set_dist.then(|| 0.), empty),
+                    Segment::tokyo_to_chiba(set_ele, set_dist.then(|| 26936.42633640023), empty),
+                    Segment::chiba(set_ele, set_dist.then(|| 58759.97393251488), empty),
+                ],
+            }
+        }
+    }
+
+    impl SegmentListFixture for SegmentList {}
 }

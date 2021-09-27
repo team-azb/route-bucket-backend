@@ -9,10 +9,16 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 use crate::model::types::SegmentId;
 use crate::model::{Coordinate, Distance, Polyline};
 
+#[cfg(test)]
+use derivative::Derivative;
+
 #[derive(Clone, Debug, Getters, Serialize)]
 #[get = "pub"]
+#[cfg_attr(test, derive(Derivative))]
+#[cfg_attr(test, derivative(PartialEq))]
 pub struct Segment {
     #[serde(skip_serializing)]
+    #[cfg_attr(test, derivative(PartialEq = "ignore"))]
     pub(super) id: SegmentId,
     #[serde(skip_serializing)]
     pub(super) start: Coordinate,
@@ -82,141 +88,52 @@ impl TryFrom<(String, String)> for Segment {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::convert::TryInto;
-
-    use rstest::rstest;
+    use rstest::{fixture, rstest};
 
     use crate::model::route::coordinate::tests::CoordinateFixtures;
-    use crate::model::Elevation;
 
     use super::*;
 
-    pub trait SegmentFixtures {
-        fn yokohama_to_tokyo(set_ele: bool, set_dist: bool) -> Segment {
-            Segment {
-                start: Coordinate::yokohama(),
-                goal: Coordinate::tokyo(),
-                points: Coordinate::yokohama_to_tokyo_coords(set_ele, set_dist),
-            }
-        }
-
-        fn tokyo_to_chiba(set_ele: bool, set_dist: bool) -> Segment {
-            Segment {
-                start: Coordinate::tokyo(),
-                goal: Coordinate::chiba(),
-                points: Coordinate::tokyo_to_chiba_coords(set_ele, set_dist),
-            }
-        }
-
-        fn yokohama_to_chiba(set_ele: bool, set_dist: bool) -> Segment {
-            Segment {
-                start: Coordinate::yokohama(),
-                goal: Coordinate::chiba(),
-                points: Coordinate::yokohama_to_chiba_coords(set_ele, set_dist),
-            }
-        }
-
-        // The step number corresponds to the execution order of the operations in operation.rs.
-        fn yokohama_end(set_ele: bool, set_dist: bool) -> Segment {
-            let yokohama = Coordinate::yokohama();
-            let mut yokohama_verbose = yokohama.clone();
-
-            yokohama_verbose
-                .set_elevation(set_ele.then(|| Elevation::try_from(1).unwrap()))
-                .unwrap();
-            if set_dist {
-                yokohama_verbose.set_distance_from_start(Distance::try_from(0.).unwrap());
-            }
-
-            Segment {
-                start: yokohama.clone(),
-                goal: yokohama,
-                points: vec![yokohama_verbose],
-            }
-        }
-
-        fn yokohama_to_tokyo_end(set_ele: bool, set_dist: bool) -> Segment {
-            let tokyo = Coordinate::chiba();
-            let mut tokyo_verbose = tokyo.clone();
-
-            tokyo_verbose
-                .set_elevation(set_ele.then(|| 4.try_into().unwrap()))
-                .unwrap();
-            if set_dist {
-                tokyo_verbose.set_distance_from_start(29434.629256467866.try_into().unwrap());
-            }
-
-            Segment {
-                start: tokyo.clone(),
-                goal: tokyo,
-                points: vec![tokyo_verbose],
-            }
-        }
-
-        fn yokohama_to_chiba_end(set_ele: bool, set_dist: bool) -> Segment {
-            let chiba = Coordinate::chiba();
-            let mut chiba_verbose = chiba.clone();
-
-            chiba_verbose
-                .set_elevation(set_ele.then(|| 11.try_into().unwrap()))
-                .unwrap();
-            if set_dist {
-                chiba_verbose.set_distance_from_start(61926.0425172123.try_into().unwrap());
-            }
-
-            Segment {
-                start: chiba.clone(),
-                goal: chiba,
-                points: vec![chiba_verbose],
-            }
-        }
-
-        fn yokohama_to_chiba_via_tokyo_end(set_ele: bool, set_dist: bool) -> Segment {
-            let chiba = Coordinate::chiba();
-            let mut chiba_verbose = chiba.clone();
-
-            chiba_verbose
-                .set_elevation(set_ele.then(|| 11.try_into().unwrap()))
-                .unwrap();
-            if set_dist {
-                chiba_verbose.set_distance_from_start(63439.42063598467.try_into().unwrap());
-            }
-
-            Segment {
-                start: chiba.clone(),
-                goal: chiba,
-                points: vec![chiba_verbose],
-            }
-        }
+    #[fixture]
+    fn yokohama_to_tokyo() -> Segment {
+        Segment::yokohama_to_tokyo(true, Some(0.), false)
     }
 
-    impl SegmentFixtures for Segment {}
+    #[fixture]
+    fn yokohama_to_tokyo_empty() -> Segment {
+        Segment::yokohama_to_tokyo(false, None, true)
+    }
+
+    #[fixture]
+    fn yokohama_to_tokyo_coords() -> Vec<Coordinate> {
+        Coordinate::yokohama_to_tokyo_coords(true, Some(0.))
+    }
 
     #[rstest]
-    #[case::single_point_segment(Segment::yokohama_end(true, true), 0.)]
-    #[case::yokohama_to_tokyo(Segment::yokohama_to_tokyo(true, true), 29434.629256467866)]
-    fn return_last_distance_from_start_as_distance(#[case] seg: Segment, #[case] expected: f64) {
+    #[case::empty_segment(yokohama_to_tokyo_empty(), 0.)]
+    #[case::yokohama_to_tokyo(yokohama_to_tokyo(), 26936.42633640023)]
+    fn can_return_last_distance_from_start_as_distance(
+        #[case] seg: Segment,
+        #[case] expected: f64,
+    ) {
         assert_eq!(seg.get_distance().value(), expected)
     }
 
     #[rstest]
-    #[case::yokohama_to_tokyo(
-        Segment::new_empty(Coordinate::yokohama(), Coordinate::tokyo()),
-        Coordinate::yokohama_to_tokyo_coords(true, true),
-        Segment::yokohama_to_tokyo(true, true)
-    )]
     fn can_set_points(
-        #[case] mut empty_seg: Segment,
-        #[case] points: Vec<Coordinate>,
-        #[case] expected_segment: Segment,
+        #[from(yokohama_to_tokyo_empty)] mut empty_seg: Segment,
+        #[from(yokohama_to_tokyo_coords)] points: Vec<Coordinate>,
+        #[from(yokohama_to_tokyo)] expected_segment: Segment,
     ) {
         empty_seg.set_points(points).unwrap();
-        assert_eq!(empty_seg, expected_segment)
+        assert_eq!(&empty_seg, &expected_segment)
     }
 
     #[rstest]
-    #[case::yokohama_to_tokyo(Segment::yokohama_to_tokyo(true, true), Segment::tokyo_to_chiba(true, true).points)]
-    fn cannot_set_points_twice(#[case] mut filled_seg: Segment, #[case] points: Vec<Coordinate>) {
+    fn cannot_set_points_twice(
+        #[from(yokohama_to_tokyo)] mut filled_seg: Segment,
+        #[from(yokohama_to_tokyo_coords)] points: Vec<Coordinate>,
+    ) {
         assert!(matches!(
             filled_seg.set_points(points),
             Err(ApplicationError::DomainError(_))
@@ -224,56 +141,84 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::reset_nothing(Segment::yokohama_to_tokyo(true, true), None, None)]
-    #[case::reset_start(
-        Segment::yokohama_to_tokyo(true, true),
-        Some(Coordinate::tokyo()),
-        None
-    )]
-    #[case::reset_goal(
-        Segment::yokohama_to_tokyo(true, true),
-        None,
-        Some(Coordinate::chiba())
-    )]
-    #[case::reset_both(
-        Segment::yokohama_to_tokyo(true, true),
-        Some(Coordinate::tokyo()),
-        Some(Coordinate::chiba())
-    )]
-    fn can_reset_endpoints(
-        #[case] mut seg: Segment,
-        #[case] start: Option<Coordinate>,
-        #[case] goal: Option<Coordinate>,
-    ) {
-        seg.reset_endpoints(start.clone(), goal.clone());
-
-        let new_start = start.unwrap_or(seg.start.clone());
-        let new_goal = goal.unwrap_or(seg.goal.clone());
-
-        assert_eq!(seg, Segment::new_empty(new_start, new_goal))
-    }
-
-    #[rstest]
-    #[case::reset_nothing(
-        Coordinate::yokohama_to_tokyo_coords(false, false),
-        Segment::yokohama_to_tokyo(false, false)
-    )]
-    fn can_be_converted_from_coords(
-        #[case] coords: Vec<Coordinate>,
+    #[case("yokohama-to-tokyo____".into(), "{inwE}uesYcoh@u|Z".into(), Segment::yokohama_to_tokyo(false, None, false))]
+    fn pair_of_string_can_be_converted_to_segment(
+        #[case] id: String,
+        #[case] polyline: String,
         #[case] expected_seg: Segment,
     ) {
-        assert_eq!(Segment::try_from(coords).unwrap(), expected_seg)
+        let convert_result = Segment::try_from((id.clone(), polyline));
+        assert_eq!(convert_result, Ok(expected_seg));
+        assert_eq!(convert_result.unwrap().id.to_string(), id);
     }
 
-    #[rstest]
-    #[case::reset_nothing(Coordinate::empty_coords())]
-    fn cannot_be_converted_from_empty_coords(#[case] coords: Vec<Coordinate>) {
-        assert!(matches!(
-            Segment::try_from(coords),
-            Err(ApplicationError::DomainError(_))
-        ))
+    macro_rules! point_segment {
+        ($fix_name:ident, $set_ele:expr, $dist_offset:expr, $init_empty:expr) => {
+            Segment {
+                id: SegmentId::from_string(format!("{:_<21}", stringify!($fix_name))),
+                start: Coordinate::$fix_name(false, None),
+                goal: Coordinate::$fix_name(false, None),
+                points: if $init_empty {
+                    Vec::new()
+                } else {
+                    vec![Coordinate::$fix_name($set_ele, $dist_offset)]
+                },
+            }
+        };
     }
 
-    // NOTE: TryFrom<Polyline>, TryFrom<String> は，TryFrom<Vec<Coordinate>>を使ったエイリアスと判断して、
-    // テストには含めず
+    pub trait SegmentFixtures {
+        fn yokohama_to_tokyo(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            Segment {
+                id: SegmentId::from_string("yokohama-to-tokyo____".into()),
+                start: Coordinate::yokohama(false, None),
+                goal: Coordinate::tokyo(false, None),
+                points: if init_empty {
+                    Vec::new()
+                } else {
+                    Coordinate::yokohama_to_tokyo_coords(set_ele, dist_offset)
+                },
+            }
+        }
+
+        fn tokyo_to_chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            Segment {
+                id: SegmentId::from_string("tokyo-to-tokyo_______".into()),
+                start: Coordinate::tokyo(false, None),
+                goal: Coordinate::chiba(false, None),
+                points: if init_empty {
+                    Vec::new()
+                } else {
+                    Coordinate::tokyo_to_chiba_coords(set_ele, dist_offset)
+                },
+            }
+        }
+
+        fn yokohama_to_chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            Segment {
+                id: SegmentId::from_string("yokohama-to-chiba____".into()),
+                start: Coordinate::yokohama(false, None),
+                goal: Coordinate::chiba(false, None),
+                points: if init_empty {
+                    Vec::new()
+                } else {
+                    Coordinate::yokohama_to_chiba_coords(set_ele, dist_offset)
+                },
+            }
+        }
+
+        fn yokohama(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            point_segment!(yokohama, set_ele, dist_offset, init_empty)
+        }
+
+        fn tokyo(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            point_segment!(tokyo, set_ele, dist_offset, init_empty)
+        }
+
+        fn chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+            point_segment!(chiba, set_ele, dist_offset, init_empty)
+        }
+    }
+
+    impl SegmentFixtures for Segment {}
 }

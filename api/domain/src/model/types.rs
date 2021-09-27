@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-#[derive(Display, Debug, Clone, Serialize, Deserialize)]
+#[derive(Display, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NanoId<const LEN: usize>(String);
 
 impl<const LEN: usize> NanoId<LEN> {

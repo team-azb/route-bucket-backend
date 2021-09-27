@@ -10,6 +10,9 @@ use crate::model::types::OperationId;
 use super::coordinate::Coordinate;
 use super::segment_list::SegmentList;
 
+#[cfg(test)]
+use derivative::Derivative;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OperationType {
     Add,
@@ -56,7 +59,10 @@ impl From<OperationType> for String {
 
 #[derive(Clone, Debug, Getters)]
 #[get = "pub"]
+#[cfg_attr(test, derive(Derivative))]
+#[cfg_attr(test, derivative(PartialEq))]
 pub struct Operation {
+    #[cfg_attr(test, derivative(PartialEq = "ignore"))]
     id: OperationId,
     op_type: OperationType,
     pos: usize,
@@ -128,102 +134,31 @@ pub(crate) mod tests {
 
     use super::*;
 
-    pub trait OperationFixtures {
-        fn step1_add_yokohama() -> Operation {
-            Operation::new_add(0, Coordinate::yokohama())
-        }
-
-        fn step2_add_chiba() -> Operation {
-            Operation::new_add(1, Coordinate::chiba())
-        }
-
-        fn step3_add_tokyo() -> Operation {
-            Operation::new_add(1, Coordinate::tokyo())
-        }
-
-        fn step4_rm_tokyo() -> Operation {
-            Operation::new_remove(1, Coordinate::yokohama_to_chiba_waypoints())
-        }
-
-        fn step5_rm_chiba() -> Operation {
-            Operation::new_remove(1, vec![Coordinate::yokohama(), Coordinate::chiba()])
-        }
-
-        fn step6_rm_yokohama() -> Operation {
-            Operation::new_remove(0, vec![Coordinate::yokohama()])
-        }
-
-        fn step7_init() -> Operation {
-            Operation::new(
-                OperationType::InitWithList,
-                0,
-                vec![],
-                vec![Coordinate::yokohama(), Coordinate::chiba()],
-            )
-        }
-
-        fn step8_mv_to_tokyo() -> Operation {
-            Operation::new_move(
-                1,
-                Coordinate::tokyo(),
-                vec![Coordinate::yokohama(), Coordinate::chiba()],
-            )
-        }
-
-        fn step9_mv_to_chiba() -> Operation {
-            Operation::new_move(
-                1,
-                Coordinate::chiba(),
-                vec![Coordinate::yokohama(), Coordinate::tokyo()],
-            )
-        }
-
-        fn step10_clear() -> Operation {
-            Operation::new_clear(vec![Coordinate::yokohama(), Coordinate::chiba()])
-        }
-    }
-
-    impl OperationFixtures for Operation {}
-
     #[rstest]
-    #[case::add_front(Operation::step1_add_yokohama(), Operation::step6_rm_yokohama())]
-    #[case::add_back(Operation::step2_add_chiba(), Operation::step5_rm_chiba())]
-    #[case::add_middle(Operation::step3_add_tokyo(), Operation::step4_rm_tokyo())]
-    #[case::rm_middle(Operation::step4_rm_tokyo(), Operation::step3_add_tokyo())]
-    #[case::rm_back(Operation::step5_rm_chiba(), Operation::step2_add_chiba())]
-    #[case::rm_front(Operation::step6_rm_yokohama(), Operation::step1_add_yokohama())]
-    #[case::init(Operation::step7_init(), Operation::step10_clear())]
-    #[case::mv(Operation::step8_mv_to_tokyo(), Operation::step9_mv_to_chiba())]
-    #[case::mv(Operation::step9_mv_to_chiba(), Operation::step8_mv_to_tokyo())]
-    #[case::clear(Operation::step10_clear(), Operation::step7_init())]
+    #[case::add(Operation::add_tokyo(), Operation::remove_tokyo())]
+    #[case::remove(Operation::remove_tokyo(), Operation::add_tokyo())]
+    #[case::move_(Operation::move_tokyo_to_chiba(), Operation::move_chiba_to_tokyo())]
     fn can_reverse_to_inverse_operation(#[case] mut op: Operation, #[case] op_inv: Operation) {
         op.reverse();
         assert_eq!(op, op_inv)
     }
 
     #[rstest]
-    #[case::add_front(
-        Operation::step1_add_yokohama(),
-        SegmentList::step0_empty(),
-        SegmentList::step1_add_yokohama(false, false, true)
+    #[case::add(
+        Operation::add_tokyo(),
+        SegmentList::yokohama_to_chiba(false, false, true),
+        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true)
     )]
-    #[case::add_back(
-        Operation::step2_add_chiba(),
-        SegmentList::step1_add_yokohama(false, false, false),
-        SegmentList::step2_add_chiba(false, false, true)
+    #[case::remove(
+        Operation::remove_tokyo(),
+        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true),
+        SegmentList::yokohama_to_chiba(false, false, true)
     )]
-    #[case::add_middle(
-        Operation::step3_add_tokyo(),
-        SegmentList::step2_add_chiba(false, false, false),
-        SegmentList::step3_add_tokyo(false, false, true)
+    #[case::move_(
+        Operation::move_chiba_to_tokyo(),
+        SegmentList::yokohama_to_chiba(false, false, true),
+        SegmentList::yokohama_to_tokyo(false, false, true)
     )]
-    // #[case::rm_middle(Operation::step4_rm_tokyo(), Operation::step3_add_tokyo())]
-    // #[case::rm_back(Operation::step5_rm_chiba(), Operation::step2_add_chiba())]
-    // #[case::rm_front(Operation::step6_rm_yokohama(), Operation::step1_add_yokohama())]
-    // #[case::init(Operation::step7_init(), Operation::step10_clear())]
-    // #[case::mv(Operation::step8_mv_to_tokyo(), Operation::step9_mv_to_chiba())]
-    // #[case::mv(Operation::step9_mv_to_chiba(), Operation::step8_mv_to_tokyo())]
-    // #[case::clear(Operation::step10_clear(), Operation::step7_init())]
     fn can_apply_to_seg_list(
         #[case] op: Operation,
         #[case] mut seg_list: SegmentList,
@@ -232,4 +167,35 @@ pub(crate) mod tests {
         op.apply(&mut seg_list).unwrap();
         assert_eq!(seg_list, expected)
     }
+
+    pub trait OperationFixtures {
+        fn add_tokyo() -> Operation {
+            Operation::new_add(1, Coordinate::tokyo(false, None))
+        }
+
+        fn remove_tokyo() -> Operation {
+            Operation::new_remove(
+                1,
+                Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
+            )
+        }
+
+        fn move_tokyo_to_chiba() -> Operation {
+            Operation::new_move(
+                1,
+                Coordinate::chiba(false, None),
+                Coordinate::yokohama_to_tokyo_coords(false, None),
+            )
+        }
+
+        fn move_chiba_to_tokyo() -> Operation {
+            Operation::new_move(
+                1,
+                Coordinate::tokyo(false, None),
+                Coordinate::yokohama_to_chiba_coords(false, None),
+            )
+        }
+    }
+
+    impl OperationFixtures for Operation {}
 }
