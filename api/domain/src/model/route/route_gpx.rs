@@ -103,6 +103,8 @@ impl TryFrom<Route> for RouteGpx {
             ApplicationError::ExternalError(format!("Failed to write gpx event ({:?})", err))
         };
 
+        let mut found_gpx_element = false;
+
         loop {
             match reader.read_event(&mut read_buf) {
                 Ok(Event::Start(mut elem)) if elem.name() == b"gpx" => {
@@ -114,13 +116,21 @@ impl TryFrom<Route> for RouteGpx {
                     writer
                         .write_event(Event::Start(elem))
                         .map_err(to_write_err)?;
-                    break;
+
+                    found_gpx_element = true;
                 }
                 Ok(Event::Eof) => {
-                    return Err(ApplicationError::ExternalError(format!(
-                        "Produced GPX didn't contain <gpx> element!\n{:?}",
-                        from_utf8(&org_gpx_buf).unwrap()
-                    )))
+                    found_gpx_element
+                        .then(|| ())
+                        .ok_or(ApplicationError::ExternalError(format!(
+                            "Produced GPX didn't contain <gpx> element!
+                            {:?}",
+                            from_utf8(&org_gpx_buf).unwrap()
+                        )))?;
+                    break;
+                }
+                Ok(event) => {
+                    writer.write_event(event).map_err(to_write_err)?;
                 }
                 Err(e) => {
                     return Err(ApplicationError::ExternalError(format!(
@@ -128,14 +138,8 @@ impl TryFrom<Route> for RouteGpx {
                         e
                     )))
                 }
-                Ok(_) => {}
             }
         }
-        reader
-            .into_underlying_reader()
-            .read_to_end(&mut read_buf)
-            .unwrap();
-        writer.write(&read_buf).map_err(to_write_err)?;
 
         Ok(Self {
             name: file_name,
