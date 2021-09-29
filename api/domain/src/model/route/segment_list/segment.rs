@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 use std::slice::{Iter, IterMut};
 
+use derive_more::IntoIterator;
 use getset::Getters;
 use serde::Serialize;
 
@@ -12,7 +13,7 @@ use crate::model::{Coordinate, Distance, Polyline};
 #[cfg(test)]
 use derivative::Derivative;
 
-#[derive(Clone, Debug, Getters, Serialize)]
+#[derive(Clone, Debug, Getters, Serialize, IntoIterator)]
 #[get = "pub"]
 #[cfg_attr(test, derive(Derivative))]
 #[cfg_attr(test, derivative(PartialEq))]
@@ -24,6 +25,7 @@ pub struct Segment {
     pub(super) start: Coordinate,
     #[serde(skip_serializing)]
     pub(super) goal: Coordinate,
+    #[into_iterator(owned)]
     pub(super) points: Vec<Coordinate>,
 }
 

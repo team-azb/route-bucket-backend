@@ -2,7 +2,6 @@ use std::slice::IterMut;
 
 use derive_more::{From, Into};
 use getset::Getters;
-use gpx::{Gpx, GpxVersion};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
@@ -20,7 +19,7 @@ pub(crate) mod route_gpx;
 pub(crate) mod route_info;
 pub(crate) mod segment_list;
 
-#[derive(Debug, From, Into, Getters)]
+#[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Route {
@@ -116,17 +115,6 @@ impl Route {
 
     pub fn into_segments_in_between(self) -> Vec<Segment> {
         self.seg_list.into_segments_in_between()
-    }
-}
-
-impl From<Route> for Gpx {
-    fn from(route: Route) -> Self {
-        Gpx {
-            version: GpxVersion::Gpx11,
-            metadata: Some(route.info.into()),
-            tracks: vec![route.seg_list.into()],
-            ..Default::default()
-        }
     }
 }
 

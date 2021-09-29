@@ -1,5 +1,4 @@
 use getset::Getters;
-use gpx::Metadata;
 use serde::{Deserialize, Serialize};
 
 use crate::model::RouteId;
@@ -34,21 +33,6 @@ impl RouteInfo {
 
     pub fn clear_route(&mut self) {
         self.op_num = 0;
-    }
-}
-
-impl From<RouteInfo> for Metadata {
-    fn from(route_info: RouteInfo) -> Self {
-        Self {
-            name: Some(route_info.name),
-            description: None,
-            // TODO: ここにRouteBucketのリンクを入れられると良さそう
-            author: None,
-            links: vec![],
-            time: None,
-            keywords: None,
-            bounds: None,
-        }
     }
 }
 
