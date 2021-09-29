@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::str::from_utf8;
 
 use itertools::Itertools;
@@ -71,8 +71,16 @@ impl From<Route> for gpx::Gpx {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Derivative))]
+#[cfg_attr(test, derivative(PartialEq))]
 pub struct RouteGpx {
     name: String,
+    #[cfg_attr(
+        test,
+        derivative(PartialEq(compare_with = "tests::cmp_utf8_without_white_spaces"))
+    )]
     data: Vec<u8>,
 }
 
@@ -146,4 +154,84 @@ impl TryFrom<Route> for RouteGpx {
             data: writer.into_inner().into_inner(),
         })
     }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use rstest::{fixture, rstest};
+
+    use crate::model::route::operation::tests::OperationFixtures;
+    use crate::model::route::operation::Operation;
+    use crate::model::route::route_info::tests::RouteInfoFixtures;
+    use crate::model::route::segment_list::tests::SegmentListFixture;
+
+    use super::*;
+
+    #[fixture]
+    fn route0() -> Route {
+        Route {
+            info: RouteInfo::route0(3),
+            op_list: Operation::after_step3_op_list(),
+            seg_list: SegmentList::yokohama_to_chiba_via_tokyo(true, true, false),
+        }
+    }
+
+    #[fixture]
+    fn route0_gpx() -> RouteGpx {
+        RouteGpx::route0()
+    }
+
+    #[rstest]
+    fn can_convert_route_into_gpx(
+        #[from(route0)] route: Route,
+        #[from(route0_gpx)] expected_gpx: RouteGpx,
+    ) {
+        assert_eq!(RouteGpx::try_from(route), Ok(expected_gpx))
+    }
+
+    pub(super) fn cmp_utf8_without_white_spaces(left: &[u8], right: &[u8]) -> bool {
+        std::str::from_utf8(left)
+            .unwrap()
+            .split_whitespace()
+            .eq(std::str::from_utf8(right).unwrap().split_whitespace())
+    }
+
+    pub trait RouteGpxFixtures {
+        fn route0() -> RouteGpx {
+            let gpx_str = r#"
+                <?xml version="1.0" encoding="utf-8"?>
+                <gpx version="1.1" creator="https://github.com/georust/gpx" xsi:schemaLocation="http://www.topografix.com/GPX/11.xsd" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+                  <metadata>
+                    <name>route0</name>
+                  </metadata>
+                  <trk>
+                    <trkseg>
+                      <trkpt lat="35.46798" lon="139.62607">
+                        <ele>1</ele>
+                      </trkpt>
+                      <trkpt lat="35.68048" lon="139.76906">
+                        <ele>4</ele>
+                      </trkpt>
+                      <trkpt lat="35.68048" lon="139.76906">
+                        <ele>4</ele>
+                      </trkpt>
+                      <trkpt lat="35.61311" lon="140.11135">
+                        <ele>11</ele>
+                      </trkpt>
+                      <trkpt lat="35.61311" lon="140.11135">
+                        <ele>11</ele>
+                      </trkpt>
+                    </trkseg>
+                  </trk>
+                  <rte />
+                </gpx>
+                "#;
+            RouteGpx {
+                name: "route0".into(),
+                data: gpx_str.into(),
+            }
+        }
+    }
+
+    impl RouteGpxFixtures for RouteGpx {}
 }
