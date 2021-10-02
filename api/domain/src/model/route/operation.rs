@@ -199,7 +199,7 @@ pub(crate) mod tests {
     }
     pub trait OperationFixtures {
         fn add_yokohama() -> Operation {
-            Operation::new_add(1, Coordinate::yokohama(false, None))
+            Operation::new_add(0, Coordinate::yokohama(false, None))
         }
 
         fn add_chiba() -> Operation {

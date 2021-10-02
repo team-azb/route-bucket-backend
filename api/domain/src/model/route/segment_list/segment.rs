@@ -185,7 +185,7 @@ pub(crate) mod tests {
 
         fn tokyo_to_chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
             Segment {
-                id: SegmentId::from_string("tokyo-to-tokyo_______".into()),
+                id: SegmentId::from_string("tokyo-to-chiba_______".into()),
                 start: Coordinate::tokyo(false, None),
                 goal: Coordinate::chiba(false, None),
                 points: if init_empty {

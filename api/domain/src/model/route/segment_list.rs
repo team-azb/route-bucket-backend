@@ -239,7 +239,7 @@ pub(crate) mod tests {
     #[rstest]
     #[case::empty(SegmentList::empty(), 0.)]
     #[case::single_point(yokohama_verbose(), 0.)]
-    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 58759.97393251488)]
+    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 58759.973932514884)]
     fn can_get_total_distance(#[case] seg_list: SegmentList, #[case] expected_distance: f64) {
         assert_eq!(
             seg_list.get_total_distance().unwrap().value(),
@@ -421,7 +421,7 @@ pub(crate) mod tests {
                 segments: vec![
                     Segment::yokohama_to_tokyo(set_ele, set_dist.then(|| 0.), empty),
                     Segment::tokyo_to_chiba(set_ele, set_dist.then(|| 26936.42633640023), empty),
-                    Segment::chiba(set_ele, set_dist.then(|| 58759.97393251488), empty),
+                    Segment::chiba(set_ele, set_dist.then(|| 58759.973932514884), empty),
                 ],
             }
         }

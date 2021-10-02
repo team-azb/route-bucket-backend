@@ -292,7 +292,7 @@ pub(crate) mod tests {
             vec![
                 Self::yokohama(set_ele, dist_offset.clone()),
                 Self::tokyo(set_ele, dist_offset.map(|d| d + 26936.42633640023)),
-                Self::chiba(set_ele, dist_offset.map(|d| d + 58759.97393251488)),
+                Self::chiba(set_ele, dist_offset.map(|d| d + 58759.973932514884)),
             ]
         }
 
