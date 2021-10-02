@@ -13,7 +13,7 @@ use crate::model::route::{
     coordinate::Coordinate, route_info::RouteInfo, segment_list::SegmentList, Route,
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
 
 impl From<Coordinate> for gpx::Waypoint {
@@ -73,12 +73,12 @@ impl From<Route> for gpx::Gpx {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Derivative))]
-#[cfg_attr(test, derivative(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
+#[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct RouteGpx {
     name: String,
     #[cfg_attr(
-        test,
+        any(test, feature = "fixtures"),
         derivative(PartialEq(compare_with = "tests::cmp_utf8_without_white_spaces"))
     )]
     data: Vec<u8>,
@@ -156,7 +156,7 @@ impl TryFrom<Route> for RouteGpx {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 

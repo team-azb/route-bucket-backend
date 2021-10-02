@@ -10,7 +10,7 @@ use crate::model::types::OperationId;
 use super::coordinate::Coordinate;
 use super::segment_list::SegmentList;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -59,10 +59,10 @@ impl From<OperationType> for String {
 
 #[derive(Clone, Debug, Getters)]
 #[get = "pub"]
-#[cfg_attr(test, derive(Derivative))]
-#[cfg_attr(test, derivative(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
+#[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct Operation {
-    #[cfg_attr(test, derivative(PartialEq = "ignore"))]
+    #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
     id: OperationId,
     op_type: OperationType,
     pos: usize,
@@ -125,11 +125,13 @@ impl Operation {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
     use crate::model::route::coordinate::tests::CoordinateFixtures;
+
+    #[cfg(test)]
     use crate::model::route::segment_list::tests::SegmentListFixture;
 
     use super::*;

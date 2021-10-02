@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::RouteId;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
 
 #[derive(Clone, Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]
-#[cfg_attr(test, derive(Derivative))]
-#[cfg_attr(test, derivative(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
+#[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct RouteInfo {
-    #[cfg_attr(test, derivative(PartialEq = "ignore"))]
+    #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
     pub(super) id: RouteId,
     pub(super) name: String,
     #[serde(skip_serializing)]
@@ -36,7 +36,7 @@ impl RouteInfo {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 

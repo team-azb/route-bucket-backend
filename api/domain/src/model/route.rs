@@ -21,7 +21,7 @@ pub(crate) mod segment_list;
 
 #[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
@@ -118,7 +118,7 @@ impl Route {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
