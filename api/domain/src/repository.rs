@@ -4,6 +4,9 @@ use futures::future::BoxFuture;
 pub use route::{CallRouteRepository, RouteRepository};
 use route_bucket_utils::ApplicationResult;
 
+#[cfg(feature = "mocking")]
+pub use route::MockRouteRepository;
+
 pub(crate) mod route;
 
 #[async_trait]
@@ -42,5 +45,26 @@ pub trait Repository: Send + Sync {
         let conn = self.get_connection().await?;
         conn.begin_transaction().await?;
         Ok(conn)
+    }
+}
+
+// NOTE: Connectionにautomockをつけようとすると、transactionのライフタイムでバグるっぽいので、自前で作成
+//     : ライフタイムパラメータのついたgenericsはそもそも言語使用的に捌けないっぽい（ほんまか）
+// 参考　： https://github.com/asomers/mockall/issues/299#issuecomment-873669518
+#[cfg(feature = "mocking")]
+#[cfg_attr(feature = "mocking", derive(Clone))]
+pub struct MockConnection {}
+
+#[cfg(feature = "mocking")]
+#[async_trait]
+impl Connection for MockConnection {
+    async fn begin_transaction(&self) -> ApplicationResult<()> {
+        Ok(())
+    }
+    async fn commit_transaction(&self) -> ApplicationResult<()> {
+        Ok(())
+    }
+    async fn rollback_transaction(&self) -> ApplicationResult<()> {
+        Ok(())
     }
 }

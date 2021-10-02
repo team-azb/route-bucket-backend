@@ -6,6 +6,7 @@ use route_bucket_utils::ApplicationResult;
 use crate::model::route::segment_list::Segment;
 use crate::model::{Coordinate, Elevation, Route};
 
+#[cfg_attr(feature = "mocking", mockall::automock)]
 #[async_trait]
 pub trait RouteInterpolationApi: Send + Sync {
     async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
@@ -31,6 +32,7 @@ pub trait CallRouteInterpolationApi {
     fn route_interpolation_api(&self) -> &Self::RouteInterpolationApi;
 }
 
+#[cfg_attr(feature = "mocking", mockall::automock)]
 pub trait ElevationApi: Send + Sync {
     fn get_elevation(&self, coord: &Coordinate) -> ApplicationResult<Option<Elevation>>;
 

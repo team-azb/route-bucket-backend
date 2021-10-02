@@ -16,6 +16,7 @@ geo = "0.17.1"
 getset = "0.1.1"
 gpx = "0.8.1"
 itertools = "0.10.1"
+mockall = { version = "0.10.2", optional = true }
 nanoid = "0.3.0"
 num-traits = "0.2.14"
 polyline = "0.9.0"
@@ -29,4 +30,7 @@ serde = { version = "1.0.124", features = ["derive"] }
 derivative = "2.2.0"
 rstest = "0.11.0"
 
+[features]
 fixtures = ["derivative", "rstest"]
+mocking = ["mockall"]
+testing = ["fixtures", "mocking"]
