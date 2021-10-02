@@ -136,17 +136,17 @@ pub(crate) mod tests {
 
     #[fixture]
     fn add_tokyo() -> Operation {
-        Operation::step3_add_tokyo()
+        Operation::add_tokyo()
     }
 
     #[fixture]
     fn remove_tokyo() -> Operation {
-        Operation::step4_remove_tokyo()
+        Operation::remove_tokyo()
     }
 
     #[fixture]
     fn move_chiba_to_tokyo() -> Operation {
-        Operation::step5_move_chiba_to_tokyo()
+        Operation::move_chiba_to_tokyo()
     }
 
     #[fixture]
@@ -198,26 +198,26 @@ pub(crate) mod tests {
         };
     }
     pub trait OperationFixtures {
-        fn step1_add_yokohama() -> Operation {
+        fn add_yokohama() -> Operation {
             Operation::new_add(1, Coordinate::yokohama(false, None))
         }
 
-        fn step2_add_chiba() -> Operation {
+        fn add_chiba() -> Operation {
             Operation::new_add(1, Coordinate::chiba(false, None))
         }
 
-        fn step3_add_tokyo() -> Operation {
+        fn add_tokyo() -> Operation {
             Operation::new_add(1, Coordinate::tokyo(false, None))
         }
 
-        fn step4_remove_tokyo() -> Operation {
+        fn remove_tokyo() -> Operation {
             Operation::new_remove(
                 1,
                 Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
             )
         }
 
-        fn step5_move_chiba_to_tokyo() -> Operation {
+        fn move_chiba_to_tokyo() -> Operation {
             Operation::new_move(
                 1,
                 Coordinate::tokyo(false, None),
@@ -225,37 +225,24 @@ pub(crate) mod tests {
             )
         }
 
-        // step6, step7 is undo
-
-        fn step8_remove_chiba_instead() -> Operation {
-            Operation::new_remove(
-                2,
-                Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
-            )
+        fn after_add_yokohama_op_list() -> Vec<Operation> {
+            vec![Self::add_yokohama()]
         }
 
-        fn after_step1_op_list() -> Vec<Operation> {
-            vec![Self::step1_add_yokohama()]
+        fn after_add_chiba_op_list() -> Vec<Operation> {
+            concat_op_list!(after_add_yokohama_op_list, add_chiba)
         }
 
-        fn after_step2_op_list() -> Vec<Operation> {
-            concat_op_list!(after_step1_op_list, step2_add_chiba)
+        fn after_add_tokyo_op_list() -> Vec<Operation> {
+            concat_op_list!(after_add_chiba_op_list, add_tokyo)
         }
 
-        fn after_step3_op_list() -> Vec<Operation> {
-            concat_op_list!(after_step2_op_list, step3_add_tokyo)
+        fn after_remove_tokyo_op_list() -> Vec<Operation> {
+            concat_op_list!(after_add_tokyo_op_list, remove_tokyo)
         }
 
-        fn after_step4_op_list() -> Vec<Operation> {
-            concat_op_list!(after_step3_op_list, step4_remove_tokyo)
-        }
-
-        fn after_step5_to_7_op_list() -> Vec<Operation> {
-            concat_op_list!(after_step4_op_list, step5_move_chiba_to_tokyo)
-        }
-
-        fn after_step8_op_list() -> Vec<Operation> {
-            concat_op_list!(after_step3_op_list, step8_remove_chiba_instead)
+        fn after_move_chiba_op_list() -> Vec<Operation> {
+            concat_op_list!(after_add_chiba_op_list, move_chiba_to_tokyo)
         }
     }
 

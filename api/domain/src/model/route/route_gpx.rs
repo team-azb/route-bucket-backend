@@ -171,7 +171,7 @@ pub(crate) mod tests {
     fn route0() -> Route {
         Route {
             info: RouteInfo::route0(3),
-            op_list: Operation::after_step3_op_list(),
+            op_list: Operation::after_add_tokyo_op_list(),
             seg_list: SegmentList::yokohama_to_chiba_via_tokyo(true, true, false),
         }
     }

@@ -136,13 +136,18 @@ pub(crate) mod tests {
 
     #[fixture]
     fn full_route() -> Route {
-        Route::after_step3_added_tokyo()
+        Route::yokohama_to_chiba_via_tokyo()
+    }
+
+    #[fixture]
+    fn after_undo() -> Route {
+        Route::yokohama_to_chiba_after_undo()
     }
 
     #[rstest]
-    #[case::first(0, Operation::step1_add_yokohama())]
-    #[case::middle(1, Operation::step2_add_chiba())]
-    #[case::last(2, Operation::step3_add_tokyo())]
+    #[case::first(0, Operation::add_yokohama())]
+    #[case::middle(1, Operation::add_chiba())]
+    #[case::last(2, Operation::add_tokyo())]
     fn can_get_operation(full_route: Route, #[case] pos: usize, #[case] expected: Operation) {
         assert_eq!(full_route.get_operation(pos).unwrap().clone(), expected)
     }
@@ -157,24 +162,24 @@ pub(crate) mod tests {
 
     #[rstest]
     #[case::add(
-        Route::after_step2_added_chiba(),
-        Operation::step3_add_tokyo(),
-        Route::after_step3_added_tokyo()
+        Route::yokohama_to_chiba(),
+        Operation::add_tokyo(),
+        Route::yokohama_to_chiba_via_tokyo()
     )]
     #[case::remove(
-        Route::after_step3_added_tokyo(),
-        Operation::step4_remove_tokyo(),
-        Route::after_step4_removed_tokyo()
+        Route::yokohama_to_chiba_via_tokyo(),
+        Operation::remove_tokyo(),
+        Route::yokohama_to_chiba_after_remove()
     )]
     #[case::move_(
-        Route::after_step4_removed_tokyo(),
-        Operation::step5_move_chiba_to_tokyo(),
-        Route::after_step5_moved_chiba_to_tokyo()
+        Route::yokohama_to_chiba(),
+        Operation::move_chiba_to_tokyo(),
+        Route::yokohama_to_tokyo()
     )]
     #[case::truncate_op_list(
-        Route::after_step7_undone_remove(),
-        Operation::step8_remove_chiba_instead(),
-        Route::after_step8_remove_chiba()
+        Route::yokohama_to_chiba_after_undo(),
+        Operation::move_chiba_to_tokyo(),
+        Route::yokohama_to_tokyo()
     )]
     fn can_push_operation(
         #[case] mut route: Route,
@@ -186,12 +191,10 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::remove(Route::after_step7_undone_remove(), Route::after_step6_undone_move())]
-    #[case::move_(
-        Route::after_step6_undone_move(),
-        Route::after_step5_moved_chiba_to_tokyo()
-    )]
-    fn can_redo_operation(#[case] mut route: Route, #[case] expected: Route) {
+    fn can_redo_operation(
+        #[from(after_undo)] mut route: Route,
+        #[from(full_route)] expected: Route,
+    ) {
         route.redo_operation().unwrap();
         assert_eq!(route, expected)
     }
@@ -211,12 +214,10 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::move_(
-        Route::after_step5_moved_chiba_to_tokyo(),
-        Route::after_step6_undone_move()
-    )]
-    #[case::remove(Route::after_step6_undone_move(), Route::after_step7_undone_remove())]
-    fn can_undo_operation(#[case] mut route: Route, #[case] expected: Route) {
+    fn can_undo_operation(
+        #[from(full_route)] mut route: Route,
+        #[from(after_undo)] expected: Route,
+    ) {
         route.undo_operation().unwrap();
         assert_eq!(route, expected)
     }
@@ -248,36 +249,28 @@ pub(crate) mod tests {
             }
         }
 
-        fn after_step1_added_yokohama() -> Route {
-            init_route!(1, after_step1_op_list, yokohama)
+        fn yokohama() -> Route {
+            init_route!(1, after_add_yokohama_op_list, yokohama)
         }
 
-        fn after_step2_added_chiba() -> Route {
-            init_route!(2, after_step2_op_list, yokohama_to_chiba)
+        fn yokohama_to_chiba() -> Route {
+            init_route!(2, after_add_chiba_op_list, yokohama_to_chiba)
         }
 
-        fn after_step3_added_tokyo() -> Route {
-            init_route!(3, after_step3_op_list, yokohama_to_chiba_via_tokyo)
+        fn yokohama_to_chiba_via_tokyo() -> Route {
+            init_route!(3, after_add_tokyo_op_list, yokohama_to_chiba_via_tokyo)
         }
 
-        fn after_step4_removed_tokyo() -> Route {
-            init_route!(4, after_step4_op_list, yokohama_to_chiba)
+        fn yokohama_to_chiba_after_remove() -> Route {
+            init_route!(4, after_remove_tokyo_op_list, yokohama_to_chiba)
         }
 
-        fn after_step5_moved_chiba_to_tokyo() -> Route {
-            init_route!(5, after_step5_to_7_op_list, yokohama_to_tokyo)
+        fn yokohama_to_chiba_after_undo() -> Route {
+            init_route!(2, after_add_tokyo_op_list, yokohama_to_chiba)
         }
 
-        fn after_step6_undone_move() -> Route {
-            init_route!(4, after_step5_to_7_op_list, yokohama_to_chiba)
-        }
-
-        fn after_step7_undone_remove() -> Route {
-            init_route!(3, after_step5_to_7_op_list, yokohama_to_chiba_via_tokyo)
-        }
-
-        fn after_step8_remove_chiba() -> Route {
-            init_route!(4, after_step8_op_list, yokohama_to_tokyo)
+        fn yokohama_to_tokyo() -> Route {
+            init_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
         }
     }
 
