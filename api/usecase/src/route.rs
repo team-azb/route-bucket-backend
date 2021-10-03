@@ -300,6 +300,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::{expect_at_repository, expect_once};
     use route_bucket_domain::{
         external::{MockElevationApi, MockRouteInterpolationApi},
         model::{
@@ -611,25 +612,13 @@ mod tests {
                 interpolation_api: MockRouteInterpolationApi::new(),
                 elevation_api: MockElevationApi::new(),
             };
-
-            usecase
-                .repository
-                .expect_get_connection()
-                .times(..=1)
-                .return_const(Ok(MockConnection {}));
+            expect_at_repository!(usecase, get_connection, MockConnection {});
 
             usecase
         }
 
         fn expect_find_at_route_repository(&mut self, param_id: RouteId, return_route: Route) {
-            self.repository
-                .expect_find()
-                .once()
-                .withf(move |id, _| {
-                    assert_eq!(*id, param_id);
-                    true
-                })
-                .return_const(Ok(return_route));
+            expect_at_repository!(self, find, param_id, return_route);
         }
 
         fn expect_find_info_at_route_repository(
@@ -637,65 +626,27 @@ mod tests {
             param_id: RouteId,
             return_info: RouteInfo,
         ) {
-            self.repository
-                .expect_find_info()
-                .once()
-                .withf(move |id, _| {
-                    assert_eq!(*id, param_id);
-                    true
-                })
-                .return_const(Ok(return_info));
+            expect_at_repository!(self, find_info, param_id, return_info);
         }
 
         fn expect_find_all_at_route_repository(&mut self, return_infos: Vec<RouteInfo>) {
-            self.repository
-                .expect_find_all_infos()
-                .once()
-                .return_const(Ok(return_infos));
+            expect_at_repository!(self, find_all_infos, return_infos);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            self.repository
-                .expect_insert_info()
-                .once()
-                .withf(move |info, _| {
-                    assert_eq!(*info, param_info);
-                    true
-                })
-                .return_const(Ok(()));
+            expect_at_repository!(self, insert_info, param_info, ());
         }
 
         fn expect_update_at_route_repository(&mut self, param_route: Route) {
-            self.repository
-                .expect_update()
-                .once()
-                .withf(move |route, _| {
-                    assert_eq!(*route, param_route);
-                    true
-                })
-                .return_const(Ok(()));
+            expect_at_repository!(self, update, param_route, ());
         }
 
         fn expect_update_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            self.repository
-                .expect_update_info()
-                .once()
-                .withf(move |info, _| {
-                    assert_eq!(*info, param_info);
-                    true
-                })
-                .return_const(Ok(()));
+            expect_at_repository!(self, update_info, param_info, ());
         }
 
         fn expect_delete_at_route_repository(&mut self, param_id: RouteId) {
-            self.repository
-                .expect_delete()
-                .once()
-                .withf(move |id, _| {
-                    assert_eq!(*id, param_id);
-                    true
-                })
-                .return_const(Ok(()));
+            expect_at_repository!(self, delete, param_id, ());
         }
 
         fn expect_correct_coordinate_at_interpolation_api(
@@ -703,14 +654,12 @@ mod tests {
             param_coord: Coordinate,
             return_coord: Coordinate,
         ) {
-            self.interpolation_api
-                .expect_correct_coordinate()
-                .once()
-                .withf(move |coord| {
-                    assert_eq!(*coord, param_coord);
-                    true
-                })
-                .return_const(Ok(return_coord));
+            expect_once!(
+                self.interpolation_api,
+                correct_coordinate,
+                param_coord,
+                return_coord
+            );
         }
 
         fn expect_interpolate_empty_segments_at_interpolation_api(
@@ -718,17 +667,11 @@ mod tests {
             before_route: Route,
             after_route: Route,
         ) {
-            self.interpolation_api
-                .expect_interpolate_empty_segments()
-                .once()
-                .withf(move |route| {
-                    assert_eq!(*route, before_route);
-                    true
-                })
-                .returning(move |route| {
-                    *route = after_route.clone();
-                    Ok(())
-                });
+            expect_once!(
+                self.interpolation_api,
+                interpolate_empty_segments,
+                before_route => after_route
+            );
         }
 
         fn expect_attach_elevations_at_elevation_api(
@@ -736,17 +679,11 @@ mod tests {
             before_route: Route,
             after_route: Route,
         ) {
-            self.elevation_api
-                .expect_attach_elevations()
-                .once()
-                .withf(move |route| {
-                    assert_eq!(*route, before_route);
-                    true
-                })
-                .returning(move |route| {
-                    *route = after_route.clone();
-                    Ok(())
-                });
+            expect_once!(
+                self.elevation_api,
+                attach_elevations,
+                before_route => after_route
+            );
         }
     }
 
