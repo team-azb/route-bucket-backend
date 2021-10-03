@@ -52,7 +52,7 @@ pub trait Repository: Send + Sync {
 //     : ライフタイムパラメータのついたgenericsはそもそも言語使用的に捌けないっぽい（ほんまか）
 // 参考　： https://github.com/asomers/mockall/issues/299#issuecomment-873669518
 #[cfg(feature = "mocking")]
-#[cfg_attr(feature = "mocking", derive(Clone))]
+#[cfg_attr(feature = "mocking", derive(Clone, Debug, PartialEq))]
 pub struct MockConnection {}
 
 #[cfg(feature = "mocking")]

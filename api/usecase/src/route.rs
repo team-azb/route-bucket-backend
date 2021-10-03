@@ -300,6 +300,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::{expect, expect_at_repository};
     use route_bucket_domain::{
         external::{MockElevationApi, MockRouteInterpolationApi},
         model::{
@@ -420,6 +421,10 @@ mod tests {
         }
     }
 
+    fn base_route(set_ele: bool, set_dist: bool) -> Route {
+        TestRouteUseCase::base_route(set_ele, set_dist)
+    }
+
     #[rstest]
     #[tokio::test]
     async fn can_find(
@@ -427,8 +432,17 @@ mod tests {
         #[from(route_get_resp)] expected_resp: RouteGetResponse,
     ) {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_find_at_route_repository();
-        usecase.expect_attach_elevations_at_elevation_api();
+        expect_at_repository!(usecase, find, (base_route_id()) => base_route(false, false));
+        expect!(
+            usecase,
+            elevation_api,
+            attach_elevations,
+            base_route(false, true)
+        )
+        .returning(|route| {
+            *route = base_route(true, true);
+            Ok(())
+        });
         assert_eq!(usecase.find(&route_id).await, Ok(expected_resp));
     }
 
@@ -436,7 +450,7 @@ mod tests {
     #[tokio::test]
     async fn can_find_all(#[from(route_get_all_resp)] expected_resp: RouteGetAllResponse) {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_find_all_at_route_repository();
+        expect_at_repository!(usecase, find_all_infos, () => vec![RouteInfo::route0(0)]);
         assert_eq!(usecase.find_all().await, Ok(expected_resp));
     }
 
@@ -447,6 +461,7 @@ mod tests {
         #[from(route_get_gpx_resp)] expected_resp: RouteGetGpxResponse,
     ) {
         let mut usecase = TestRouteUseCase::new();
+        // expect_at_repository!(usecase, find_all_infos, vec![RouteInfo::route0(0)]);
         usecase.expect_find_at_route_repository();
         usecase.expect_attach_elevations_at_elevation_api();
         assert_eq!(usecase.find_gpx(&route_id).await, Ok(expected_resp));
