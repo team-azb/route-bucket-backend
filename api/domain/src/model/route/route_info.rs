@@ -72,6 +72,14 @@ pub(crate) mod tests {
                 op_num,
             }
         }
+
+        fn route1(op_num: usize) -> RouteInfo {
+            RouteInfo {
+                id: RouteId::new(),
+                name: "route1".into(),
+                op_num,
+            }
+        }
     }
 
     impl RouteInfoFixtures for RouteInfo {}

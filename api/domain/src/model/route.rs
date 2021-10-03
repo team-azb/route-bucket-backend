@@ -272,6 +272,30 @@ pub(crate) mod tests {
         fn yokohama_to_tokyo() -> Route {
             init_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
         }
+
+        fn yokohama_to_chiba_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(2),
+                Operation::after_add_tokyo_op_list(),
+                SegmentList::yokohama_to_chiba(set_ele, set_dist, false),
+            )
+        }
+
+        fn yokohama_to_chiba_via_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(3),
+                Operation::after_add_tokyo_op_list(),
+                SegmentList::yokohama_to_chiba_via_tokyo(set_ele, set_dist, false),
+            )
+        }
+
+        fn yokohama_to_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(3),
+                Operation::after_move_chiba_op_list(),
+                SegmentList::yokohama_to_tokyo(set_ele, set_dist, false),
+            )
+        }
     }
 
     impl RouteFixtures for Route {}

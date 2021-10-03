@@ -297,3 +297,481 @@ where
         self.route_repository().delete(route_id, &mut conn).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use route_bucket_domain::{
+        external::{MockElevationApi, MockRouteInterpolationApi},
+        model::{
+            fixtures::{
+                CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
+                RouteInfoFixtures, SegmentFixtures,
+            },
+            Coordinate, RouteGpx, Segment,
+        },
+        repository::{MockConnection, MockRouteRepository},
+    };
+    use rstest::rstest;
+
+    use super::*;
+
+    fn route_id() -> RouteId {
+        RouteId::from_string("route-id___".into())
+    }
+
+    fn tokyo_before_correction() -> Coordinate {
+        Coordinate::new(35.68, 139.77).unwrap()
+    }
+
+    fn yokohama_to_chiba_before_interpolation(is_undone: bool) -> Route {
+        Route::new(
+            RouteInfo::route0(if is_undone { 2 } else { 4 }),
+            if is_undone {
+                Operation::after_add_tokyo_op_list()
+            } else {
+                Operation::after_remove_tokyo_op_list()
+            },
+            vec![
+                Segment::yokohama_to_chiba(false, None, true),
+                Segment::chiba(false, None, false),
+            ]
+            .into(),
+        )
+    }
+
+    fn yokohama_to_chiba_via_tokyo_before_interpolation() -> Route {
+        Route::new(
+            RouteInfo::route0(3),
+            Operation::after_add_tokyo_op_list(),
+            vec![
+                Segment::yokohama_to_tokyo(false, None, true),
+                Segment::tokyo_to_chiba(false, None, true),
+                Segment::chiba(false, None, false),
+            ]
+            .into(),
+        )
+    }
+
+    fn yokohama_to_tokyo_before_interpolation() -> Route {
+        Route::yokohama_to_tokyo()
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_find() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_filled(false, true),
+            Route::yokohama_to_chiba_filled(true, true),
+        );
+
+        assert_eq!(
+            usecase.find(&route_id()).await,
+            Route::yokohama_to_chiba_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_find_all() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_all_at_route_repository(vec![RouteInfo::route0(0)]);
+
+        assert_eq!(
+            usecase.find_all().await,
+            Ok(RouteGetAllResponse {
+                route_infos: vec![RouteInfo::route0(0)]
+            })
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_find_gpx() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_via_tokyo_filled(false, true),
+            Route::yokohama_to_chiba_via_tokyo_filled(true, true),
+        );
+
+        assert_eq!(usecase.find_gpx(&route_id()).await, Ok(RouteGpx::route0()));
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_create() {
+        let req = RouteCreateRequest {
+            name: "route0".into(),
+        };
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_insert_info_at_route_repository(RouteInfo::route0(0));
+        // NOTE: unable to check resp since RouteId is auto-generated
+        // assert_eq!(usecase.create(&req).await, Ok(expected_resp));
+        assert!(matches!(usecase.create(&req).await, Ok(_)));
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_rename() {
+        let req = RouteRenameRequest {
+            name: "route1".into(),
+        };
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(0));
+        usecase.expect_update_info_at_route_repository(RouteInfo::route1(0));
+
+        assert_eq!(
+            usecase.rename(&route_id(), &req).await,
+            Ok(RouteInfo::route1(0))
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_add_point() {
+        let req = NewPointRequest {
+            coord: tokyo_before_correction(),
+        };
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_correct_coordinate_at_interpolation_api(
+            tokyo_before_correction(),
+            Coordinate::tokyo(false, None),
+        );
+        usecase.expect_interpolate_empty_segments_at_interpolation_api(
+            yokohama_to_chiba_via_tokyo_before_interpolation(),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+            Route::yokohama_to_chiba_via_tokyo_filled(true, false),
+        );
+        usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_via_tokyo_filled(
+            true, true,
+        ));
+
+        assert_eq!(
+            usecase.add_point(&route_id(), 1, &req).await,
+            Route::yokohama_to_chiba_via_tokyo_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_remove_point() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_interpolate_empty_segments_at_interpolation_api(
+            yokohama_to_chiba_before_interpolation(false),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_filled(false, false),
+            Route::yokohama_to_chiba_filled(true, false),
+        );
+        usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_filled(true, true));
+
+        assert_eq!(
+            usecase.remove_point(&route_id(), 1).await,
+            Route::yokohama_to_chiba_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_move_point() {
+        let req = NewPointRequest {
+            coord: tokyo_before_correction(),
+        };
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_correct_coordinate_at_interpolation_api(
+            tokyo_before_correction(),
+            Coordinate::tokyo(false, None),
+        );
+        usecase.expect_interpolate_empty_segments_at_interpolation_api(
+            yokohama_to_tokyo_before_interpolation(),
+            Route::yokohama_to_tokyo_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_tokyo_filled(false, false),
+            Route::yokohama_to_tokyo_filled(true, false),
+        );
+        usecase.expect_update_at_route_repository(Route::yokohama_to_tokyo_filled(true, true));
+
+        assert_eq!(
+            usecase.move_point(&route_id(), 1, &req).await,
+            Route::yokohama_to_tokyo_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_clear_route() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(3));
+        usecase.expect_update_at_route_repository(Route::empty());
+
+        assert_eq!(
+            usecase.clear_route(&route_id()).await,
+            Route::empty().try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_redo_operation() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_interpolate_empty_segments_at_interpolation_api(
+            yokohama_to_chiba_via_tokyo_before_interpolation(),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+            Route::yokohama_to_chiba_via_tokyo_filled(true, false),
+        );
+        usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_via_tokyo_filled(
+            true, true,
+        ));
+
+        assert_eq!(
+            usecase.redo_operation(&route_id()).await,
+            Route::yokohama_to_chiba_via_tokyo_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_undo_operation() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_at_route_repository(
+            route_id(),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_interpolate_empty_segments_at_interpolation_api(
+            yokohama_to_chiba_before_interpolation(true),
+            Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_attach_elevations_at_elevation_api(
+            Route::yokohama_to_chiba_filled(false, false),
+            Route::yokohama_to_chiba_filled(true, false),
+        );
+        usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_filled(true, true));
+
+        assert_eq!(
+            usecase.undo_operation(&route_id()).await,
+            Route::yokohama_to_chiba_filled(true, true).try_into()
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_delete() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_delete_at_route_repository(route_id());
+        assert_eq!(usecase.delete(&route_id()).await, Ok(()));
+    }
+
+    struct TestRouteUseCase {
+        repository: MockRouteRepository,
+        interpolation_api: MockRouteInterpolationApi,
+        elevation_api: MockElevationApi,
+    }
+
+    // setup methods for mocking
+    impl TestRouteUseCase {
+        fn new() -> Self {
+            let mut usecase = TestRouteUseCase {
+                repository: MockRouteRepository::new(),
+                interpolation_api: MockRouteInterpolationApi::new(),
+                elevation_api: MockElevationApi::new(),
+            };
+
+            usecase
+                .repository
+                .expect_get_connection()
+                .times(..=1)
+                .return_const(Ok(MockConnection {}));
+
+            usecase
+        }
+
+        fn expect_find_at_route_repository(&mut self, param_id: RouteId, return_route: Route) {
+            self.repository
+                .expect_find()
+                .once()
+                .withf(move |id, _| {
+                    assert_eq!(*id, param_id);
+                    true
+                })
+                .return_const(Ok(return_route));
+        }
+
+        fn expect_find_info_at_route_repository(
+            &mut self,
+            param_id: RouteId,
+            return_info: RouteInfo,
+        ) {
+            self.repository
+                .expect_find_info()
+                .once()
+                .withf(move |id, _| {
+                    assert_eq!(*id, param_id);
+                    true
+                })
+                .return_const(Ok(return_info));
+        }
+
+        fn expect_find_all_at_route_repository(&mut self, return_infos: Vec<RouteInfo>) {
+            self.repository
+                .expect_find_all_infos()
+                .once()
+                .return_const(Ok(return_infos));
+        }
+
+        fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {
+            self.repository
+                .expect_insert_info()
+                .once()
+                .withf(move |info, _| {
+                    assert_eq!(*info, param_info);
+                    true
+                })
+                .return_const(Ok(()));
+        }
+
+        fn expect_update_at_route_repository(&mut self, param_route: Route) {
+            self.repository
+                .expect_update()
+                .once()
+                .withf(move |route, _| {
+                    assert_eq!(*route, param_route);
+                    true
+                })
+                .return_const(Ok(()));
+        }
+
+        fn expect_update_info_at_route_repository(&mut self, param_info: RouteInfo) {
+            self.repository
+                .expect_update_info()
+                .once()
+                .withf(move |info, _| {
+                    assert_eq!(*info, param_info);
+                    true
+                })
+                .return_const(Ok(()));
+        }
+
+        fn expect_delete_at_route_repository(&mut self, param_id: RouteId) {
+            self.repository
+                .expect_delete()
+                .once()
+                .withf(move |id, _| {
+                    assert_eq!(*id, param_id);
+                    true
+                })
+                .return_const(Ok(()));
+        }
+
+        fn expect_correct_coordinate_at_interpolation_api(
+            &mut self,
+            param_coord: Coordinate,
+            return_coord: Coordinate,
+        ) {
+            self.interpolation_api
+                .expect_correct_coordinate()
+                .once()
+                .withf(move |coord| {
+                    assert_eq!(*coord, param_coord);
+                    true
+                })
+                .return_const(Ok(return_coord));
+        }
+
+        fn expect_interpolate_empty_segments_at_interpolation_api(
+            &mut self,
+            before_route: Route,
+            after_route: Route,
+        ) {
+            self.interpolation_api
+                .expect_interpolate_empty_segments()
+                .once()
+                .withf(move |route| {
+                    assert_eq!(*route, before_route);
+                    true
+                })
+                .returning(move |route| {
+                    *route = after_route.clone();
+                    Ok(())
+                });
+        }
+
+        fn expect_attach_elevations_at_elevation_api(
+            &mut self,
+            before_route: Route,
+            after_route: Route,
+        ) {
+            self.elevation_api
+                .expect_attach_elevations()
+                .once()
+                .withf(move |route| {
+                    assert_eq!(*route, before_route);
+                    true
+                })
+                .returning(move |route| {
+                    *route = after_route.clone();
+                    Ok(())
+                });
+        }
+    }
+
+    // impls to enable trait RouteUseCase
+    impl CallRouteRepository for TestRouteUseCase {
+        type RouteRepository = MockRouteRepository;
+
+        fn route_repository(&self) -> &Self::RouteRepository {
+            &self.repository
+        }
+    }
+
+    impl CallRouteInterpolationApi for TestRouteUseCase {
+        type RouteInterpolationApi = MockRouteInterpolationApi;
+
+        fn route_interpolation_api(&self) -> &Self::RouteInterpolationApi {
+            &self.interpolation_api
+        }
+    }
+
+    impl CallElevationApi for TestRouteUseCase {
+        type ElevationApi = MockElevationApi;
+
+        fn elevation_api(&self) -> &Self::ElevationApi {
+            &self.elevation_api
+        }
+    }
+}

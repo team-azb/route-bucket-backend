@@ -7,7 +7,8 @@ use route_bucket_domain::model::{
 };
 use route_bucket_utils::ApplicationError;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct RouteGetResponse {
     #[serde(flatten)]
     pub route_info: RouteInfo,
@@ -17,7 +18,8 @@ pub struct RouteGetResponse {
     pub total_distance: Distance,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct RouteGetAllResponse {
     #[serde(rename = "routes")]
     pub route_infos: Vec<RouteInfo>,
@@ -25,12 +27,14 @@ pub struct RouteGetAllResponse {
 
 pub type RouteGetGpxResponse = RouteGpx;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct RouteCreateResponse {
     pub id: RouteId,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct RouteOperationResponse {
     pub waypoints: Vec<Coordinate>,
     pub segments: Vec<Segment>,
