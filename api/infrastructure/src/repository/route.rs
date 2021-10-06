@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use async_trait::async_trait;
 use futures::FutureExt;
 use itertools::{enumerate, Itertools};
@@ -144,7 +142,7 @@ impl RouteRepositoryMySql {
 
     async fn update_operations(
         id: &RouteId,
-        operations: &Vec<Operation>,
+        operations: &[Operation],
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<()> {
         if let Some(last_op) = operations.last() {

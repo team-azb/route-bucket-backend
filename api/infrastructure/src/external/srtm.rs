@@ -146,16 +146,19 @@ impl SrtmFile {
     fn read_header(f: &mut File) -> std::io::Result<(SrtmByteOrder, u32)> {
         f.seek(SeekFrom::Start(0u64))?;
 
-        let byte_order = SrtmByteOrder::from_u16(f.read_u16::<LittleEndian>()?).ok_or(
-            std::io::Error::new(std::io::ErrorKind::Other, "invalid SRTM byte_order"),
-        )?;
+        let byte_order =
+            SrtmByteOrder::from_u16(f.read_u16::<LittleEndian>()?).ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::Other, "invalid SRTM byte_order")
+            })?;
 
         let version = f.read_u16::<LittleEndian>()?;
 
-        (0x2A == version).then(|| ()).ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("invalid SRTM version {:X}", version),
-        ))?;
+        (0x2A == version).then(|| ()).ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("invalid SRTM version {:X}", version),
+            )
+        })?;
 
         let ifd_offset = match byte_order {
             SrtmByteOrder::LittleEndian => f.read_u32::<LittleEndian>(),
@@ -200,12 +203,9 @@ impl SrtmFile {
         mut file: File,
     ) -> ApplicationResult<Self> {
         let read_tag_data = |tag: IfdTag| -> ApplicationResult<&IfdEntry> {
-            entries
-                .get(&tag)
-                .ok_or(ApplicationError::ExternalError(format!(
-                    "Failed to find tag {:?}",
-                    tag
-                )))
+            entries.get(&tag).ok_or_else(|| {
+                ApplicationError::ExternalError(format!("Failed to find tag {:?}", tag))
+            })
         };
         let width = read_tag_data(IfdTag::ImageWidth)?.data;
         let height = read_tag_data(IfdTag::ImageHeight)?.data;
@@ -274,7 +274,7 @@ impl SrtmFile {
     fn read_no_data_value(entry: &IfdEntry, file: &mut File) -> std::io::Result<i32> {
         let mut buf = vec![0u8; (entry.count - 1) as usize];
         file.seek(SeekFrom::Start(entry.data as u64))?;
-        file.read(&mut buf[..])?;
+        file.read_exact(&mut buf[..])?;
         Ok(std::str::from_utf8(&buf).unwrap().parse::<i32>().unwrap())
     }
 
@@ -305,6 +305,6 @@ impl ElevationApi for SrtmReader {
                 return area.get(coord);
             }
         }
-        return Ok(None);
+        Ok(None)
     }
 }
