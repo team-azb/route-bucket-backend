@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-#[derive(Display, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Display, Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NanoId<const LEN: usize>(String);
 
 impl<const LEN: usize> NanoId<LEN> {
@@ -17,9 +17,6 @@ impl<const LEN: usize> NanoId<LEN> {
     pub fn from_string(id: String) -> Self {
         Self(id)
     }
-    pub fn to_string(&self) -> String {
-        self.0.clone()
-    }
 }
 
 // TODO: Make this an derive macro (ex: #[derive(NanoId)])
@@ -27,7 +24,7 @@ pub type RouteId = NanoId<11>;
 pub type SegmentId = NanoId<21>;
 pub type OperationId = NanoId<21>;
 
-#[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default, Display, From, Into, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Polyline(String);
 
 impl Polyline {

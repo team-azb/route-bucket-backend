@@ -27,20 +27,18 @@ pub struct SegmentList {
 impl SegmentList {
     pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
         if let Some(last_seg) = self.segments.last() {
-            let last_point =
-                last_seg
-                    .points
-                    .last()
-                    .ok_or(ApplicationError::DomainError(format!(
-                        "Last segment cannot be empty at get_total_distance! ({:?})",
-                        last_seg
-                    )))?;
-            last_point
-                .distance_from_start()
-                .clone()
-                .ok_or(ApplicationError::DomainError(
-                    format!("Failed to calculate total distance. {:?}", self).into(),
+            let last_point = last_seg.points.last().ok_or_else(|| {
+                ApplicationError::DomainError(format!(
+                    "Last segment cannot be empty at get_total_distance! ({:?})",
+                    last_seg
                 ))
+            })?;
+            (*last_point.distance_from_start()).ok_or_else(|| {
+                ApplicationError::DomainError(format!(
+                    "Failed to calculate total distance. {:?}",
+                    self
+                ))
+            })
         } else {
             Ok(Distance::zero())
         }
@@ -74,7 +72,7 @@ impl SegmentList {
                         *dist += coord.haversine_distance(prev_coord);
                     }
                     coord.set_distance_from_start(*dist);
-                    prev_op.insert(coord.clone());
+                    *prev_op = Some(coord.clone());
                     Some(*dist)
                 })
                 .last()
@@ -107,7 +105,7 @@ impl SegmentList {
                     .segments
                     .first()
                     .map(|seg| seg.start.clone())
-                    .unwrap_or(coord.clone());
+                    .unwrap_or_else(|| coord.clone());
                 self.segments.insert(0, Segment::new_empty(coord, goal));
             } else {
                 let org_seg = self.segments.remove(pos - 1);
@@ -175,7 +173,7 @@ impl SegmentList {
 
     pub fn into_segments_in_between(self) -> Vec<Segment> {
         let mut segments: Vec<Segment> = self.into();
-        if segments.len() > 0 {
+        if !segments.is_empty() {
             segments.pop();
         }
         segments

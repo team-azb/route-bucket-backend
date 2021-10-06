@@ -19,16 +19,16 @@ pub struct RouteInfo {
 }
 
 impl RouteInfo {
-    pub fn new(id: RouteId, name: &String, op_num: usize) -> RouteInfo {
+    pub fn new(id: RouteId, name: &str, op_num: usize) -> RouteInfo {
         RouteInfo {
             id,
-            name: name.clone(),
+            name: name.to_string(),
             op_num,
         }
     }
 
-    pub fn rename(&mut self, name: &String) {
-        self.name = name.clone();
+    pub fn rename(&mut self, name: &str) {
+        self.name = name.to_string();
     }
 
     pub fn clear_route(&mut self) {
@@ -54,7 +54,7 @@ pub(crate) mod tests {
 
     #[rstest]
     fn can_rename(#[from(route0_without_op)] mut info: RouteInfo) {
-        info.rename(&"Renamed!!!".into());
+        info.rename("Renamed!!!");
         assert_eq!(info.name.to_string(), String::from("Renamed!!!"))
     }
 
