@@ -155,7 +155,7 @@ where
                 self.elevation_api().attach_elevations(&mut route)?;
                 route.attach_distance_from_start()?;
 
-                self.route_repository().update(&mut route, conn).await?;
+                self.route_repository().update(&route, conn).await?;
 
                 route.try_into()
             }
@@ -182,7 +182,7 @@ where
                 self.elevation_api().attach_elevations(&mut route)?;
                 route.attach_distance_from_start()?;
 
-                self.route_repository().update(&mut route, conn).await?;
+                self.route_repository().update(&route, conn).await?;
 
                 route.try_into()
             }
@@ -216,7 +216,7 @@ where
                 self.elevation_api().attach_elevations(&mut route)?;
                 route.attach_distance_from_start()?;
 
-                self.route_repository().update(&mut route, conn).await?;
+                self.route_repository().update(&route, conn).await?;
 
                 route.try_into()
             }
@@ -258,7 +258,7 @@ where
                 self.elevation_api().attach_elevations(&mut route)?;
                 route.attach_distance_from_start()?;
 
-                self.route_repository().update(&mut route, conn).await?;
+                self.route_repository().update(&route, conn).await?;
 
                 route.try_into()
             }
@@ -283,7 +283,7 @@ where
                 self.elevation_api().attach_elevations(&mut route)?;
                 route.attach_distance_from_start()?;
 
-                self.route_repository().update(&mut route, conn).await?;
+                self.route_repository().update(&route, conn).await?;
 
                 route.try_into()
             }
@@ -293,8 +293,8 @@ where
     }
 
     async fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
-        let mut conn = self.route_repository().get_connection().await?;
-        self.route_repository().delete(route_id, &mut conn).await
+        let conn = self.route_repository().get_connection().await?;
+        self.route_repository().delete(route_id, &conn).await
     }
 }
 

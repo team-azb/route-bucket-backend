@@ -52,7 +52,7 @@ impl TryFrom<Route> for RouteGetResponse {
             waypoints: seg_list.gather_waypoints(),
             elevation_gain: seg_list.calc_elevation_gain(),
             total_distance: seg_list.get_total_distance()?,
-            segments: seg_list.clone().into_segments_in_between(),
+            segments: seg_list.into_segments_in_between(),
         })
     }
 }
