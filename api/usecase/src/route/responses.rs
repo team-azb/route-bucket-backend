@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use serde::Serialize;
 
 use route_bucket_domain::model::{
-    Coordinate, Distance, Elevation, Route, RouteGpx, RouteId, RouteInfo, Segment,
+    BoundingBox, Coordinate, Distance, Elevation, Route, RouteGpx, RouteId, RouteInfo, Segment,
 };
 use route_bucket_utils::ApplicationError;
 
@@ -16,6 +16,7 @@ pub struct RouteGetResponse {
     pub segments: Vec<Segment>,
     pub elevation_gain: Elevation,
     pub total_distance: Distance,
+    pub bounding_box: Option<BoundingBox>,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,6 +53,9 @@ impl TryFrom<Route> for RouteGetResponse {
             waypoints: seg_list.gather_waypoints(),
             elevation_gain: seg_list.calc_elevation_gain(),
             total_distance: seg_list.get_total_distance()?,
+            bounding_box: (!seg_list.is_empty())
+                .then(|| seg_list.calc_bounding_box())
+                .transpose()?,
             segments: seg_list.into_segments_in_between(),
         })
     }
@@ -73,7 +77,7 @@ impl TryFrom<Route> for RouteOperationResponse {
 #[cfg(test)]
 mod tests {
     use route_bucket_domain::model::fixtures::{
-        CoordinateFixtures, RouteFixtures, RouteInfoFixtures, SegmentFixtures,
+        BoundingBoxFixture, CoordinateFixtures, RouteFixtures, RouteInfoFixtures, SegmentFixtures,
     };
     use rstest::rstest;
     use std::convert::TryInto;
@@ -87,6 +91,7 @@ mod tests {
             elevation_gain: Elevation::zero(),
             total_distance: Distance::zero(),
             segments: Vec::new(),
+            bounding_box: None,
         }
     }
 
@@ -100,6 +105,7 @@ mod tests {
                 Segment::yokohama_to_tokyo(true, Some(0.), false),
                 Segment::tokyo_to_chiba(true, Some(26936.42633640023), false),
             ],
+            bounding_box: Some(BoundingBox::yokohama_to_chiba_via_tokyo()),
         }
     }
 
