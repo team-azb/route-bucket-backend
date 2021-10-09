@@ -13,6 +13,7 @@ use self::operation::Operation;
 use self::route_info::RouteInfo;
 use self::segment_list::{Segment, SegmentList};
 
+pub(crate) mod bounding_box;
 pub(crate) mod coordinate;
 pub(crate) mod operation;
 pub(crate) mod route_gpx;
