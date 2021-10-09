@@ -63,7 +63,7 @@ impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T
         self.0
     }
 
-    pub fn max() -> Self {
+    pub fn max_value() -> Self {
         Self(if MAX_ABS == 0 {
             T::max_value()
         } else {
@@ -73,6 +73,24 @@ impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T
 
     pub fn zero() -> Self {
         Self(T::from_u32(0).unwrap())
+    }
+}
+
+impl<const MAX_ABS: u32> NumericValueObject<f64, MAX_ABS> {
+    pub fn min(a: Self, b: Self) -> Self {
+        if a.0 > b.0 {
+            b
+        } else {
+            a
+        }
+    }
+
+    pub fn max(a: Self, b: Self) -> Self {
+        if a.0 < b.0 {
+            b
+        } else {
+            a
+        }
     }
 }
 

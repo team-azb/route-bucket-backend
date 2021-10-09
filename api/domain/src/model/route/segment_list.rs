@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::{Distance, Elevation};
+use crate::model::{BoundingBox, Distance, Elevation, Latitude, Longitude};
 
 use super::coordinate::Coordinate;
 
@@ -49,7 +49,7 @@ impl SegmentList {
             .par_bridge()
             .fold(Elevation::zero, |total_gain, seg| {
                 let mut gain = Elevation::zero();
-                let mut prev_elev = Elevation::max();
+                let mut prev_elev = Elevation::max_value();
                 seg.iter().for_each(|coord| {
                     if let Some(elev) = coord.elevation() {
                         gain += max(*elev - prev_elev, 0.try_into().unwrap());
@@ -95,6 +95,31 @@ impl SegmentList {
             });
 
         Ok(())
+    }
+
+    pub fn calc_bounding_box(&self) -> ApplicationResult<BoundingBox> {
+        let mut coord_iter = self.iter().map(|seg| seg.iter()).flatten();
+
+        if let Some(first_coord) = coord_iter.next() {
+            let mut min_coord = first_coord.clone();
+            let mut max_coord = first_coord.clone();
+            min_coord.elevation = None;
+            min_coord.distance_from_start = None;
+            max_coord.elevation = None;
+            max_coord.distance_from_start = None;
+
+            coord_iter.for_each(|coord| {
+                min_coord.latitude = Latitude::min(min_coord.latitude, coord.latitude);
+                min_coord.longitude = Longitude::min(min_coord.longitude, coord.longitude);
+                max_coord.latitude = Latitude::max(max_coord.latitude, coord.latitude);
+                max_coord.longitude = Longitude::max(max_coord.longitude, coord.longitude);
+            });
+            Ok((min_coord, max_coord).into())
+        } else {
+            Err(ApplicationError::DomainError(
+                "Cannot calc_bounding_box on an empty SegmentList".into(),
+            ))
+        }
     }
 
     pub fn insert_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
@@ -186,6 +211,10 @@ impl SegmentList {
     pub fn iter_mut(&mut self) -> IterMut<Segment> {
         self.segments.iter_mut()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.segments.is_empty()
+    }
 }
 
 impl From<Vec<Segment>> for SegmentList {
@@ -204,6 +233,8 @@ impl From<SegmentList> for Vec<Segment> {
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
+    #[cfg(test)]
+    use crate::model::route::bounding_box::tests::BoundingBoxFixture;
     #[cfg(test)]
     use crate::model::route::coordinate::tests::CoordinateFixtures;
     pub use crate::model::route::segment_list::segment::tests::SegmentFixtures;
@@ -281,6 +312,26 @@ pub(crate) mod tests {
     ) {
         seg_list_without_dist.attach_distance_from_start().unwrap();
         assert_eq!(seg_list_without_dist, expected_seg_list)
+    }
+
+    #[rstest]
+    #[case::single_point(SegmentList::yokohama(false, false, false), BoundingBox::yokohama())]
+    #[case::yokohama_to_chiba_via_tokyo(
+        SegmentList::yokohama_to_chiba_via_tokyo(false, false, false),
+        BoundingBox::yokohama_to_chiba_via_tokyo()
+    )]
+    fn can_calc_bounding_box(#[case] seg_list: SegmentList, #[case] expected_bbox: BoundingBox) {
+        assert_eq!(seg_list.calc_bounding_box(), Ok(expected_bbox))
+    }
+
+    #[rstest]
+    fn cannot_calc_bounding_box_if_empty(
+        #[from(yokohama_to_chiba_via_tokyo_empty)] empty_seg_list: SegmentList,
+    ) {
+        assert!(matches!(
+            empty_seg_list.calc_bounding_box(),
+            Err(ApplicationError::DomainError(_))
+        ))
     }
 
     #[rstest]
