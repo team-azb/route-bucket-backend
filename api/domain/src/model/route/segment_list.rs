@@ -124,7 +124,7 @@ impl SegmentList {
             Ok(())
         } else {
             Err(ApplicationError::DomainError(format!(
-                "pos({}) cannot be greater than segment.len()({})",
+                "pos({}) cannot be greater than segments.len()({}) at SegmentList::insert_waypoint",
                 pos,
                 self.segments.len()
             )))
@@ -155,7 +155,7 @@ impl SegmentList {
             Ok(())
         } else {
             Err(ApplicationError::DomainError(format!(
-                "pos({}) cannot be greater than segment.len()({})",
+                "pos({}) cannot be greater than or equal to segments.len()({}) at SegmentList::remove_waypoint",
                 pos,
                 self.segments.len()
             )))
