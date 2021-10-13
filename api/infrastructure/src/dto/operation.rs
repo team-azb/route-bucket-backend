@@ -7,6 +7,7 @@ use std::convert::TryFrom;
 #[derive(sqlx::FromRow, Getters)]
 #[get = "pub"]
 pub struct OperationDto {
+    id: String,
     route_id: String,
     index: u32,
     code: String,
@@ -46,6 +47,7 @@ impl OperationDto {
         let new_polyline: String = Polyline::from(operation.new_coord().clone()).into();
 
         Ok(OperationDto {
+            id: operation.id().to_string(),
             route_id: route_id.to_string(),
             index,
             code: operation.op_type().clone().into(),

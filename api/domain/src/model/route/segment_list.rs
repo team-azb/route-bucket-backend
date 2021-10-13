@@ -1,6 +1,5 @@
 use std::cmp::max;
 use std::convert::TryInto;
-use std::ops::Range;
 use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
@@ -24,9 +23,6 @@ mod segment;
 #[get = "pub"]
 pub struct SegmentList {
     segments: Vec<Segment>,
-    // TODO: この二つをなくす
-    removed_range: Option<Range<usize>>,
-    inserted_range: Option<Range<usize>>,
 }
 
 impl SegmentList {
@@ -105,7 +101,8 @@ impl SegmentList {
     }
 
     pub fn insert_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
-        if pos <= self.segments.len() {
+        let org_len = self.segments.len();
+        if pos <= org_len {
             if pos == 0 {
                 let goal = self
                     .segments
@@ -113,17 +110,17 @@ impl SegmentList {
                     .map(|seg| seg.start.clone())
                     .unwrap_or(coord.clone());
                 self.segments.insert(0, Segment::new_empty(coord, goal));
-                self.inserted_range.insert(0..1);
             } else {
-                let goal = if pos == self.segments.len() {
+                let org_seg = self.segments.remove(pos - 1);
+                let start = org_seg.start.clone();
+                let goal = if pos == org_len {
                     coord.clone()
                 } else {
-                    self.segments[pos - 1].goal.clone()
+                    org_seg.goal
                 };
-                self.segments[pos - 1].reset_endpoints(None, Some(coord.clone()));
+                self.segments
+                    .insert(pos - 1, Segment::new_empty(start, coord.clone()));
                 self.segments.insert(pos, Segment::new_empty(coord, goal));
-                self.inserted_range.insert(pos - 1..pos + 1);
-                self.removed_range.insert(pos - 1..pos);
             }
             Ok(())
         } else {
@@ -136,26 +133,25 @@ impl SegmentList {
     }
 
     pub fn remove_waypoint(&mut self, pos: usize) -> ApplicationResult<()> {
-        if self.segments.len() == 0 {
+        let org_len = self.segments.len();
+        if org_len == 0 {
             return Err(ApplicationError::DomainError(
                 "segments.len() cannot be 0 at SegmentList::remove_waypoint".into(),
             ));
         }
 
-        if pos <= self.segments.len() {
-            let removed_seg = self.segments.remove(pos);
+        if pos < org_len {
+            let org_second_seg = self.segments.remove(pos);
             if pos > 0 {
-                let goal = if pos == self.segments.len() {
-                    self.segments[pos - 1].start.clone()
+                let org_first_seg = self.segments.remove(pos - 1);
+                let start = org_first_seg.start.clone();
+                let goal = if pos == org_len - 1 {
+                    org_first_seg.start
                 } else {
-                    removed_seg.goal
+                    org_second_seg.goal
                 };
-                self.segments[pos - 1].reset_endpoints(None, Some(goal));
-                self.inserted_range.insert(pos - 1..pos);
-                self.removed_range.insert(pos - 1..pos + 1);
-            } else {
-                self.inserted_range.insert(pos..pos);
-                self.removed_range.insert(pos..pos + 1);
+                self.segments
+                    .insert(pos - 1, Segment::new_empty(start, goal));
             }
             Ok(())
         } else {
@@ -171,22 +167,7 @@ impl SegmentList {
         self.remove_waypoint(pos)?;
         self.insert_waypoint(pos, coord)?;
 
-        let range_start = pos.checked_sub(1).unwrap_or(0);
-        let range_end = pos.checked_add(1).unwrap_or(self.segments.len());
-        self.inserted_range.insert(range_start..range_end);
-        self.removed_range.insert(range_start..range_end);
-
         Ok(())
-    }
-
-    pub fn get_inserted_slice(&self) -> ApplicationResult<&[Segment]> {
-        if let Some(inserted_range) = self.inserted_range.clone() {
-            Ok(&self.segments[inserted_range])
-        } else {
-            Err(ApplicationError::DomainError(
-                "SegmentList still hasn't been inserted at get_inserted_slice".into(),
-            ))
-        }
     }
 
     pub fn gather_waypoints(&self) -> Vec<Coordinate> {
@@ -212,11 +193,7 @@ impl SegmentList {
 
 impl From<Vec<Segment>> for SegmentList {
     fn from(segments: Vec<Segment>) -> Self {
-        Self {
-            segments,
-            removed_range: None,
-            inserted_range: None,
-        }
+        Self { segments }
     }
 }
 

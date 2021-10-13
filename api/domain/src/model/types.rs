@@ -5,17 +5,12 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-// TODO: Value Object用のderive macroを作る
-// ↓みたいな一要素のタプル構造体たちにfrom, valueをデフォルトで実装したい
-// ただのgenericsでSelf(val)やself.0.clone()をしようとすると怒られるので、
-// derive macro + traitでやるしかなさそう
-
 #[derive(Display, Debug, Clone, Serialize, Deserialize)]
-pub struct RouteId(String);
+pub struct NanoId<const LEN: usize>(String);
 
-impl RouteId {
-    pub fn new() -> RouteId {
-        RouteId(nanoid!(11))
+impl<const LEN: usize> NanoId<LEN> {
+    pub fn new() -> Self {
+        Self(nanoid!(LEN))
     }
     pub fn from_string(id: String) -> Self {
         Self(id)
@@ -24,6 +19,11 @@ impl RouteId {
         self.0.clone()
     }
 }
+
+// TODO: Make this an derive macro (ex: #[derive(NanoId)])
+pub type RouteId = NanoId<11>;
+pub type SegmentId = NanoId<21>;
+pub type OperationId = NanoId<21>;
 
 #[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize)]
 pub struct Polyline(String);
