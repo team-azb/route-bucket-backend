@@ -2,7 +2,6 @@ use std::slice::IterMut;
 
 use derive_more::{From, Into};
 use getset::Getters;
-use gpx::{Gpx, GpxVersion};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
@@ -20,8 +19,9 @@ pub(crate) mod route_gpx;
 pub(crate) mod route_info;
 pub(crate) mod segment_list;
 
-#[derive(Debug, From, Into, Getters)]
+#[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
@@ -91,7 +91,7 @@ impl Route {
         Ok(())
     }
 
-    // methods from SegmentList
+    // methods from SegmentList ( No tests for them! )
 
     pub fn calc_elevation_gain(&self) -> Elevation {
         self.seg_list.calc_elevation_gain()
@@ -118,13 +118,161 @@ impl Route {
     }
 }
 
-impl From<Route> for Gpx {
-    fn from(route: Route) -> Self {
-        Gpx {
-            version: GpxVersion::Gpx11,
-            metadata: Some(route.info.into()),
-            tracks: vec![route.seg_list.into()],
-            ..Default::default()
+#[cfg(test)]
+pub(crate) mod tests {
+    use rstest::{fixture, rstest};
+
+    use crate::model::route::{
+        operation::tests::OperationFixtures, route_info::tests::RouteInfoFixtures,
+        segment_list::tests::SegmentListFixture,
+    };
+
+    use super::*;
+
+    #[fixture]
+    fn empty_route() -> Route {
+        Route::empty()
+    }
+
+    #[fixture]
+    fn full_route() -> Route {
+        Route::yokohama_to_chiba_via_tokyo()
+    }
+
+    #[fixture]
+    fn after_undo() -> Route {
+        Route::yokohama_to_chiba_after_undo()
+    }
+
+    #[rstest]
+    #[case::first(0, Operation::add_yokohama())]
+    #[case::middle(1, Operation::add_chiba())]
+    #[case::last(2, Operation::add_tokyo())]
+    fn can_get_operation(full_route: Route, #[case] pos: usize, #[case] expected: Operation) {
+        assert_eq!(full_route.get_operation(pos).unwrap().clone(), expected)
+    }
+
+    #[rstest]
+    fn cannot_get_operation_out_of_range(full_route: Route) {
+        assert!(matches!(
+            full_route.get_operation(3),
+            Err(ApplicationError::DomainError(_))
+        ))
+    }
+
+    #[rstest]
+    #[case::add(
+        Route::yokohama_to_chiba(),
+        Operation::add_tokyo(),
+        Route::yokohama_to_chiba_via_tokyo()
+    )]
+    #[case::remove(
+        Route::yokohama_to_chiba_via_tokyo(),
+        Operation::remove_tokyo(),
+        Route::yokohama_to_chiba_after_remove()
+    )]
+    #[case::move_(
+        Route::yokohama_to_chiba(),
+        Operation::move_chiba_to_tokyo(),
+        Route::yokohama_to_tokyo()
+    )]
+    #[case::truncate_op_list(
+        Route::yokohama_to_chiba_after_undo(),
+        Operation::move_chiba_to_tokyo(),
+        Route::yokohama_to_tokyo()
+    )]
+    fn can_push_operation(
+        #[case] mut route: Route,
+        #[case] op: Operation,
+        #[case] expected: Route,
+    ) {
+        route.push_operation(op).unwrap();
+        assert_eq!(route, expected)
+    }
+
+    #[rstest]
+    fn can_redo_operation(
+        #[from(after_undo)] mut route: Route,
+        #[from(full_route)] expected: Route,
+    ) {
+        route.redo_operation().unwrap();
+        assert_eq!(route, expected)
+    }
+
+    #[rstest]
+    #[case::empty(empty_route())]
+    #[case::full(full_route())]
+    fn cannot_redo_if_nothing_to_redo(#[case] mut route: Route) {
+        assert!(matches!(
+            route.redo_operation(),
+            // TODO: This might be an DomainError
+            // maybe this should be catched at UseCase
+            // and then converted into InvalidOperation
+            // => https://github.com/team-azb/route-bucket-backend/issues/81
+            Err(ApplicationError::InvalidOperation(_))
+        ))
+    }
+
+    #[rstest]
+    fn can_undo_operation(
+        #[from(full_route)] mut route: Route,
+        #[from(after_undo)] expected: Route,
+    ) {
+        route.undo_operation().unwrap();
+        assert_eq!(route, expected)
+    }
+
+    #[rstest]
+    fn cannot_undo_if_empty(mut empty_route: Route) {
+        assert!(matches!(
+            empty_route.redo_operation(),
+            Err(ApplicationError::InvalidOperation(_))
+        ))
+    }
+
+    macro_rules! init_route {
+        ($op_num:expr, $op_list_name:ident, $seg_list_name:ident) => {
+            Route {
+                info: RouteInfo::route0($op_num),
+                op_list: Operation::$op_list_name(),
+                seg_list: SegmentList::$seg_list_name(false, false, true),
+            }
+        };
+    }
+
+    pub trait RouteFixtures {
+        fn empty() -> Route {
+            Route {
+                info: RouteInfo::route0(0),
+                op_list: Vec::new(),
+                seg_list: SegmentList::empty(),
+            }
+        }
+
+        fn yokohama() -> Route {
+            init_route!(1, after_add_yokohama_op_list, yokohama)
+        }
+
+        fn yokohama_to_chiba() -> Route {
+            init_route!(2, after_add_chiba_op_list, yokohama_to_chiba)
+        }
+
+        fn yokohama_to_chiba_via_tokyo() -> Route {
+            init_route!(3, after_add_tokyo_op_list, yokohama_to_chiba_via_tokyo)
+        }
+
+        fn yokohama_to_chiba_after_remove() -> Route {
+            init_route!(4, after_remove_tokyo_op_list, yokohama_to_chiba)
+        }
+
+        fn yokohama_to_chiba_after_undo() -> Route {
+            init_route!(2, after_add_tokyo_op_list, yokohama_to_chiba)
+        }
+
+        fn yokohama_to_tokyo() -> Route {
+            init_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
         }
     }
+
+    impl RouteFixtures for Route {}
 }

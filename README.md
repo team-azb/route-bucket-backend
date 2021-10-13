@@ -21,13 +21,21 @@ This will start the following
 
 The root of the app will be at `http://localhost:8080/`.
 
-### (Optional) Add seed data to the DB
+## For Developpers
+### Testing
+Run
+```bash
+make test
+```
+to run [cargo-test](https://doc.rust-lang.org/cargo/commands/cargo-test.html) on the docker container.
+
+### Add seed data to the DB
 ```bash
 make seed
 ```
 See `api/src/bin/seed.rs`.
 
-### (Optional) Change DB schema
+### Change DB schema
 After modifying `db/schema.sql`, run
 ```bash
 make migrate-dry-run

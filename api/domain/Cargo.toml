@@ -23,3 +23,7 @@ rayon = "1.5.1"
 route-bucket-utils = { path = "../utils" }
 serde = { version = "1.0.124", features = ["derive"] }
 
+[dev-dependencies]
+derivative = "2.2.0"
+rstest = "0.11.0"
+

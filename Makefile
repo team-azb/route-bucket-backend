@@ -17,6 +17,9 @@ start-without-api:
 seed:
 	docker-compose run api /app/target/release/seed
 
+test:
+	docker-compose run api cargo test --all
+
 migrate: $(db_manager)
 	docker-compose run db_manager \
 		mysqldef --host=db --password=password \

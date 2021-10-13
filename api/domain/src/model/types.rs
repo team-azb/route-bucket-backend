@@ -1,11 +1,13 @@
+use std::convert::TryFrom;
+
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
-use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
-#[derive(Display, Debug, Clone, Serialize, Deserialize)]
+use route_bucket_utils::{ApplicationError, ApplicationResult};
+
+#[derive(Display, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct NanoId<const LEN: usize>(String);
 
 impl<const LEN: usize> NanoId<LEN> {
@@ -25,7 +27,7 @@ pub type RouteId = NanoId<11>;
 pub type SegmentId = NanoId<21>;
 pub type OperationId = NanoId<21>;
 
-#[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize)]
+#[derive(Display, From, Into, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Polyline(String);
 
 impl Polyline {
