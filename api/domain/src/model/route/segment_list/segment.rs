@@ -1,14 +1,25 @@
 use std::convert::TryFrom;
 use std::slice::{Iter, IterMut};
+use std::str::FromStr;
 
 use derive_more::IntoIterator;
 use getset::Getters;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::types::SegmentId;
 use crate::model::{Coordinate, Distance, Polyline};
+
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum DrawingMode {
+    FollowRoad,
+    Freehand,
+}
 
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
@@ -25,16 +36,19 @@ pub struct Segment {
     pub(super) start: Coordinate,
     #[serde(skip_serializing)]
     pub(super) goal: Coordinate,
+    #[serde(skip_serializing)]
+    pub(super) mode: DrawingMode,
     #[into_iterator(owned)]
     pub(super) points: Vec<Coordinate>,
 }
 
 impl Segment {
-    pub fn new_empty(start: Coordinate, goal: Coordinate) -> Self {
+    pub fn new_empty(start: Coordinate, goal: Coordinate, mode: DrawingMode) -> Self {
         Self {
             id: SegmentId::new(),
             start,
             goal,
+            mode,
             points: Vec::new(),
         }
     }
@@ -71,18 +85,23 @@ impl Segment {
     }
 }
 
-impl TryFrom<(String, String)> for Segment {
+impl TryFrom<(String, String, String)> for Segment {
     type Error = ApplicationError;
 
-    fn try_from((id_str, polyline_str): (String, String)) -> ApplicationResult<Self> {
-        let err = ApplicationError::DomainError(
+    fn try_from(
+        (id_str, mode_str, polyline_str): (String, String, String),
+    ) -> ApplicationResult<Self> {
+        let empty_err = ApplicationError::DomainError(
             "Cannot Initialize Segment from an empty Vec<Coordinate>!".into(),
         );
         let points = Vec::try_from(Polyline::from(polyline_str))?;
         Ok(Segment {
             id: SegmentId::from_string(id_str),
-            start: points.first().ok_or_else(|| err.clone())?.clone(),
-            goal: points.last().ok_or(err)?.clone(),
+            start: points.first().ok_or_else(|| empty_err.clone())?.clone(),
+            goal: points.last().ok_or(empty_err)?.clone(),
+            mode: DrawingMode::from_str(&mode_str).map_err(|_| {
+                ApplicationError::DomainError(format!("Invalid mode: {}", mode_str))
+            })?,
             points,
         })
     }
@@ -98,12 +117,12 @@ pub(crate) mod tests {
 
     #[fixture]
     fn yokohama_to_tokyo() -> Segment {
-        Segment::yokohama_to_tokyo(true, Some(0.), false)
+        Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::FollowRoad)
     }
 
     #[fixture]
     fn yokohama_to_tokyo_empty() -> Segment {
-        Segment::yokohama_to_tokyo(false, None, true)
+        Segment::yokohama_to_tokyo(false, None, true, DrawingMode::FollowRoad)
     }
 
     #[fixture]
@@ -143,19 +162,39 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case("yokohama-to-tokyo____".into(), "{inwE}uesYcoh@u|Z".into(), Segment::yokohama_to_tokyo(false, None, false))]
+    #[case::follow_road("follow_road", DrawingMode::FollowRoad)]
+    #[case::freehand("freehand", DrawingMode::Freehand)]
+    fn valid_str_can_be_converted_to_drawing_mode(
+        #[case] valid_str: &str,
+        #[case] expected_mode: DrawingMode,
+    ) {
+        assert_eq!(DrawingMode::from_str(valid_str), Ok(expected_mode))
+    }
+
+    #[rstest]
+    #[case("unknown")]
+    fn unknown_str_cannot_be_converted_to_drawing_mode(#[case] unknown_str: &str) {
+        assert!(matches!(
+            DrawingMode::from_str(unknown_str),
+            Err(strum::ParseError::VariantNotFound)
+        ))
+    }
+
+    #[rstest]
+    #[case("yokohama-to-tokyo____".into(), "follow_road".into(), "{inwE}uesYcoh@u|Z".into(), Segment::yokohama_to_tokyo(false, None, false, DrawingMode::FollowRoad))]
     fn pair_of_string_can_be_converted_to_segment(
         #[case] id: String,
+        #[case] mode: String,
         #[case] polyline: String,
         #[case] expected_seg: Segment,
     ) {
-        let convert_result = Segment::try_from((id.clone(), polyline));
+        let convert_result = Segment::try_from((id.clone(), mode, polyline));
         assert_eq!(convert_result, Ok(expected_seg));
         assert_eq!(convert_result.unwrap().id.to_string(), id);
     }
 
     macro_rules! point_segment {
-        ($fix_name:ident, $set_ele:expr, $dist_offset:expr, $init_empty:expr) => {
+        ($fix_name:ident, $set_ele:expr, $dist_offset:expr, $init_empty:expr, $mode:expr) => {
             Segment {
                 id: SegmentId::from_string(format!("{:_<21}", stringify!($fix_name))),
                 start: Coordinate::$fix_name(false, None),
@@ -165,12 +204,18 @@ pub(crate) mod tests {
                 } else {
                     vec![Coordinate::$fix_name($set_ele, $dist_offset)]
                 },
+                mode: $mode,
             }
         };
     }
 
     pub trait SegmentFixtures {
-        fn yokohama_to_tokyo(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+        fn yokohama_to_tokyo(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
             Segment {
                 id: SegmentId::from_string("yokohama-to-tokyo____".into()),
                 start: Coordinate::yokohama(false, None),
@@ -180,10 +225,16 @@ pub(crate) mod tests {
                 } else {
                     Coordinate::yokohama_to_tokyo_coords(set_ele, dist_offset)
                 },
+                mode,
             }
         }
 
-        fn tokyo_to_chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+        fn tokyo_to_chiba(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
             Segment {
                 id: SegmentId::from_string("tokyo-to-chiba_______".into()),
                 start: Coordinate::tokyo(false, None),
@@ -193,10 +244,16 @@ pub(crate) mod tests {
                 } else {
                     Coordinate::tokyo_to_chiba_coords(set_ele, dist_offset)
                 },
+                mode,
             }
         }
 
-        fn yokohama_to_chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
+        fn yokohama_to_chiba(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
             Segment {
                 id: SegmentId::from_string("yokohama-to-chiba____".into()),
                 start: Coordinate::yokohama(false, None),
@@ -206,19 +263,35 @@ pub(crate) mod tests {
                 } else {
                     Coordinate::yokohama_to_chiba_coords(set_ele, dist_offset)
                 },
+                mode,
             }
         }
 
-        fn yokohama(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
-            point_segment!(yokohama, set_ele, dist_offset, init_empty)
+        fn yokohama(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
+            point_segment!(yokohama, set_ele, dist_offset, init_empty, mode)
         }
 
-        fn tokyo(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
-            point_segment!(tokyo, set_ele, dist_offset, init_empty)
+        fn tokyo(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
+            point_segment!(tokyo, set_ele, dist_offset, init_empty, mode)
         }
 
-        fn chiba(set_ele: bool, dist_offset: Option<f64>, init_empty: bool) -> Segment {
-            point_segment!(chiba, set_ele, dist_offset, init_empty)
+        fn chiba(
+            set_ele: bool,
+            dist_offset: Option<f64>,
+            init_empty: bool,
+            mode: DrawingMode,
+        ) -> Segment {
+            point_segment!(chiba, set_ele, dist_offset, init_empty, mode)
         }
     }
 

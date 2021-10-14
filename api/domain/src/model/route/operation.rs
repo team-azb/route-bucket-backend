@@ -1,22 +1,26 @@
-use std::convert::TryFrom;
 use std::mem::swap;
 
+use derive_more::{From, Into};
 use getset::Getters;
+use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::types::OperationId;
 
 use super::coordinate::Coordinate;
-use super::segment_list::SegmentList;
+use super::segment_list::{DrawingMode, Segment, SegmentList};
 
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 pub enum OperationType {
+    #[strum(serialize = "ad")]
     Add,
+    #[strum(serialize = "rm")]
     Remove,
+    #[strum(serialize = "mv")]
     Move,
 }
 
@@ -30,30 +34,30 @@ impl OperationType {
     }
 }
 
-impl TryFrom<String> for OperationType {
-    type Error = ApplicationError;
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, From, Into)]
+pub struct SegmentTemplate {
+    start: Coordinate,
+    goal: Coordinate,
+    mode: DrawingMode,
+}
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
-            "ad" => Ok(OperationType::Add),
-            "rm" => Ok(OperationType::Remove),
-            "mv" => Ok(OperationType::Move),
-            _ => Err(ApplicationError::DomainError(format!(
-                "Cannot convert {} into OperationType!",
-                value
-            ))),
-        }
+impl SegmentTemplate {
+    pub fn new(start: Coordinate, goal: Coordinate, mode: DrawingMode) -> Self {
+        Self { start, goal, mode }
+    }
+
+    pub fn from_segment(segment: &Segment) -> Self {
+        Self::new(
+            segment.start().clone(),
+            segment.goal().clone(),
+            *segment.mode(),
+        )
     }
 }
 
-impl From<OperationType> for String {
-    fn from(value: OperationType) -> Self {
-        match value {
-            OperationType::Add => "ad",
-            OperationType::Remove => "rm",
-            OperationType::Move => "mv",
-        }
-        .into()
+impl From<SegmentTemplate> for Segment {
+    fn from(template: SegmentTemplate) -> Self {
+        Segment::new_empty(template.start, template.goal, template.mode)
     }
 }
 
@@ -64,64 +68,160 @@ impl From<OperationType> for String {
 pub struct Operation {
     #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
     id: OperationId,
+    // NOTE: typeはロジック的には不要だが、デバッグ用に残している
     op_type: OperationType,
     pos: usize,
-    org_coord: Option<Coordinate>,
-    new_coord: Option<Coordinate>,
+    org_seg_templates: Vec<SegmentTemplate>,
+    new_seg_templates: Vec<SegmentTemplate>,
 }
 
 impl Operation {
     pub fn new(
         op_type: OperationType,
         pos: usize,
-        org_coord: Option<Coordinate>,
-        new_coord: Option<Coordinate>,
+        org_seg_templates: Vec<SegmentTemplate>,
+        new_seg_templates: Vec<SegmentTemplate>,
     ) -> Self {
         Self {
             id: OperationId::new(),
             op_type,
             pos,
-            org_coord,
-            new_coord,
+            org_seg_templates,
+            new_seg_templates,
         }
     }
 
-    pub fn new_add(pos: usize, coord: Coordinate) -> Self {
-        Self::new(OperationType::Add, pos, None, Some(coord))
+    pub fn new_add(
+        pos: usize,
+        coord: Coordinate,
+        org_seg_list: &SegmentList,
+        mode: DrawingMode,
+    ) -> ApplicationResult<Self> {
+        let mut org_seg_templates = Vec::new();
+        let mut new_seg_templates = Vec::new();
+
+        if pos <= org_seg_list.len() {
+            if pos > 0 {
+                let org_seg = &org_seg_list.segments[pos - 1];
+                let start = org_seg.start();
+                org_seg_templates = vec![SegmentTemplate::from_segment(org_seg)];
+                new_seg_templates = vec![SegmentTemplate::new(start.clone(), coord.clone(), mode)];
+            }
+
+            let goal = org_seg_list
+                .segments
+                .get(pos)
+                .map(Segment::start)
+                .unwrap_or_else(|| &coord);
+
+            new_seg_templates.push(SegmentTemplate::new(coord.clone(), goal.clone(), mode));
+        } else {
+            return Err(ApplicationError::DomainError(format!(
+                "pos({}) cannot be greater than org_seg_list.len()({}) at Operation::new_add",
+                pos,
+                org_seg_list.len()
+            )));
+        }
+
+        Ok(Self::new(
+            OperationType::Add,
+            pos.saturating_sub(1),
+            org_seg_templates,
+            new_seg_templates,
+        ))
     }
 
-    pub fn new_remove(pos: usize, org_waypoints: Vec<Coordinate>) -> Self {
-        let org = org_waypoints[pos].clone();
-        Self::new(OperationType::Remove, pos, Some(org), None)
+    pub fn new_remove(
+        pos: usize,
+        org_seg_list: &SegmentList,
+        mode: DrawingMode,
+    ) -> ApplicationResult<Self> {
+        let mut org_seg_templates = Vec::new();
+        let mut new_seg_templates = Vec::new();
+
+        if pos < org_seg_list.len() {
+            if pos > 0 {
+                let start = org_seg_list.segments[pos - 1].start();
+                let goal = org_seg_list.segments[pos].goal();
+                org_seg_templates = vec![SegmentTemplate::from_segment(
+                    &org_seg_list.segments[pos - 1],
+                )];
+                new_seg_templates = vec![SegmentTemplate::new(start.clone(), goal.clone(), mode)];
+            }
+
+            org_seg_templates.push(SegmentTemplate::from_segment(&org_seg_list.segments[pos]));
+        } else {
+            return Err(ApplicationError::DomainError(format!(
+                "pos({}) cannot be greater than or equal to org_seg_list.len()({}) at Operation::new_remove",
+                pos,
+                org_seg_list.len()
+            )));
+        }
+
+        Ok(Self::new(
+            OperationType::Remove,
+            pos.saturating_sub(1),
+            org_seg_templates,
+            new_seg_templates,
+        ))
     }
 
-    pub fn new_move(pos: usize, coord: Coordinate, org_waypoints: Vec<Coordinate>) -> Self {
-        let org = org_waypoints[pos].clone();
-        Self::new(OperationType::Move, pos, Some(org), Some(coord))
+    pub fn new_move(
+        pos: usize,
+        coord: Coordinate,
+        org_seg_list: &SegmentList,
+        mode: DrawingMode,
+    ) -> ApplicationResult<Self> {
+        let mut org_seg_templates = Vec::new();
+        let mut new_seg_templates = Vec::new();
+
+        if pos < org_seg_list.len() {
+            if pos > 0 {
+                let start = org_seg_list.segments[pos - 1].start();
+                org_seg_templates = vec![SegmentTemplate::from_segment(
+                    &org_seg_list.segments[pos - 1],
+                )];
+                new_seg_templates = vec![SegmentTemplate::new(start.clone(), coord.clone(), mode)];
+            }
+
+            let goal = org_seg_list
+                .segments
+                .get(pos + 1)
+                .map(Segment::start)
+                .unwrap_or_else(|| &coord);
+
+            org_seg_templates.push(SegmentTemplate::from_segment(&org_seg_list.segments[pos]));
+            new_seg_templates.push(SegmentTemplate::new(coord.clone(), goal.clone(), mode));
+        } else {
+            return Err(ApplicationError::DomainError(format!(
+                "pos({}) cannot be greater than or equal to org_seg_list.len()({}) at Operation::new_move",
+                pos,
+                org_seg_list.len()
+            )));
+        }
+
+        Ok(Self::new(
+            OperationType::Move,
+            pos.saturating_sub(1),
+            org_seg_templates,
+            new_seg_templates,
+        ))
     }
 
     pub fn apply(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
-        match self.op_type {
-            OperationType::Remove => seg_list.remove_waypoint(self.pos),
-            OperationType::Add | OperationType::Move => {
-                if let Some(new_coord) = self.new_coord.clone() {
-                    if self.op_type == OperationType::Add {
-                        seg_list.insert_waypoint(self.pos, new_coord)
-                    } else {
-                        seg_list.move_waypoint(self.pos, new_coord)
-                    }
-                } else {
-                    Err(ApplicationError::DomainError(
-                        "OperationType::{Add | Move} must have new_coord!".into(),
-                    ))
-                }
-            }
-        }
+        seg_list.splice(
+            self.pos..self.pos + self.org_seg_templates.len(),
+            self.new_seg_templates
+                .iter()
+                .map(Clone::clone)
+                .map(Segment::from),
+        );
+        Ok(())
     }
 
     pub fn reverse(&mut self) {
         self.op_type = self.op_type.reverse();
-        swap(&mut self.org_coord, &mut self.new_coord);
+        swap(&mut self.org_seg_templates, &mut self.new_seg_templates);
     }
 }
 
@@ -135,6 +235,16 @@ pub(crate) mod tests {
     use crate::model::route::segment_list::tests::SegmentListFixture;
 
     use super::*;
+
+    macro_rules! init_template {
+        ($start:ident, $goal:ident, $mode:ident) => {
+            SegmentTemplate::new(
+                Coordinate::$start(false, None),
+                Coordinate::$goal(false, None),
+                DrawingMode::$mode,
+            )
+        };
+    }
 
     #[fixture]
     fn add_tokyo() -> Operation {
@@ -153,10 +263,56 @@ pub(crate) mod tests {
 
     #[fixture]
     fn move_tokyo_to_chiba() -> Operation {
-        Operation::new_move(
-            1,
-            Coordinate::chiba(false, None),
-            Coordinate::yokohama_to_tokyo_coords(false, None),
+        Operation {
+            id: OperationId::new(),
+            op_type: OperationType::Move,
+            pos: 0,
+            org_seg_templates: vec![
+                init_template!(yokohama, tokyo, Freehand),
+                init_template!(tokyo, tokyo, Freehand),
+            ],
+            new_seg_templates: vec![
+                init_template!(yokohama, chiba, FollowRoad),
+                init_template!(chiba, chiba, FollowRoad),
+            ],
+        }
+    }
+
+    #[rstest]
+    fn can_new_add() {
+        assert_eq!(
+            Operation::new_add(
+                1,
+                Coordinate::tokyo(false, None),
+                &SegmentList::yokohama_to_chiba(false, false, true),
+                DrawingMode::Freehand,
+            ),
+            Ok(add_tokyo())
+        )
+    }
+
+    #[rstest]
+    fn can_new_remove() {
+        assert_eq!(
+            Operation::new_remove(
+                1,
+                &SegmentList::yokohama_to_chiba_via_tokyo(false, false, true),
+                DrawingMode::FollowRoad,
+            ),
+            Ok(remove_tokyo())
+        )
+    }
+
+    #[rstest]
+    fn can_new_move() {
+        assert_eq!(
+            Operation::new_move(
+                1,
+                Coordinate::tokyo(false, None),
+                &SegmentList::yokohama_to_chiba(false, false, true),
+                DrawingMode::Freehand,
+            ),
+            Ok(move_chiba_to_tokyo())
         )
     }
 
@@ -201,30 +357,68 @@ pub(crate) mod tests {
     }
     pub trait OperationFixtures {
         fn add_yokohama() -> Operation {
-            Operation::new_add(0, Coordinate::yokohama(false, None))
+            Operation {
+                id: OperationId::new(),
+                op_type: OperationType::Add,
+                pos: 0,
+                org_seg_templates: vec![],
+                new_seg_templates: vec![init_template!(yokohama, yokohama, FollowRoad)],
+            }
         }
 
         fn add_chiba() -> Operation {
-            Operation::new_add(1, Coordinate::chiba(false, None))
+            Operation {
+                id: OperationId::new(),
+                op_type: OperationType::Add,
+                pos: 0,
+                org_seg_templates: vec![init_template!(yokohama, yokohama, FollowRoad)],
+                new_seg_templates: vec![
+                    init_template!(yokohama, chiba, FollowRoad),
+                    init_template!(chiba, chiba, FollowRoad),
+                ],
+            }
         }
 
         fn add_tokyo() -> Operation {
-            Operation::new_add(1, Coordinate::tokyo(false, None))
+            Operation {
+                id: OperationId::new(),
+                op_type: OperationType::Add,
+                pos: 0,
+                org_seg_templates: vec![init_template!(yokohama, chiba, FollowRoad)],
+                new_seg_templates: vec![
+                    init_template!(yokohama, tokyo, Freehand),
+                    init_template!(tokyo, chiba, Freehand),
+                ],
+            }
         }
 
         fn remove_tokyo() -> Operation {
-            Operation::new_remove(
-                1,
-                Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
-            )
+            Operation {
+                id: OperationId::new(),
+                op_type: OperationType::Remove,
+                pos: 0,
+                org_seg_templates: vec![
+                    init_template!(yokohama, tokyo, Freehand),
+                    init_template!(tokyo, chiba, Freehand),
+                ],
+                new_seg_templates: vec![init_template!(yokohama, chiba, FollowRoad)],
+            }
         }
 
         fn move_chiba_to_tokyo() -> Operation {
-            Operation::new_move(
-                1,
-                Coordinate::tokyo(false, None),
-                Coordinate::yokohama_to_chiba_coords(false, None),
-            )
+            Operation {
+                id: OperationId::new(),
+                op_type: OperationType::Move,
+                pos: 0,
+                org_seg_templates: vec![
+                    init_template!(yokohama, chiba, FollowRoad),
+                    init_template!(chiba, chiba, FollowRoad),
+                ],
+                new_seg_templates: vec![
+                    init_template!(yokohama, tokyo, Freehand),
+                    init_template!(tokyo, tokyo, Freehand),
+                ],
+            }
         }
 
         fn after_add_yokohama_op_list() -> Vec<Operation> {
