@@ -11,6 +11,7 @@ CREATE TABLE segments
     `id`       VARCHAR(21)                        NOT NULL,
     `route_id` VARCHAR(11)                        NOT NULL,
     `index`    INTEGER UNSIGNED                   NOT NULL,
+    `mode`     VARCHAR(15)    CHARACTER SET ascii NOT NULL,
     `polyline` VARCHAR(65000) CHARACTER SET ascii NOT NULL,
     INDEX segment_idx (`route_id`, `index`),
     PRIMARY KEY (`id`)
@@ -23,7 +24,8 @@ CREATE TABLE operations
     `index`    INTEGER UNSIGNED                   NOT NULL,
     `code`     CHAR(2) CHARACTER SET ascii        NOT NULL,
     `pos`      INTEGER UNSIGNED                   NOT NULL,
-    `polyline` VARCHAR(30) CHARACTER SET ascii NOT NULL,
+    `org_seg_templates` JSON                      NOT NULL,
+    `new_seg_templates` JSON                      NOT NULL,
     INDEX segment_idx (`route_id`, `index`),
     PRIMARY KEY (`id`)
 );

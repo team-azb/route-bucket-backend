@@ -2109,6 +2109,7 @@ dependencies = [
  "reqwest",
  "route-bucket-domain",
  "route-bucket-utils",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",
@@ -2329,6 +2330,7 @@ version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
 dependencies = [
+ "indexmap",
  "itoa",
  "ryu",
  "serde",
@@ -2484,6 +2486,8 @@ dependencies = [
  "percent-encoding",
  "rand 0.8.4",
  "rsa",
+ "serde",
+ "serde_json",
  "sha-1",
  "sha2",
  "smallvec",
@@ -2509,6 +2513,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
+ "serde_json",
  "sha2",
  "sqlx-core",
  "sqlx-rt",
