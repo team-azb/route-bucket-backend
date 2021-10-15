@@ -61,8 +61,20 @@ impl Segment {
             .unwrap_or_else(Distance::zero)
     }
 
-    pub fn set_points(&mut self, points: Vec<Coordinate>) -> ApplicationResult<()> {
+    pub fn set_points(&mut self, mut points: Vec<Coordinate>) -> ApplicationResult<()> {
         if self.is_empty() {
+            match points.first() {
+                Some(coord) if *coord == self.start => (),
+                _ => {
+                    points.insert(0, self.start.clone());
+                }
+            }
+            match points.last() {
+                Some(coord) if *coord == self.goal => (),
+                _ => {
+                    points.push(self.goal.clone());
+                }
+            }
             self.points = points;
             Ok(())
         } else {
@@ -117,6 +129,11 @@ pub(crate) mod tests {
 
     #[fixture]
     fn yokohama_to_tokyo() -> Segment {
+        Segment::yokohama_to_tokyo(false, None, false, DrawingMode::FollowRoad)
+    }
+
+    #[fixture]
+    fn yokohama_to_tokyo_verbose() -> Segment {
         Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::FollowRoad)
     }
 
@@ -132,7 +149,7 @@ pub(crate) mod tests {
 
     #[rstest]
     #[case::empty_segment(yokohama_to_tokyo_empty(), 0.)]
-    #[case::yokohama_to_tokyo(yokohama_to_tokyo(), 26936.42633640023)]
+    #[case::yokohama_to_tokyo(yokohama_to_tokyo_verbose(), 26936.42633640023)]
     fn can_return_last_distance_from_start_as_distance(
         #[case] seg: Segment,
         #[case] expected: f64,
@@ -141,9 +158,11 @@ pub(crate) mod tests {
     }
 
     #[rstest]
+    #[case::set_empty(Vec::new())]
+    #[case::set_yokohama_to_tokyo(Coordinate::yokohama_to_tokyo_coords(false, None))]
     fn can_set_points(
         #[from(yokohama_to_tokyo_empty)] mut empty_seg: Segment,
-        #[from(yokohama_to_tokyo_coords)] points: Vec<Coordinate>,
+        #[case] points: Vec<Coordinate>,
         #[from(yokohama_to_tokyo)] expected_segment: Segment,
     ) {
         empty_seg.set_points(points).unwrap();
@@ -152,7 +171,7 @@ pub(crate) mod tests {
 
     #[rstest]
     fn cannot_set_points_twice(
-        #[from(yokohama_to_tokyo)] mut filled_seg: Segment,
+        #[from(yokohama_to_tokyo_verbose)] mut filled_seg: Segment,
         #[from(yokohama_to_tokyo_coords)] points: Vec<Coordinate>,
     ) {
         assert!(matches!(
@@ -181,7 +200,7 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case("yokohama-to-tokyo____".into(), "follow_road".into(), "{inwE}uesYcoh@u|Z".into(), Segment::yokohama_to_tokyo(false, None, false, DrawingMode::FollowRoad))]
+    #[case("yokohama-to-tokyo____".into(), "follow_road".into(), "{inwE}uesYcoh@u|Z".into(), yokohama_to_tokyo())]
     fn pair_of_string_can_be_converted_to_segment(
         #[case] id: String,
         #[case] mode: String,
