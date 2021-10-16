@@ -44,6 +44,7 @@ pub trait RouteUseCase {
         &self,
         route_id: &RouteId,
         pos: usize,
+        req: &RemovePointRequest,
     ) -> ApplicationResult<RouteOperationResponse>;
 
     async fn move_point(
@@ -144,9 +145,11 @@ where
                 let op = Operation::new_add(
                     pos,
                     self.route_interpolation_api()
-                        .correct_coordinate(&req.coord)
+                        .correct_coordinate(&req.coord, req.mode)
                         .await?,
-                );
+                    route.seg_list(),
+                    req.mode,
+                )?;
                 route.push_operation(op)?;
 
                 self.route_interpolation_api()
@@ -168,12 +171,13 @@ where
         &self,
         route_id: &RouteId,
         pos: usize,
+        req: &RemovePointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                let op = Operation::new_remove(pos, route.gather_waypoints());
+                let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
                 route.push_operation(op)?;
 
                 self.route_interpolation_api()
@@ -204,10 +208,11 @@ where
                 let op = Operation::new_move(
                     pos,
                     self.route_interpolation_api()
-                        .correct_coordinate(&req.coord)
+                        .correct_coordinate(&req.coord, req.mode)
                         .await?,
-                    route.gather_waypoints(),
-                );
+                    route.seg_list(),
+                    req.mode,
+                )?;
                 route.push_operation(op)?;
 
                 self.route_interpolation_api()
@@ -308,7 +313,7 @@ mod tests {
                 CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
                 RouteInfoFixtures, SegmentFixtures,
             },
-            Coordinate, RouteGpx, Segment,
+            Coordinate, DrawingMode, RouteGpx, Segment,
         },
         repository::{MockConnection, MockRouteRepository},
     };
@@ -333,8 +338,8 @@ mod tests {
                 Operation::after_remove_tokyo_op_list()
             },
             vec![
-                Segment::yokohama_to_chiba(false, None, true),
-                Segment::chiba(false, None, false),
+                Segment::yokohama_to_chiba(false, None, true, DrawingMode::FollowRoad),
+                Segment::chiba(false, None, false, DrawingMode::FollowRoad),
             ]
             .into(),
         )
@@ -345,9 +350,9 @@ mod tests {
             RouteInfo::route0(3),
             Operation::after_add_tokyo_op_list(),
             vec![
-                Segment::yokohama_to_tokyo(false, None, true),
-                Segment::tokyo_to_chiba(false, None, true),
-                Segment::chiba(false, None, false),
+                Segment::yokohama_to_tokyo(false, None, true, DrawingMode::Freehand),
+                Segment::tokyo_to_chiba(false, None, true, DrawingMode::Freehand),
+                Segment::chiba(false, None, false, DrawingMode::FollowRoad),
             ]
             .into(),
         )
@@ -441,6 +446,7 @@ mod tests {
     #[tokio::test]
     async fn can_add_point() {
         let req = NewPointRequest {
+            mode: DrawingMode::Freehand,
             coord: tokyo_before_correction(),
         };
 
@@ -451,6 +457,7 @@ mod tests {
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
             tokyo_before_correction(),
+            DrawingMode::Freehand,
             Coordinate::tokyo(false, None),
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -474,6 +481,9 @@ mod tests {
     #[rstest]
     #[tokio::test]
     async fn can_remove_point() {
+        let req = RemovePointRequest {
+            mode: DrawingMode::FollowRoad,
+        };
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_find_at_route_repository(
             route_id(),
@@ -490,7 +500,7 @@ mod tests {
         usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_filled(true, true));
 
         assert_eq!(
-            usecase.remove_point(&route_id(), 1).await,
+            usecase.remove_point(&route_id(), 1, &req).await,
             Route::yokohama_to_chiba_filled(true, true).try_into()
         );
     }
@@ -499,6 +509,7 @@ mod tests {
     #[tokio::test]
     async fn can_move_point() {
         let req = NewPointRequest {
+            mode: DrawingMode::Freehand,
             coord: tokyo_before_correction(),
         };
 
@@ -509,6 +520,7 @@ mod tests {
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
             tokyo_before_correction(),
+            DrawingMode::Freehand,
             Coordinate::tokyo(false, None),
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -652,12 +664,14 @@ mod tests {
         fn expect_correct_coordinate_at_interpolation_api(
             &mut self,
             param_coord: Coordinate,
+            param_mode: DrawingMode,
             return_coord: Coordinate,
         ) {
             expect_once!(
                 self.interpolation_api,
                 correct_coordinate,
                 param_coord,
+                param_mode,
                 return_coord
             );
         }

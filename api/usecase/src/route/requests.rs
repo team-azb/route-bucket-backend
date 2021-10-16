@@ -1,7 +1,7 @@
 use derive_more::From;
 use serde::Deserialize;
 
-use route_bucket_domain::model::Coordinate;
+use route_bucket_domain::model::{Coordinate, DrawingMode};
 
 #[derive(From, Deserialize)]
 pub struct RouteCreateRequest {
@@ -10,7 +10,13 @@ pub struct RouteCreateRequest {
 
 #[derive(From, Deserialize)]
 pub struct NewPointRequest {
+    pub(super) mode: DrawingMode,
     pub(super) coord: Coordinate,
+}
+
+#[derive(From, Deserialize)]
+pub struct RemovePointRequest {
+    pub(super) mode: DrawingMode,
 }
 
 #[derive(From, Deserialize)]

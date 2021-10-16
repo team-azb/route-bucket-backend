@@ -79,6 +79,7 @@ mod tests {
     use route_bucket_domain::model::fixtures::{
         BoundingBoxFixture, CoordinateFixtures, RouteFixtures, RouteInfoFixtures, SegmentFixtures,
     };
+    use route_bucket_domain::model::DrawingMode;
     use rstest::rstest;
     use std::convert::TryInto;
 
@@ -96,14 +97,15 @@ mod tests {
     }
 
     fn full_route_get_resp() -> RouteGetResponse {
+        let dist = 26936.42633640023;
         RouteGetResponse {
             route_info: RouteInfo::route0(3),
             waypoints: Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
             elevation_gain: 10.try_into().unwrap(),
             total_distance: 58759.973932514884.try_into().unwrap(),
             segments: vec![
-                Segment::yokohama_to_tokyo(true, Some(0.), false),
-                Segment::tokyo_to_chiba(true, Some(26936.42633640023), false),
+                Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
+                Segment::tokyo_to_chiba(true, Some(dist), false, DrawingMode::Freehand),
             ],
             bounding_box: Some(BoundingBox::yokohama_to_chiba_via_tokyo()),
         }
@@ -119,13 +121,14 @@ mod tests {
     }
 
     fn full_route_operation_resp() -> RouteOperationResponse {
+        let dist = 26936.42633640023;
         RouteOperationResponse {
             waypoints: Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
             elevation_gain: 10.try_into().unwrap(),
             total_distance: 58759.973932514884.try_into().unwrap(),
             segments: vec![
-                Segment::yokohama_to_tokyo(true, Some(0.), false),
-                Segment::tokyo_to_chiba(true, Some(26936.42633640023), false),
+                Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
+                Segment::tokyo_to_chiba(true, Some(dist), false, DrawingMode::Freehand),
             ],
         }
     }
