@@ -305,7 +305,7 @@ pub(crate) mod tests {
     #[case::yokohama_to_chiba_via_tokyo(
         yokohama_to_chiba_via_tokyo_verbose(),
         vec![
-            Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand), 
+            Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
             Segment::tokyo_to_chiba(true, Some(26936.42633640023), false, DrawingMode::Freehand)
         ]
     )]
