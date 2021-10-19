@@ -19,7 +19,7 @@ mod segment;
 
 #[derive(Clone, Debug, Serialize, Getters)]
 #[get = "pub"]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct SegmentList {
     pub(super) segments: Vec<Segment>,
 }
@@ -202,12 +202,13 @@ impl From<SegmentList> for Vec<Segment> {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
+    #[cfg(test)]
     use crate::model::route::coordinate::tests::CoordinateFixtures;
-    use crate::model::route::segment_list::segment::tests::SegmentFixtures;
+    pub use crate::model::route::segment_list::segment::tests::SegmentFixtures;
 
     use super::*;
 

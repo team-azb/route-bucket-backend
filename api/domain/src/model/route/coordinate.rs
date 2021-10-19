@@ -144,7 +144,7 @@ impl HaversineDistance<Distance> for Coordinate {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 

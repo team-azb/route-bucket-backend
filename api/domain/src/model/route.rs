@@ -21,7 +21,7 @@ pub(crate) mod segment_list;
 
 #[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct Route {
     info: RouteInfo,
     op_list: Vec<Operation>,
@@ -118,7 +118,7 @@ impl Route {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
@@ -271,6 +271,30 @@ pub(crate) mod tests {
 
         fn yokohama_to_tokyo() -> Route {
             init_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
+        }
+
+        fn yokohama_to_chiba_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(2),
+                Operation::after_add_tokyo_op_list(),
+                SegmentList::yokohama_to_chiba(set_ele, set_dist, false),
+            )
+        }
+
+        fn yokohama_to_chiba_via_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(3),
+                Operation::after_add_tokyo_op_list(),
+                SegmentList::yokohama_to_chiba_via_tokyo(set_ele, set_dist, false),
+            )
+        }
+
+        fn yokohama_to_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+            Route::new(
+                RouteInfo::route0(3),
+                Operation::after_move_chiba_op_list(),
+                SegmentList::yokohama_to_tokyo(set_ele, set_dist, false),
+            )
         }
     }
 

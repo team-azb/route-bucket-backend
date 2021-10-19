@@ -10,16 +10,16 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 use crate::model::types::SegmentId;
 use crate::model::{Coordinate, Distance, Polyline};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
 
 #[derive(Clone, Debug, Getters, Serialize, IntoIterator)]
 #[get = "pub"]
-#[cfg_attr(test, derive(Derivative))]
-#[cfg_attr(test, derivative(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
+#[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct Segment {
     #[serde(skip_serializing)]
-    #[cfg_attr(test, derivative(PartialEq = "ignore"))]
+    #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
     pub(super) id: SegmentId,
     #[serde(skip_serializing)]
     pub(super) start: Coordinate,
@@ -88,7 +88,7 @@ impl TryFrom<(String, String)> for Segment {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
