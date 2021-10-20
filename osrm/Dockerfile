@@ -11,7 +11,7 @@ RUN mkdir /data && \
     wget --progress=bar:force:noscroll -O /data/map.osm.pbf http://download.geofabrik.de/asia/japan-latest.osm.pbf
 
 # 地図データの前処理
-COPY ./bicycle.lua /opt/bicycle.lua
-RUN osrm-extract -p /opt/bicycle.lua /data/map.osm.pbf
+COPY ./customized.lua /opt/customized.lua
+RUN osrm-extract -p /opt/customized.lua /data/map.osm.pbf
 RUN osrm-partition /data/map.osrm
 RUN osrm-customize /data/map.osrm
