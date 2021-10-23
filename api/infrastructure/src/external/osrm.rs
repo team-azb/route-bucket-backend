@@ -7,6 +7,7 @@ use route_bucket_domain::model::{Coordinate, Polyline, Segment};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 /// osrmでルート補間をするための構造体
+#[derive(Default)]
 pub struct OsrmApi {
     api_root: String,
 }
@@ -18,7 +19,7 @@ impl OsrmApi {
         }
     }
 
-    async fn request(&self, service: &str, args: &String) -> ApplicationResult<serde_json::Value> {
+    async fn request(&self, service: &str, args: &str) -> ApplicationResult<serde_json::Value> {
         let url_str =
             format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace("\\", "%5C");
         let url = reqwest::Url::parse(&url_str).map_err(|err| {

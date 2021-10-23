@@ -42,9 +42,9 @@ impl Segment {
     pub fn get_distance(&self) -> Distance {
         self.points
             .last()
-            .map(|coord| coord.distance_from_start().clone())
+            .map(|coord| *coord.distance_from_start())
             .flatten()
-            .unwrap_or(Distance::zero())
+            .unwrap_or_else(Distance::zero)
     }
 
     pub fn set_points(&mut self, points: Vec<Coordinate>) -> ApplicationResult<()> {
@@ -81,8 +81,8 @@ impl TryFrom<(String, String)> for Segment {
         let points = Vec::try_from(Polyline::from(polyline_str))?;
         Ok(Segment {
             id: SegmentId::from_string(id_str),
-            start: points.first().ok_or(err.clone())?.clone(),
-            goal: points.last().ok_or(err.clone())?.clone(),
+            start: points.first().ok_or_else(|| err.clone())?.clone(),
+            goal: points.last().ok_or(err)?.clone(),
             points,
         })
     }

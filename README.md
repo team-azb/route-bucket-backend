@@ -1,5 +1,7 @@
 # route-bucket-backend
 
+[![CI](https://github.com/team-azb/route-bucket-backend/actions/workflows/cargo.yml/badge.svg)](https://github.com/team-azb/route-bucket-backend/actions/workflows/cargo.yml)
+
 ## Requirements
 * `docker`: 18.09 or higher
 * `docker-compose`: 1.25.1 or higher

@@ -128,13 +128,13 @@ impl TryFrom<Route> for RouteGpx {
                     found_gpx_element = true;
                 }
                 Ok(Event::Eof) => {
-                    found_gpx_element
-                        .then(|| ())
-                        .ok_or(ApplicationError::ExternalError(format!(
+                    found_gpx_element.then(|| ()).ok_or_else(|| {
+                        ApplicationError::ExternalError(format!(
                             "Produced GPX didn't contain <gpx> element!
                             {:?}",
                             from_utf8(&org_gpx_buf).unwrap()
-                        )))?;
+                        ))
+                    })?;
                     break;
                 }
                 Ok(event) => {

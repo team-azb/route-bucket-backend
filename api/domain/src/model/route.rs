@@ -38,13 +38,13 @@ impl Route {
     }
 
     pub fn get_operation(&self, pos: usize) -> ApplicationResult<&Operation> {
-        self.op_list
-            .get(pos)
-            .ok_or(ApplicationError::DomainError(format!(
+        self.op_list.get(pos).ok_or_else(|| {
+            ApplicationError::DomainError(format!(
                 "Index {} out of range for RouteEditor.op_list!(len={})",
                 pos,
                 self.op_list.len()
-            )))
+            ))
+        })
     }
 
     pub fn push_operation(&mut self, op: Operation) -> ApplicationResult<()> {

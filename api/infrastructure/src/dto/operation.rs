@@ -27,7 +27,7 @@ impl OperationDto {
 
         let [org_coord, new_coord] = <[Option<Coordinate>; 2]>::try_from(
             polyline
-                .split(" ")
+                .split(' ')
                 .map(String::from)
                 .map(Polyline::from)
                 .map(Option::try_from)

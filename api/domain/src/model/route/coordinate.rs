@@ -39,13 +39,13 @@ impl Coordinate {
             .then(|| {
                 self.elevation = elevation;
             })
-            .ok_or(ApplicationError::DomainError(
-                "Elevation already set for Coordinate.".into(),
-            ))
+            .ok_or_else(|| {
+                ApplicationError::DomainError("Elevation already set for Coordinate.".into())
+            })
     }
 
-    pub fn set_distance_from_start(&mut self, distance: Distance) -> () {
-        self.distance_from_start.insert(distance);
+    pub fn set_distance_from_start(&mut self, distance: Distance) {
+        self.distance_from_start = Some(distance);
     }
 }
 
@@ -119,7 +119,7 @@ impl TryFrom<Polyline> for Coordinate {
 
 impl From<Option<Coordinate>> for Polyline {
     fn from(value: Option<Coordinate>) -> Self {
-        value.map(Polyline::from).unwrap_or(Polyline::new())
+        value.map(Polyline::from).unwrap_or_else(Polyline::new)
     }
 }
 

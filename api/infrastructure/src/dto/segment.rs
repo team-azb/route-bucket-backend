@@ -28,7 +28,7 @@ impl SegmentDto {
         Ok(SegmentDto {
             id: segment.id().to_string(),
             route_id: route_id.to_string(),
-            index: index,
+            index,
             polyline: Polyline::from(segment.points().clone()).into(),
         })
     }
