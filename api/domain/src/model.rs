@@ -6,7 +6,7 @@ pub use route::route_gpx::RouteGpx;
 pub use route::route_info::RouteInfo;
 pub use route::segment_list::{DrawingMode, Segment, SegmentList};
 pub use route::Route;
-pub use types::{Distance, Elevation, Latitude, Longitude, Polyline, RouteId};
+pub use types::{Distance, Elevation, Latitude, Longitude, OperationId, Polyline, RouteId};
 
 pub(crate) mod route;
 pub(crate) mod types;

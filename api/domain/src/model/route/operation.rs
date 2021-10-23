@@ -61,7 +61,7 @@ impl From<SegmentTemplate> for Segment {
     }
 }
 
-#[derive(Clone, Debug, Getters)]
+#[derive(Clone, Debug, Getters, From)]
 #[get = "pub"]
 #[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
 #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]

@@ -1,7 +1,7 @@
 use getset::Getters;
 use itertools::Itertools;
 use route_bucket_domain::model::{
-    DrawingMode, Operation, OperationType, Polyline, RouteId, SegmentTemplate,
+    DrawingMode, Operation, OperationId, OperationType, Polyline, RouteId, SegmentTemplate,
 };
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 use serde::{Deserialize, Serialize};
@@ -56,6 +56,7 @@ pub struct OperationDto {
 impl OperationDto {
     pub fn into_model(self) -> ApplicationResult<Operation> {
         let OperationDto {
+            id,
             code,
             pos,
             org_seg_templates,
@@ -65,7 +66,8 @@ impl OperationDto {
         let op_type = OperationType::from_str(&code)
             .map_err(|_| ApplicationError::DomainError(format!("Invalid type code: {}", code)))?;
 
-        Ok(Operation::new(
+        Ok(Operation::from((
+            OperationId::from_string(id),
             op_type,
             pos as usize,
             org_seg_templates
@@ -78,7 +80,7 @@ impl OperationDto {
                 .into_iter()
                 .map(SegmentTemplate::try_from)
                 .try_collect()?,
-        ))
+        )))
     }
 
     pub fn from_model(
