@@ -1,6 +1,6 @@
 use actix_web::{dev, http, web, HttpResponse, Result};
 
-use route_bucket_domain::model::RouteId;
+use route_bucket_domain::model::route::RouteId;
 use route_bucket_usecase::route::{
     NewPointRequest, RemovePointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
