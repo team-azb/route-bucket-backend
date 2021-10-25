@@ -1,7 +1,5 @@
-pub use types::{Distance, Elevation, Latitude, Longitude, Polyline};
-
 pub mod route;
-pub(crate) mod types;
+pub mod types;
 
 #[cfg(feature = "fixtures")]
 pub mod fixtures {
