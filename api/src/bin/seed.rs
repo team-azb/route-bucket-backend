@@ -1,5 +1,5 @@
 use route_bucket_backend::server::Server;
-use route_bucket_domain::model::{Coordinate, DrawingMode};
+use route_bucket_domain::model::route::{Coordinate, DrawingMode};
 use route_bucket_usecase::route::RouteUseCase;
 
 macro_rules! coord {
