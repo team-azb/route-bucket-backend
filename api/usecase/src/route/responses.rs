@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use serde::Serialize;
 
-use route_bucket_domain::model::{
+use route_bucket_domain::model::route::{
     BoundingBox, Coordinate, Distance, Elevation, Route, RouteGpx, RouteId, RouteInfo, Segment,
 };
 use route_bucket_utils::ApplicationError;
@@ -76,10 +76,10 @@ impl TryFrom<Route> for RouteOperationResponse {
 
 #[cfg(test)]
 mod tests {
-    use route_bucket_domain::model::fixtures::{
+    use route_bucket_domain::model::fixtures::route::{
         BoundingBoxFixture, CoordinateFixtures, RouteFixtures, RouteInfoFixtures, SegmentFixtures,
     };
-    use route_bucket_domain::model::DrawingMode;
+    use route_bucket_domain::model::route::DrawingMode;
     use rstest::rstest;
     use std::convert::TryInto;
 

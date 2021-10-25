@@ -1,7 +1,7 @@
 use derive_more::From;
 use serde::Deserialize;
 
-use route_bucket_domain::model::{Coordinate, DrawingMode};
+use route_bucket_domain::model::route::{Coordinate, DrawingMode};
 
 #[derive(From, Deserialize)]
 pub struct RouteCreateRequest {
