@@ -3,8 +3,7 @@ use itertools::Itertools;
 
 use route_bucket_utils::ApplicationResult;
 
-use crate::model::route::segment_list::Segment;
-use crate::model::{Coordinate, DrawingMode, Elevation, Route};
+use crate::model::route::{Coordinate, DrawingMode, Elevation, Route, Segment};
 
 #[cfg_attr(feature = "mocking", mockall::automock)]
 #[async_trait]

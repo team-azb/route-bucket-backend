@@ -10,9 +10,9 @@ use serde::Serialize;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::{BoundingBox, Distance, Elevation, Latitude, Longitude};
-
+use super::bounding_box::BoundingBox;
 use super::coordinate::Coordinate;
+use super::types::{Distance, Elevation, Latitude, Longitude};
 
 pub use self::segment::{DrawingMode, Segment};
 

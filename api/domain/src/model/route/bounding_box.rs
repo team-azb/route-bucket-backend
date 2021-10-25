@@ -1,6 +1,7 @@
-use crate::model::Coordinate;
 use derive_more::From;
 use serde::Serialize;
+
+use super::Coordinate;
 
 #[derive(Clone, Debug, Serialize, From)]
 #[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]

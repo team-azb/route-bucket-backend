@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::types::{Distance, Elevation, Latitude, Longitude, Polyline};
+use super::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 /// Value Object for Coordinates
 #[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]
