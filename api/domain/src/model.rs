@@ -1,14 +1,6 @@
-// TODO: この辺をmodel/route.rsに移動して、外からもmodel::route::でアクセスさせるようにする
-pub use route::bounding_box::BoundingBox;
-pub use route::coordinate::Coordinate;
-pub use route::operation::{Operation, OperationId, OperationType, SegmentTemplate};
-pub use route::route_gpx::RouteGpx;
-pub use route::route_info::RouteInfo;
-pub use route::segment_list::{DrawingMode, Segment, SegmentList};
-pub use route::{Route, RouteId};
 pub use types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
-pub(crate) mod route;
+pub mod route;
 pub(crate) mod types;
 
 #[cfg(feature = "fixtures")]
