@@ -5,7 +5,9 @@ use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
 use tokio::sync::Mutex;
 
-use route_bucket_domain::model::{Operation, Route, RouteId, RouteInfo, Segment, SegmentList};
+use route_bucket_domain::model::route::{
+    Operation, Route, RouteId, RouteInfo, Segment, SegmentList,
+};
 use route_bucket_domain::repository::{Connection, Repository, RouteRepository};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 

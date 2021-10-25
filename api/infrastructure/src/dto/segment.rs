@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use getset::Getters;
 
-use route_bucket_domain::model::{Polyline, RouteId, Segment};
+use route_bucket_domain::model::route::{Polyline, RouteId, Segment};
 use route_bucket_utils::ApplicationResult;
 
 /// 座標のdto構造体

@@ -9,7 +9,7 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num_traits::FromPrimitive;
 
 use route_bucket_domain::external::ElevationApi;
-use route_bucket_domain::model::{Coordinate, Elevation, Latitude, Longitude};
+use route_bucket_domain::model::route::{Coordinate, Elevation, Latitude, Longitude};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 #[derive(num_derive::FromPrimitive)]
