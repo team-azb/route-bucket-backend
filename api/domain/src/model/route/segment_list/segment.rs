@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::types::SegmentId;
+use crate::model::types::NanoId;
 use crate::model::{Coordinate, Distance, Polyline};
+
+pub(crate) type SegmentId = NanoId<Segment, 21>;
 
 #[derive(
     Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,

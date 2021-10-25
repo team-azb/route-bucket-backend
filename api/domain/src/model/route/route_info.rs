@@ -1,10 +1,10 @@
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
-use crate::model::RouteId;
-
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
+
+use super::RouteId;
 
 #[derive(Clone, Debug, Getters, Deserialize, Serialize)]
 #[get = "pub"]

@@ -13,12 +13,16 @@ use self::operation::Operation;
 use self::route_info::RouteInfo;
 use self::segment_list::{Segment, SegmentList};
 
+use super::types::NanoId;
+
 pub(crate) mod bounding_box;
 pub(crate) mod coordinate;
 pub(crate) mod operation;
 pub(crate) mod route_gpx;
 pub(crate) mod route_info;
 pub(crate) mod segment_list;
+
+pub type RouteId = NanoId<Route, 11>;
 
 #[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
