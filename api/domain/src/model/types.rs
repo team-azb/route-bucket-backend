@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
 use num_traits::{Bounded, FromPrimitive};
+use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
@@ -33,12 +34,12 @@ impl Polyline {
     }
 }
 
-pub type Latitude = NumericValueObject<f64, 90>;
-pub type Longitude = NumericValueObject<f64, 180>;
+pub type Latitude = NumericValueObject<OrderedFloat<f64>, 90>;
+pub type Longitude = NumericValueObject<OrderedFloat<f64>, 180>;
 // NOTE: genericsの特殊化が実装されたら、この0は消せる
 // 参考: https://github.com/rust-lang/rust/issues/31844
 pub type Elevation = NumericValueObject<i32, 1000000>;
-pub type Distance = NumericValueObject<f64, 0>;
+pub type Distance = NumericValueObject<OrderedFloat<f64>, 0>;
 
 /// Value Object for BigDecimal type
 #[derive(
@@ -58,12 +59,20 @@ pub type Distance = NumericValueObject<f64, 0>;
 )]
 pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 
-impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
-    pub fn value(&self) -> T {
+impl<const MAX_ABS: u32> NumericValueObject<i32, MAX_ABS> {
+    pub fn value(&self) -> i32 {
         self.0
     }
+}
 
-    pub fn max() -> Self {
+impl<const MAX_ABS: u32> NumericValueObject<OrderedFloat<f64>, MAX_ABS> {
+    pub fn value(&self) -> f64 {
+        self.0.into_inner()
+    }
+}
+
+impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
+    pub fn max_value() -> Self {
         Self(if MAX_ABS == 0 {
             T::max_value()
         } else {
@@ -78,17 +87,17 @@ impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T
 
 // NOTE: TryFrom<T>を実装しようとすると、coreのimplとconflictする
 // これも特殊化待ち: https://github.com/rust-lang/rust/issues/31844
-impl<const MAX_ABS: u32> TryFrom<f64> for NumericValueObject<f64, MAX_ABS> {
+impl<const MAX_ABS: u32> TryFrom<f64> for NumericValueObject<OrderedFloat<f64>, MAX_ABS> {
     type Error = ApplicationError;
 
     fn try_from(val: f64) -> ApplicationResult<Self> {
-        if MAX_ABS == 0 || val.abs() <= MAX_ABS.into() {
-            Ok(Self(val))
+        if (MAX_ABS == 0 || val.abs() <= MAX_ABS.into()) && val.is_finite() {
+            Ok(Self(OrderedFloat(val)))
         } else {
             Err(ApplicationError::ValueObjectError(format!(
                 // TODO: stringのconst genericsが追加されたら、
                 // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
-                "Invalid value {} for NumericValueObject<f64, {}>",
+                "Invalid value {} for NumericValueObject<OrderedFloat<f64>, {}>",
                 val,
                 MAX_ABS
             )))

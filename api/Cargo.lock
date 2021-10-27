@@ -1577,6 +1577,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "2.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97c9d06878b3a851e8026ef94bf7fef9ba93062cd412601da4d9cf369b1cc62d"
+dependencies = [
+ "num-traits",
+ "serde",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2085,6 +2095,7 @@ dependencies = [
  "mockall",
  "nanoid",
  "num-traits",
+ "ordered-float",
  "polyline",
  "quick-xml",
  "rayon",

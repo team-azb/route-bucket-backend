@@ -1,4 +1,5 @@
 // TODO: この辺をmodel/route.rsに移動して、外からもmodel::route::でアクセスさせるようにする
+pub use route::bounding_box::BoundingBox;
 pub use route::coordinate::Coordinate;
 pub use route::operation::{Operation, OperationType};
 pub use route::route_gpx::RouteGpx;
@@ -12,6 +13,7 @@ pub(crate) mod types;
 
 #[cfg(feature = "fixtures")]
 pub mod fixtures {
+    pub use super::route::bounding_box::tests::BoundingBoxFixture;
     pub use super::route::coordinate::tests::CoordinateFixtures;
     pub use super::route::operation::tests::OperationFixtures;
     pub use super::route::route_gpx::tests::RouteGpxFixtures;
