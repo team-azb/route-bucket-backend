@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::{BoundingBox, Distance, Elevation, Latitude, Longitude};
+use crate::model::{BoundingBox, Distance, Elevation};
 
 use super::coordinate::Coordinate;
 
@@ -110,10 +110,10 @@ impl SegmentList {
             max_coord.distance_from_start = None;
 
             coord_iter.for_each(|coord| {
-                min_coord.latitude = Latitude::min(min_coord.latitude, coord.latitude);
-                min_coord.longitude = Longitude::min(min_coord.longitude, coord.longitude);
-                max_coord.latitude = Latitude::max(max_coord.latitude, coord.latitude);
-                max_coord.longitude = Longitude::max(max_coord.longitude, coord.longitude);
+                min_coord.latitude = std::cmp::min(min_coord.latitude, coord.latitude);
+                min_coord.longitude = std::cmp::min(min_coord.longitude, coord.longitude);
+                max_coord.latitude = std::cmp::max(max_coord.latitude, coord.latitude);
+                max_coord.longitude = std::cmp::max(max_coord.longitude, coord.longitude);
             });
             Ok((min_coord, max_coord).into())
         } else {
