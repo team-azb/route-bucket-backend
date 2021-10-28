@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::convert::TryInto;
+use std::ops::RangeBounds;
 use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
@@ -13,7 +14,7 @@ use crate::model::{BoundingBox, Distance, Elevation};
 
 use super::coordinate::Coordinate;
 
-pub use self::segment::Segment;
+pub use self::segment::{DrawingMode, Segment};
 
 mod segment;
 
@@ -122,76 +123,6 @@ impl SegmentList {
         }
     }
 
-    pub fn insert_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
-        let org_len = self.segments.len();
-        if pos <= org_len {
-            if pos == 0 {
-                let goal = self
-                    .segments
-                    .first()
-                    .map(|seg| seg.start.clone())
-                    .unwrap_or_else(|| coord.clone());
-                self.segments.insert(0, Segment::new_empty(coord, goal));
-            } else {
-                let org_seg = self.segments.remove(pos - 1);
-                let start = org_seg.start.clone();
-                let goal = if pos == org_len {
-                    coord.clone()
-                } else {
-                    org_seg.goal
-                };
-                self.segments
-                    .insert(pos - 1, Segment::new_empty(start, coord.clone()));
-                self.segments.insert(pos, Segment::new_empty(coord, goal));
-            }
-            Ok(())
-        } else {
-            Err(ApplicationError::DomainError(format!(
-                "pos({}) cannot be greater than segments.len()({}) at SegmentList::insert_waypoint",
-                pos,
-                self.segments.len()
-            )))
-        }
-    }
-
-    pub fn remove_waypoint(&mut self, pos: usize) -> ApplicationResult<()> {
-        let org_len = self.segments.len();
-        if org_len == 0 {
-            return Err(ApplicationError::DomainError(
-                "segments.len() cannot be 0 at SegmentList::remove_waypoint".into(),
-            ));
-        }
-
-        if pos < org_len {
-            let org_second_seg = self.segments.remove(pos);
-            if pos > 0 {
-                let org_first_seg = self.segments.remove(pos - 1);
-                let start = org_first_seg.start.clone();
-                let goal = if pos == org_len - 1 {
-                    org_first_seg.start
-                } else {
-                    org_second_seg.goal
-                };
-                self.segments
-                    .insert(pos - 1, Segment::new_empty(start, goal));
-            }
-            Ok(())
-        } else {
-            Err(ApplicationError::DomainError(format!(
-                "pos({}) cannot be greater than or equal to segments.len()({}) at SegmentList::remove_waypoint",
-                pos,
-                self.segments.len()
-            )))
-        }
-    }
-
-    pub fn move_waypoint(&mut self, pos: usize, coord: Coordinate) -> ApplicationResult<()> {
-        self.remove_waypoint(pos)?;
-        self.insert_waypoint(pos, coord)?;
-
-        Ok(())
-    }
-
     pub fn gather_waypoints(&self) -> Vec<Coordinate> {
         self.segments.iter().map(|seg| seg.start.clone()).collect()
     }
@@ -204,6 +135,8 @@ impl SegmentList {
         segments
     }
 
+    // methods from Vec<Segment>
+
     pub fn iter(&self) -> Iter<Segment> {
         self.segments.iter()
     }
@@ -214,6 +147,18 @@ impl SegmentList {
 
     pub fn is_empty(&self) -> bool {
         self.segments.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.segments.len()
+    }
+
+    pub fn splice<R, I>(&mut self, range: R, replace_with: I)
+    where
+        R: RangeBounds<usize>,
+        I: IntoIterator<Item = Segment>,
+    {
+        self.segments.splice(range, replace_with);
     }
 }
 
@@ -335,66 +280,6 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::front(
-        SegmentList::tokyo_to_chiba(false, false, true),
-        0,
-        Coordinate::yokohama(false, None)
-    )]
-    #[case::middle(
-        SegmentList::yokohama_to_chiba(false, false, true),
-        1,
-        Coordinate::tokyo(false, None)
-    )]
-    #[case::back(
-        SegmentList::yokohama_to_tokyo(false, false, true),
-        2,
-        Coordinate::chiba(false, None)
-    )]
-    fn can_insert_waypoint(
-        #[case] mut seg_list: SegmentList,
-        #[case] pos: usize,
-        #[case] coord: Coordinate,
-        #[from(yokohama_to_chiba_via_tokyo_empty)] expected_seg_list: SegmentList,
-    ) {
-        seg_list.insert_waypoint(pos, coord).unwrap();
-        assert_eq!(seg_list, expected_seg_list)
-    }
-
-    #[rstest]
-    #[case::front(0, SegmentList::tokyo_to_chiba(false, false, true))]
-    #[case::middle(1, SegmentList::yokohama_to_chiba(false, false, true))]
-    #[case::back(2, SegmentList::yokohama_to_tokyo(false, false, true))]
-    fn can_remove_waypoint(
-        #[from(yokohama_to_chiba_via_tokyo_empty)] mut seg_list: SegmentList,
-        #[case] pos: usize,
-        #[case] expected_seg_list: SegmentList,
-    ) {
-        seg_list.remove_waypoint(pos).unwrap();
-        assert_eq!(seg_list, expected_seg_list)
-    }
-
-    #[rstest]
-    #[case::front(
-        SegmentList::tokyo_to_chiba(false, false, true),
-        0,
-        Coordinate::yokohama(false, None)
-    )]
-    #[case::back(
-        SegmentList::yokohama_to_tokyo(false, false, true),
-        1,
-        Coordinate::chiba(false, None)
-    )]
-    fn can_move_waypoint(
-        #[case] mut seg_list: SegmentList,
-        #[case] pos: usize,
-        #[case] coord: Coordinate,
-        #[from(yokohama_to_chiba_empty)] expected_seg_list: SegmentList,
-    ) {
-        seg_list.move_waypoint(pos, coord).unwrap();
-        assert_eq!(seg_list, expected_seg_list)
-    }
-
-    #[rstest]
     #[case::empty(SegmentList::empty(), vec![])]
     #[case::single_point(
         yokohama_empty(),
@@ -419,7 +304,10 @@ pub(crate) mod tests {
     )]
     #[case::yokohama_to_chiba_via_tokyo(
         yokohama_to_chiba_via_tokyo_verbose(),
-        vec![Segment::yokohama_to_tokyo(true, Some(0.), false), Segment::tokyo_to_chiba(true, Some(26936.42633640023), false)]
+        vec![
+            Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
+            Segment::tokyo_to_chiba(true, Some(26936.42633640023), false, DrawingMode::Freehand)
+        ]
     )]
     fn can_convert_into_segments_in_between(
         #[case] seg_list: SegmentList,
@@ -435,24 +323,30 @@ pub(crate) mod tests {
 
         fn yokohama(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
             SegmentList {
-                segments: vec![Segment::yokohama(set_ele, set_dist.then(|| 0.), empty)],
+                segments: vec![Segment::yokohama(
+                    set_ele,
+                    set_dist.then(|| 0.),
+                    empty,
+                    DrawingMode::FollowRoad,
+                )],
             }
         }
 
         fn yokohama_to_tokyo(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
             SegmentList {
                 segments: vec![
-                    Segment::yokohama_to_tokyo(set_ele, set_dist.then(|| 0.), empty),
-                    Segment::tokyo(set_ele, set_dist.then(|| 26936.42633640023), empty),
-                ],
-            }
-        }
-
-        fn tokyo_to_chiba(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
-            SegmentList {
-                segments: vec![
-                    Segment::tokyo_to_chiba(set_ele, set_dist.then(|| 0.), empty),
-                    Segment::chiba(set_ele, set_dist.then(|| 31823.54759611465), empty),
+                    Segment::yokohama_to_tokyo(
+                        set_ele,
+                        set_dist.then(|| 0.),
+                        empty,
+                        DrawingMode::Freehand,
+                    ),
+                    Segment::tokyo(
+                        set_ele,
+                        set_dist.then(|| 26936.42633640023),
+                        empty,
+                        DrawingMode::Freehand,
+                    ),
                 ],
             }
         }
@@ -460,8 +354,18 @@ pub(crate) mod tests {
         fn yokohama_to_chiba(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
             SegmentList {
                 segments: vec![
-                    Segment::yokohama_to_chiba(set_ele, set_dist.then(|| 0.), empty),
-                    Segment::chiba(set_ele, set_dist.then(|| 46779.709825324135), empty),
+                    Segment::yokohama_to_chiba(
+                        set_ele,
+                        set_dist.then(|| 0.),
+                        empty,
+                        DrawingMode::FollowRoad,
+                    ),
+                    Segment::chiba(
+                        set_ele,
+                        set_dist.then(|| 46779.709825324135),
+                        empty,
+                        DrawingMode::FollowRoad,
+                    ),
                 ],
             }
         }
@@ -469,9 +373,24 @@ pub(crate) mod tests {
         fn yokohama_to_chiba_via_tokyo(set_ele: bool, set_dist: bool, empty: bool) -> SegmentList {
             SegmentList {
                 segments: vec![
-                    Segment::yokohama_to_tokyo(set_ele, set_dist.then(|| 0.), empty),
-                    Segment::tokyo_to_chiba(set_ele, set_dist.then(|| 26936.42633640023), empty),
-                    Segment::chiba(set_ele, set_dist.then(|| 58759.973932514884), empty),
+                    Segment::yokohama_to_tokyo(
+                        set_ele,
+                        set_dist.then(|| 0.),
+                        empty,
+                        DrawingMode::Freehand,
+                    ),
+                    Segment::tokyo_to_chiba(
+                        set_ele,
+                        set_dist.then(|| 26936.42633640023),
+                        empty,
+                        DrawingMode::Freehand,
+                    ),
+                    Segment::chiba(
+                        set_ele,
+                        set_dist.then(|| 58759.973932514884),
+                        empty,
+                        DrawingMode::FollowRoad,
+                    ),
                 ],
             }
         }

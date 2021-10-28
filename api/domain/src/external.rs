@@ -4,12 +4,16 @@ use itertools::Itertools;
 use route_bucket_utils::ApplicationResult;
 
 use crate::model::route::segment_list::Segment;
-use crate::model::{Coordinate, Elevation, Route};
+use crate::model::{Coordinate, DrawingMode, Elevation, Route};
 
 #[cfg_attr(feature = "mocking", mockall::automock)]
 #[async_trait]
 pub trait RouteInterpolationApi: Send + Sync {
-    async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate>;
+    async fn correct_coordinate(
+        &self,
+        coord: &Coordinate,
+        mode: DrawingMode,
+    ) -> ApplicationResult<Coordinate>;
 
     async fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()>;
 

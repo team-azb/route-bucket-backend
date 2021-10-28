@@ -16,8 +16,21 @@ mod test_macros {
                     true
                 })
         };
+        // TODO: 繰り返しで共通化する方法を探る（Closureの引数がうまくいかない）
+        (private $api_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr) => {
+            expect_once!($api_exp, $method_name)
+                .withf(move |input0, input1| {
+                    assert_eq!(*input0, $in_exp0);
+                    assert_eq!(*input1, $in_exp1);
+                    true
+                })
+        };
         ($api_exp:expr, $method_name:ident, $in_exp:expr, $out_exp:expr) => {
             expect_once!(private $api_exp, $method_name, $in_exp)
+                .return_const(Ok($out_exp))
+        };
+        ($api_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $out_exp:expr) => {
+            expect_once!(private $api_exp, $method_name, $in_exp0, $in_exp1)
                 .return_const(Ok($out_exp))
         };
         ($api_exp:expr, $method_name:ident, $in_exp:expr => $out_exp:expr) => {

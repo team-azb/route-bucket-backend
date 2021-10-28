@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 
 use route_bucket_domain::external::RouteInterpolationApi;
-use route_bucket_domain::model::{Coordinate, Polyline, Segment};
+use route_bucket_domain::model::{Coordinate, DrawingMode, Polyline, Segment};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 /// osrmでルート補間をするための構造体
@@ -49,37 +49,54 @@ impl OsrmApi {
 
 #[async_trait]
 impl RouteInterpolationApi for OsrmApi {
-    async fn correct_coordinate(&self, coord: &Coordinate) -> ApplicationResult<Coordinate> {
-        self.request(
-            "nearest",
-            &format!("{},{}", coord.longitude().value(), coord.latitude().value()),
-        )
-        .await
-        .map(|json| {
-            let coord =
-                serde_json::from_value::<Vec<f64>>(json["waypoints"][0]["location"].clone())
+    async fn correct_coordinate(
+        &self,
+        coord: &Coordinate,
+        mode: DrawingMode,
+    ) -> ApplicationResult<Coordinate> {
+        match mode {
+            DrawingMode::FollowRoad => self
+                .request(
+                    "nearest",
+                    &format!("{},{}", coord.longitude().value(), coord.latitude().value()),
+                )
+                .await
+                .map(|json| {
+                    let coord = serde_json::from_value::<Vec<f64>>(
+                        json["waypoints"][0]["location"].clone(),
+                    )
                     .unwrap();
-            Coordinate::new(coord[1], coord[0]).unwrap()
-        })
+                    Coordinate::new(coord[1], coord[0]).unwrap()
+                }),
+            DrawingMode::Freehand => Ok(coord.clone()),
+        }
     }
 
     async fn interpolate(&self, seg: &mut Segment) -> ApplicationResult<()> {
-        let json = self
-            .request(
-                "route",
-                &format!(
-                    "polyline({})?overview=full",
-                    String::from(Polyline::from(vec![
-                        seg.start().clone(),
-                        seg.goal().clone()
-                    ]))
-                ),
-            )
-            .await?;
+        let mut points = Vec::new();
+        match *seg.mode() {
+            DrawingMode::FollowRoad => {
+                let json = self
+                    .request(
+                        "route",
+                        &format!(
+                            "polyline({})?overview=full",
+                            String::from(Polyline::from(vec![
+                                seg.start().clone(),
+                                seg.goal().clone()
+                            ]))
+                        ),
+                    )
+                    .await?;
 
-        let polyline =
-            serde_json::from_value::<Polyline>(json["routes"][0]["geometry"].clone()).unwrap();
+                let polyline =
+                    serde_json::from_value::<Polyline>(json["routes"][0]["geometry"].clone())
+                        .unwrap();
 
-        seg.set_points(polyline.try_into()?)
+                points = polyline.try_into()?;
+            }
+            DrawingMode::Freehand => (),
+        }
+        seg.set_points(points)
     }
 }

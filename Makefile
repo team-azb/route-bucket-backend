@@ -15,6 +15,10 @@ start-without-api:
 	docker-compose up --build db osrm swagger
 
 seed:
+	DOCKER_BUILDKIT=1 \
+	COMPOSE_DOCKER_CLI_BUILD=1 \
+	BUILDKIT_PROGRESS=plain \
+	docker-compose build api
 	docker-compose run api /app/target/release/seed
 
 test:

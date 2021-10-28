@@ -2,7 +2,7 @@ use actix_web::{dev, http, web, HttpResponse, Result};
 
 use route_bucket_domain::model::RouteId;
 use route_bucket_usecase::route::{
-    NewPointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
+    NewPointRequest, RemovePointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
 
 use crate::AddService;
@@ -60,9 +60,10 @@ async fn patch_add<U: 'static + RouteUseCase>(
 async fn patch_remove<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     path_params: web::Path<(RouteId, usize)>,
+    req: web::Json<RemovePointRequest>,
 ) -> Result<HttpResponse> {
     let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(usecase.remove_point(&route_id, pos).await?))
+    Ok(HttpResponse::Ok().json(usecase.remove_point(&route_id, pos, &req).await?))
 }
 
 async fn patch_move<U: 'static + RouteUseCase>(

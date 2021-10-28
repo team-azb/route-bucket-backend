@@ -84,7 +84,7 @@ impl RouteRepositoryMySql {
         sqlx::query(
             r"
             INSERT INTO operations
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ",
         )
         .bind(dto.id())
@@ -92,7 +92,8 @@ impl RouteRepositoryMySql {
         .bind(dto.index())
         .bind(dto.code())
         .bind(dto.pos())
-        .bind(dto.polyline())
+        .bind(dto.org_seg_templates())
+        .bind(dto.new_seg_templates())
         .execute(&mut *conn)
         .await
         .map_err(gen_err_mapper("failed to insert Operation"))?;
@@ -111,13 +112,14 @@ impl RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO segments VALUES (?, ?, ?, ?)
+            INSERT INTO segments VALUES (?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE `index` = ?
             ",
         )
         .bind(dto.id())
         .bind(dto.route_id())
         .bind(dto.index())
+        .bind(dto.mode())
         .bind(dto.polyline())
         .bind(dto.index())
         .execute(&mut *conn)
