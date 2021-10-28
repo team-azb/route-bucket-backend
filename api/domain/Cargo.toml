@@ -19,6 +19,7 @@ itertools = "0.10.1"
 mockall = { version = "0.10.2", optional = true }
 nanoid = "0.3.0"
 num-traits = "0.2.14"
+ordered-float = { version = "2.8.0", features = ["serde"] }
 polyline = "0.9.0"
 quick-xml = "0.22.0"
 rayon = "1.5.1"
