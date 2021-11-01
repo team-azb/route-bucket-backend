@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::marker::PhantomData;
 
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, Sum};
 use nanoid::nanoid;
@@ -9,21 +10,25 @@ use serde::{Deserialize, Serialize};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 #[derive(Display, Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct NanoId<const LEN: usize>(String);
-
-impl<const LEN: usize> NanoId<LEN> {
-    pub fn new() -> Self {
-        Self(nanoid!(LEN))
-    }
-    pub fn from_string(id: String) -> Self {
-        Self(id)
-    }
+#[display(fmt = "{}", id)]
+#[serde(transparent)]
+pub struct NanoId<T, const LEN: usize> {
+    id: String,
+    #[serde(skip)]
+    _phantom: PhantomData<T>,
 }
 
-// TODO: Make this an derive macro (ex: #[derive(NanoId)])
-pub type RouteId = NanoId<11>;
-pub type SegmentId = NanoId<21>;
-pub type OperationId = NanoId<21>;
+impl<T, const LEN: usize> NanoId<T, LEN> {
+    pub fn new() -> Self {
+        Self::from_string(nanoid!(LEN))
+    }
+    pub fn from_string(id: String) -> Self {
+        Self {
+            id,
+            _phantom: PhantomData,
+        }
+    }
+}
 
 #[derive(Default, Display, From, Into, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Polyline(String);

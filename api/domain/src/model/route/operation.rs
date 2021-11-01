@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::types::OperationId;
+use crate::model::types::NanoId;
 
 use super::coordinate::Coordinate;
 use super::segment_list::{DrawingMode, Segment, SegmentList};
 
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
+
+pub type OperationId = NanoId<Operation, 21>;
 
 #[derive(Clone, Debug, PartialEq, Eq, strum::Display, strum::EnumString)]
 pub enum OperationType {
