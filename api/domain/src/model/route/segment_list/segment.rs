@@ -8,8 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
+use super::super::coordinate::Coordinate;
+use super::super::types::{Distance, Polyline};
 use crate::model::types::NanoId;
-use crate::model::{Coordinate, Distance, Polyline};
 
 pub(crate) type SegmentId = NanoId<Segment, 21>;
 

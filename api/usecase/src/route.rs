@@ -8,7 +8,7 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::{Operation, Route, RouteId, RouteInfo};
+use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo};
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -309,11 +309,11 @@ mod tests {
     use route_bucket_domain::{
         external::{MockElevationApi, MockRouteInterpolationApi},
         model::{
-            fixtures::{
+            fixtures::route::{
                 CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
                 RouteInfoFixtures, SegmentFixtures,
             },
-            Coordinate, DrawingMode, RouteGpx, Segment,
+            route::{Coordinate, DrawingMode, RouteGpx, Segment},
         },
         repository::{MockConnection, MockRouteRepository},
     };

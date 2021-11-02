@@ -1,23 +1,15 @@
-// TODO: この辺をmodel/route.rsに移動して、外からもmodel::route::でアクセスさせるようにする
-pub use route::bounding_box::BoundingBox;
-pub use route::coordinate::Coordinate;
-pub use route::operation::{Operation, OperationId, OperationType, SegmentTemplate};
-pub use route::route_gpx::RouteGpx;
-pub use route::route_info::RouteInfo;
-pub use route::segment_list::{DrawingMode, Segment, SegmentList};
-pub use route::{Route, RouteId};
-pub use types::{Distance, Elevation, Latitude, Longitude, Polyline};
-
-pub(crate) mod route;
-pub(crate) mod types;
+pub mod route;
+pub mod types;
 
 #[cfg(feature = "fixtures")]
 pub mod fixtures {
-    pub use super::route::bounding_box::tests::BoundingBoxFixture;
-    pub use super::route::coordinate::tests::CoordinateFixtures;
-    pub use super::route::operation::tests::OperationFixtures;
-    pub use super::route::route_gpx::tests::RouteGpxFixtures;
-    pub use super::route::route_info::tests::RouteInfoFixtures;
-    pub use super::route::segment_list::tests::{SegmentFixtures, SegmentListFixture};
-    pub use super::route::tests::RouteFixtures;
+    pub mod route {
+        pub use crate::model::route::bounding_box::tests::BoundingBoxFixture;
+        pub use crate::model::route::coordinate::tests::CoordinateFixtures;
+        pub use crate::model::route::operation::tests::OperationFixtures;
+        pub use crate::model::route::route_gpx::tests::RouteGpxFixtures;
+        pub use crate::model::route::route_info::tests::RouteInfoFixtures;
+        pub use crate::model::route::segment_list::tests::{SegmentFixtures, SegmentListFixture};
+        pub use crate::model::route::tests::RouteFixtures;
+    }
 }

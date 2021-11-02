@@ -1,6 +1,6 @@
 use getset::Getters;
 use itertools::Itertools;
-use route_bucket_domain::model::{
+use route_bucket_domain::model::route::{
     DrawingMode, Operation, OperationId, OperationType, Polyline, RouteId, SegmentTemplate,
 };
 use route_bucket_utils::{ApplicationError, ApplicationResult};

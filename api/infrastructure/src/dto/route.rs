@@ -1,5 +1,5 @@
 use getset::Getters;
-use route_bucket_domain::model::{RouteId, RouteInfo};
+use route_bucket_domain::model::route::{RouteId, RouteInfo};
 use route_bucket_utils::ApplicationResult;
 
 /// ルートのdto構造体

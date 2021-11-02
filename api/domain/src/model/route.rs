@@ -5,13 +5,13 @@ use getset::Getters;
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 
-use crate::model::types::Elevation;
-use crate::model::Distance;
-
-use self::coordinate::Coordinate;
-use self::operation::Operation;
-use self::route_info::RouteInfo;
-use self::segment_list::{Segment, SegmentList};
+pub use self::bounding_box::BoundingBox;
+pub use self::coordinate::Coordinate;
+pub use self::operation::{Operation, OperationId, OperationType, SegmentTemplate};
+pub use self::route_gpx::RouteGpx;
+pub use self::route_info::RouteInfo;
+pub use self::segment_list::{DrawingMode, Segment, SegmentList};
+pub use self::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 use super::types::NanoId;
 
@@ -21,6 +21,7 @@ pub(crate) mod operation;
 pub(crate) mod route_gpx;
 pub(crate) mod route_info;
 pub(crate) mod segment_list;
+pub(crate) mod types;
 
 pub type RouteId = NanoId<Route, 11>;
 

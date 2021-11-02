@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use route_bucket_utils::ApplicationResult;
 
-use crate::model::{Route, RouteId, RouteInfo};
+use crate::model::route::{Route, RouteId, RouteInfo};
 use crate::repository::Repository;
 
 #[async_trait]
