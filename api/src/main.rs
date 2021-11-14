@@ -3,7 +3,7 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, Error, HttpServer, Result};
 
 use route_bucket_backend::server::Server;
-use route_bucket_controller::BuildRouteService;
+use route_bucket_controller::{BuildRouteService, BuildUserService};
 
 #[actix_web::main]
 async fn main() -> Result<(), Error> {
@@ -18,6 +18,7 @@ async fn main() -> Result<(), Error> {
             .wrap(Logger::new("%a \"%r\" %s (%T s)"))
             .app_data(server.clone())
             .build_route_service::<Server>()
+            .build_user_service::<Server>()
     })
     .bind("0.0.0.0:8080")?
     .run()

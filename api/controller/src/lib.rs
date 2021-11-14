@@ -5,8 +5,10 @@ use actix_web::error::Error;
 use actix_web::App;
 
 pub use route::BuildRouteService;
+pub use user::BuildUserService;
 
 mod route;
+mod user;
 
 pub trait AddService: Sized {
     fn add_service<F>(self, factory: F) -> Self
