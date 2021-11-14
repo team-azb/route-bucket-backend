@@ -29,3 +29,13 @@ CREATE TABLE operations
     INDEX segment_idx (`route_id`, `index`),
     PRIMARY KEY (`id`)
 );
+
+CREATE TABLE users
+(
+    `id`        VARCHAR(40)      NOT NULL,
+    `name`      VARCHAR(50)      NOT NULL,
+    `gender`    VARCHAR(6)       NOT NULL,
+    `birthdate` DATE                     ,
+    `icon_url`  VARCHAR(100)             ,
+    PRIMARY KEY (`id`)
+);

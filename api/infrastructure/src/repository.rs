@@ -1,13 +1,34 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use derive_more::Deref;
 use route_bucket_domain::repository::Connection;
 use route_bucket_utils::{ApplicationError, ApplicationResult};
-use sqlx::mysql::MySqlTransactionManager;
+use sqlx::mysql::{MySqlPoolOptions, MySqlTransactionManager};
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, TransactionManager};
 use tokio::sync::Mutex;
 
+use self::route::RouteRepositoryMySql;
+use self::user::UserRepositoryMySql;
+
 pub mod route;
+pub mod user;
+
+pub async fn init_repositories() -> (RouteRepositoryMySql, UserRepositoryMySql) {
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
+    let pool = Arc::new(
+        MySqlPoolOptions::new()
+            .max_connections(10)
+            .connect(&database_url)
+            .await
+            .unwrap(),
+    );
+    (
+        RouteRepositoryMySql(pool.clone()),
+        UserRepositoryMySql(pool),
+    )
+}
 
 fn gen_err_mapper(msg: &'static str) -> impl FnOnce(sqlx::Error) -> ApplicationError {
     move |err| ApplicationError::DataBaseError(format!("{} ({:?})", msg, err))
