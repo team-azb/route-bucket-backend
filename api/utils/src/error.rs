@@ -53,3 +53,9 @@ impl ResponseError for ApplicationError {
             .json(hashmap! {"message" => self.to_string()})
     }
 }
+
+impl From<reqwest::Error> for ApplicationError {
+    fn from(err: reqwest::Error) -> Self {
+        ApplicationError::ExternalError(err.to_string())
+    }
+}
