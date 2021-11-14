@@ -64,7 +64,7 @@ pub trait UserAuthApi: Send + Sync {
         &self,
         user: &User,
         email: &Email,
-        password: &String,
+        password: &str,
     ) -> ApplicationResult<()>;
 
     async fn verify_token(&self, auth_info: &UserAuthInfo) -> ApplicationResult<()>;

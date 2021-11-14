@@ -99,10 +99,12 @@ impl FirebaseAuthApi {
 
         self.access_token = response
             .get("access_token")
-            .ok_or(ApplicationError::ExternalError(format!(
-                "Unable to find access_token in the response: {:?}",
-                response.clone()
-            )))?
+            .ok_or_else(|| {
+                ApplicationError::ExternalError(format!(
+                    "Unable to find access_token in the response: {:?}",
+                    response.clone()
+                ))
+            })?
             .as_str()
             .unwrap()
             .to_string();
@@ -117,7 +119,7 @@ impl UserAuthApi for FirebaseAuthApi {
         &self,
         user: &User,
         email: &Email,
-        password: &String,
+        password: &str,
     ) -> ApplicationResult<()> {
         let payload = json!({
             "displayName": user.name().to_string(),
