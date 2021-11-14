@@ -1,5 +1,6 @@
 pub mod route;
 pub mod types;
+pub mod user;
 
 #[cfg(feature = "fixtures")]
 pub mod fixtures {
