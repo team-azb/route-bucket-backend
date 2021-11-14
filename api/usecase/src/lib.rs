@@ -1,4 +1,5 @@
 pub mod route;
+pub mod user;
 
 #[cfg(test)]
 mod test_macros {
