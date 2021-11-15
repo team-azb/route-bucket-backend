@@ -14,21 +14,21 @@ use route_bucket_domain::model::{
 #[derive(From, Deserialize, Validate)]
 pub struct UserCreateRequest {
     #[validate]
-    id: UserId,
+    pub(super) id: UserId,
     #[validate(length(min = 1, max = 50))]
-    name: String,
+    pub(super) name: String,
     #[validate]
-    email: Email,
+    pub(super) email: Email,
     #[serde(default)]
-    gender: Gender,
+    pub(super) gender: Gender,
     #[validate(custom = "UserCreateRequest::validate_birthdate")]
-    birthdate: Option<NaiveDate>,
+    pub(super) birthdate: Option<NaiveDate>,
     #[validate]
-    icon_url: Option<Url>,
+    pub(super) icon_url: Option<Url>,
     #[validate(length(min = 6))]
-    password: String,
+    pub(super) password: String,
     #[validate(must_match = "password")]
-    password_confirmation: String,
+    pub(super) password_confirmation: String,
 }
 
 impl UserCreateRequest {

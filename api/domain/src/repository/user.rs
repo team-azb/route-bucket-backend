@@ -38,6 +38,7 @@ pub trait CallUserRepository {
     fn user_repository(&self) -> &Self::UserRepository;
 }
 
+#[cfg(feature = "mocking")]
 mockall::mock! {
     pub UserRepository {}
 

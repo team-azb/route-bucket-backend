@@ -26,12 +26,25 @@ mod test_macros {
                     true
                 })
         };
+        (private $api_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $in_exp2:expr) => {
+            expect_once!($api_exp, $method_name)
+                .withf(move |input0, input1, input2| {
+                    assert_eq!(*input0, $in_exp0);
+                    assert_eq!(*input1, $in_exp1);
+                    assert_eq!(*input2, $in_exp2);
+                    true
+                })
+        };
         ($api_exp:expr, $method_name:ident, $in_exp:expr, $out_exp:expr) => {
             expect_once!(private $api_exp, $method_name, $in_exp)
                 .return_const(Ok($out_exp))
         };
         ($api_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $out_exp:expr) => {
             expect_once!(private $api_exp, $method_name, $in_exp0, $in_exp1)
+                .return_const(Ok($out_exp))
+        };
+        ($api_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $in_exp2:expr, $out_exp:expr) => {
+            expect_once!(private $api_exp, $method_name, $in_exp0, $in_exp1, $in_exp2)
                 .return_const(Ok($out_exp))
         };
         ($api_exp:expr, $method_name:ident, $in_exp:expr => $out_exp:expr) => {
