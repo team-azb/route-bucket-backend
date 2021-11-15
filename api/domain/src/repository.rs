@@ -7,6 +7,8 @@ pub use user::{CallUserRepository, UserRepository};
 
 #[cfg(feature = "mocking")]
 pub use route::MockRouteRepository;
+#[cfg(feature = "mocking")]
+pub use user::MockUserRepository;
 
 pub(crate) mod route;
 pub(crate) mod user;

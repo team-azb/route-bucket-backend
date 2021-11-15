@@ -27,7 +27,7 @@ impl<T, const LEN: usize> NanoId<T, LEN> {
     }
 }
 
-#[derive(Clone, Debug, Validate, Display, Into, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Validate, Display, Into, Serialize, Deserialize)]
 #[display(fmt = "{}", value)]
 #[serde(transparent)]
 pub struct Email {
@@ -47,7 +47,7 @@ impl TryFrom<String> for Email {
     }
 }
 
-#[derive(Clone, Debug, Validate, Display, Into, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Validate, Display, Into, Serialize, Deserialize)]
 #[display(fmt = "{}", value)]
 #[serde(transparent)]
 pub struct Url {

@@ -13,4 +13,8 @@ pub mod fixtures {
         pub use crate::model::route::segment_list::tests::{SegmentFixtures, SegmentListFixture};
         pub use crate::model::route::tests::RouteFixtures;
     }
+
+    pub mod user {
+        pub use crate::model::user::tests::{UserFixtures, UserIdFixtures};
+    }
 }

@@ -58,6 +58,7 @@ pub trait CallElevationApi {
     fn elevation_api(&self) -> &Self::ElevationApi;
 }
 
+#[cfg_attr(feature = "mocking", mockall::automock)]
 #[async_trait]
 pub trait UserAuthApi: Send + Sync {
     async fn create_account(
