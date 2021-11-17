@@ -6,7 +6,7 @@ use route_bucket_utils::ApplicationResult;
 use crate::model::{
     route::{Coordinate, DrawingMode, Elevation, Route, Segment},
     types::Email,
-    user::{User, UserAuthInfo},
+    user::{User, UserId},
 };
 
 #[cfg_attr(feature = "mocking", mockall::automock)]
@@ -68,7 +68,9 @@ pub trait UserAuthApi: Send + Sync {
         password: &str,
     ) -> ApplicationResult<()>;
 
-    async fn verify_token(&self, auth_info: &UserAuthInfo) -> ApplicationResult<()>;
+    async fn delete_account(&self, user_id: &UserId) -> ApplicationResult<()>;
+
+    async fn verify_token(&self, user_id: &UserId, token: &str) -> ApplicationResult<()>;
 }
 
 pub trait CallUserAuthApi {

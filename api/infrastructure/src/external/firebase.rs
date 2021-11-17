@@ -1,19 +1,23 @@
+mod token;
+
 use std::{fs::File, io::BufReader};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use reqwest::Client;
 use route_bucket_domain::{
     external::UserAuthApi,
     model::{
         types::Email,
-        user::{User, UserAuthInfo},
+        user::{User, UserId},
     },
 };
 use route_bucket_utils::{hashmap, ApplicationError, ApplicationResult};
 use serde::Deserialize;
 use serde_json::{json, Value};
+
+use self::token::verify;
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct FirebaseCredential {
@@ -27,21 +31,6 @@ struct FirebaseCredential {
     token_uri: String,
     auth_provider_x509_cert_url: String,
     client_x509_cert_url: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct AccessToken {
-    token: String,
-    expires_at: DateTime<Utc>,
-}
-
-impl Default for AccessToken {
-    fn default() -> Self {
-        Self {
-            expires_at: Utc.timestamp(0, 0),
-            ..Default::default()
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -66,7 +55,7 @@ impl FirebaseAuthApi {
         Ok(api)
     }
 
-    pub async fn update_access_token(&mut self) -> ApplicationResult<()> {
+    async fn update_access_token(&mut self) -> ApplicationResult<()> {
         let header = Header {
             typ: Some("JWT".to_string()),
             alg: Algorithm::RS256,
@@ -100,7 +89,7 @@ impl FirebaseAuthApi {
         self.access_token = response
             .get("access_token")
             .ok_or_else(|| {
-                ApplicationError::ExternalError(format!(
+                ApplicationError::AuthError(format!(
                     "Unable to find access_token in the response: {:?}",
                     response.clone()
                 ))
@@ -122,7 +111,6 @@ impl UserAuthApi for FirebaseAuthApi {
         password: &str,
     ) -> ApplicationResult<()> {
         let payload = json!({
-            "displayName": user.name().to_string(),
             "email": email.to_string(),
             "password": password.to_string(),
             "localId": user.id().to_string()
@@ -140,15 +128,38 @@ impl UserAuthApi for FirebaseAuthApi {
         if response.status().is_success() {
             Ok(())
         } else {
-            Err(ApplicationError::ExternalError(format!(
+            Err(ApplicationError::AuthError(format!(
                 "Failed to create account: {:?}",
                 response.json::<Value>().await
             )))
         }
     }
 
-    #[allow(unused_variables)]
-    async fn verify_token(&self, auth_info: &UserAuthInfo) -> ApplicationResult<()> {
-        todo!()
+    async fn delete_account(&self, user_id: &UserId) -> ApplicationResult<()> {
+        let payload = json!({
+            "localId": user_id.to_string()
+        });
+        let response = Client::new()
+            .post(format!(
+                "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts:delete",
+                self.credential.project_id
+            ))
+            .bearer_auth(&self.access_token)
+            .json(&payload)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(ApplicationError::AuthError(format!(
+                "Failed to delete account: {:?}",
+                response.json::<Value>().await
+            )))
+        }
+    }
+
+    async fn verify_token(&self, user_id: &UserId, token: &str) -> ApplicationResult<()> {
+        verify(user_id, token, &self.credential).await
     }
 }
