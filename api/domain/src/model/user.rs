@@ -87,6 +87,13 @@ pub(crate) mod tests {
                 icon_url: None,
             }
         }
+
+        fn porzingis_pretending_like_doncic() -> User {
+            User {
+                id: UserId::porzingis(),
+                ..Self::doncic()
+            }
+        }
     }
 
     impl UserFixtures for User {}

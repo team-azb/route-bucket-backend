@@ -203,7 +203,7 @@ mod tests {
         let mut usecase = TestUserUseCase::new();
         usecase.expect_verify_token_at_auth_api(UserId::porzingis(), porzingis_token());
         usecase.expect_find_at_user_repository(UserId::porzingis(), User::porzingis());
-        usecase.expect_update_at_user_repository(User::doncic());
+        usecase.expect_update_at_user_repository(User::porzingis_pretending_like_doncic());
 
         assert_eq!(
             usecase
@@ -213,7 +213,7 @@ mod tests {
                     update_to_doncic_request()
                 )
                 .await,
-            Ok(User::doncic())
+            Ok(User::porzingis_pretending_like_doncic())
         );
     }
 
