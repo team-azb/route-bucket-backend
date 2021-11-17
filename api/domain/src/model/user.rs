@@ -42,8 +42,9 @@ impl Default for Gender {
     }
 }
 
-#[derive(Clone, Debug, Constructor, Into, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Constructor, Into, Getters, Setters)]
 #[get = "pub"]
+#[set = "pub"]
 #[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct User {
     id: UserId,

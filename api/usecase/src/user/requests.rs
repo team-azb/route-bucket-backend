@@ -59,3 +59,15 @@ impl TryFrom<UserCreateRequest> for (User, Email, String) {
         ))
     }
 }
+
+#[derive(From, Deserialize, Validate)]
+pub struct UserUpdateRequest {
+    #[validate(length(min = 1, max = 50))]
+    pub(super) name: Option<String>,
+    #[serde(default)]
+    pub(super) gender: Option<Gender>,
+    #[validate(custom = "UserCreateRequest::validate_birthdate")]
+    pub(super) birthdate: Option<NaiveDate>,
+    #[validate]
+    pub(super) icon_url: Option<Url>,
+}

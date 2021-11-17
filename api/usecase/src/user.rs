@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use futures::FutureExt;
 use route_bucket_domain::{
     external::{CallUserAuthApi, UserAuthApi},
+    model::user::{User, UserId},
     repository::{CallUserRepository, Connection, Repository, UserRepository},
 };
 use route_bucket_utils::ApplicationResult;
@@ -16,7 +17,18 @@ mod responses;
 
 #[async_trait]
 pub trait UserUseCase {
+    async fn find(&self, user_id: &UserId) -> ApplicationResult<User>;
+
     async fn create(&self, req: UserCreateRequest) -> ApplicationResult<UserCreateResponse>;
+
+    async fn update(
+        &self,
+        user_id: &UserId,
+        token: &str,
+        req: UserUpdateRequest,
+    ) -> ApplicationResult<User>;
+
+    async fn delete(&self, user_id: &UserId, token: &str) -> ApplicationResult<()>;
 }
 
 #[async_trait]
@@ -24,6 +36,12 @@ impl<T> UserUseCase for T
 where
     T: CallUserRepository + CallUserAuthApi + Sync,
 {
+    async fn find(&self, user_id: &UserId) -> ApplicationResult<User> {
+        let conn = self.user_repository().get_connection().await?;
+
+        self.user_repository().find(user_id, &conn).await
+    }
+
     async fn create(&self, req: UserCreateRequest) -> ApplicationResult<UserCreateResponse> {
         let (user, email, password) = req.try_into()?;
 
@@ -37,6 +55,49 @@ where
                     .await?;
 
                 Ok(user.id().clone().into())
+            }
+            .boxed()
+        })
+        .await
+    }
+
+    async fn update(
+        &self,
+        user_id: &UserId,
+        token: &str,
+        req: UserUpdateRequest,
+    ) -> ApplicationResult<User> {
+        let conn = self.user_repository().get_connection().await?;
+
+        conn.transaction(|conn| {
+            async move {
+                self.user_auth_api().verify_token(user_id, token).await?;
+
+                let mut user = self.user_repository().find(user_id, &conn).await?;
+
+                req.name.map(|name| user.set_name(name));
+                req.gender.map(|gender| user.set_gender(gender));
+                req.birthdate
+                    .map(|birthdate| user.set_birthdate(Some(birthdate)));
+                req.icon_url
+                    .map(|icon_url| user.set_icon_url(Some(icon_url)));
+
+                self.user_repository().update(&user, &conn).await?;
+
+                Ok(user)
+            }
+            .boxed()
+        })
+        .await
+    }
+
+    async fn delete(&self, user_id: &UserId, token: &str) -> ApplicationResult<()> {
+        let conn = self.user_repository().get_connection().await?;
+        conn.transaction(|conn| {
+            async move {
+                self.user_auth_api().verify_token(user_id, token).await?;
+                self.user_auth_api().delete_account(user_id).await?;
+                self.user_repository().delete(user_id, &conn).await
             }
             .boxed()
         })
@@ -91,6 +152,35 @@ mod tests {
         }
     }
 
+    #[fixture]
+    fn update_to_doncic_request() -> UserUpdateRequest {
+        UserUpdateRequest {
+            name: Some("Luka Doncic".to_string()),
+            gender: Some(Gender::Male),
+            birthdate: NaiveDate::from_str("1999-02-28").ok(),
+            icon_url: Url::try_from("https://on.nba.com/30qMUEI".to_string()).ok(),
+        }
+    }
+
+    #[fixture]
+    fn doncic_token() -> String {
+        String::from("token.for.doncic")
+    }
+
+    #[fixture]
+    fn porzingis_token() -> String {
+        String::from("token.for.porzingis")
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_find() {
+        let mut usecase = TestUserUseCase::new();
+        usecase.expect_find_at_user_repository(UserId::doncic(), User::doncic());
+
+        assert_eq!(usecase.find(&UserId::doncic()).await, Ok(User::doncic()));
+    }
+
     #[rstest]
     #[case::minimum_profile(porzingis_create_request(), User::porzingis())]
     #[case::full_profile(doncic_create_request(), User::doncic())]
@@ -105,6 +195,40 @@ mod tests {
         usecase.expect_insert_at_user_repository(user.clone());
 
         assert_eq!(usecase.create(req).await, Ok(user.id().clone().into()));
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_update() {
+        let mut usecase = TestUserUseCase::new();
+        usecase.expect_verify_token_at_auth_api(UserId::porzingis(), porzingis_token());
+        usecase.expect_find_at_user_repository(UserId::porzingis(), User::porzingis());
+        usecase.expect_update_at_user_repository(User::doncic());
+
+        assert_eq!(
+            usecase
+                .update(
+                    &UserId::porzingis(),
+                    &porzingis_token(),
+                    update_to_doncic_request()
+                )
+                .await,
+            Ok(User::doncic())
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_delete() {
+        let mut usecase = TestUserUseCase::new();
+        usecase.expect_verify_token_at_auth_api(UserId::doncic(), doncic_token());
+        usecase.expect_delete_account_at_auth_api(UserId::doncic());
+        usecase.expect_delete_at_user_repository(UserId::doncic());
+
+        assert_eq!(
+            usecase.delete(&UserId::doncic(), &doncic_token()).await,
+            Ok(())
+        );
     }
 
     struct TestUserUseCase {
@@ -124,8 +248,20 @@ mod tests {
             usecase
         }
 
-        fn expect_insert_at_user_repository(&mut self, user: User) {
-            expect_at_repository!(self, insert, user, ());
+        fn expect_find_at_user_repository(&mut self, param_id: UserId, return_user: User) {
+            expect_at_repository!(self, find, param_id, return_user);
+        }
+
+        fn expect_insert_at_user_repository(&mut self, param_user: User) {
+            expect_at_repository!(self, insert, param_user, ());
+        }
+
+        fn expect_update_at_user_repository(&mut self, param_user: User) {
+            expect_at_repository!(self, update, param_user, ());
+        }
+
+        fn expect_delete_at_user_repository(&mut self, param_id: UserId) {
+            expect_at_repository!(self, delete, param_id, ());
         }
 
         fn expect_create_account_at_auth_api(
@@ -142,6 +278,14 @@ mod tests {
                 param_password,
                 ()
             );
+        }
+
+        fn expect_delete_account_at_auth_api(&mut self, param_id: UserId) {
+            expect_once!(self.auth_api, delete_account, param_id, ());
+        }
+
+        fn expect_verify_token_at_auth_api(&mut self, param_id: UserId, param_token: String) {
+            expect_once!(self.auth_api, verify_token, param_id, param_token, ());
         }
     }
 
