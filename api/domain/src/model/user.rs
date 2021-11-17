@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use derive_more::{Constructor, Display, From, Into};
-use getset::Getters;
+use getset::{Getters, Setters};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -17,12 +17,6 @@ static USER_ID_REGEX: Lazy<Regex> =
 pub struct UserId {
     #[validate(regex = "USER_ID_REGEX")]
     id: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct UserAuthInfo {
-    id: UserId,
-    token: String,
 }
 
 #[derive(

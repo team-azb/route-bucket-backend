@@ -9,5 +9,7 @@ edition = "2018"
 [dependencies]
 actix-service = "2.0.0"
 actix-web = "4.0.0-beta.8"
+derive_more = "0.99.16"
 route-bucket-domain = { path = "../domain" }
 route-bucket-usecase = { path = "../usecase" }
+route-bucket-utils = { version = "0.1.0", path = "../utils" }

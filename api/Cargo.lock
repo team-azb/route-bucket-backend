@@ -2129,8 +2129,10 @@ version = "0.1.0"
 dependencies = [
  "actix-service",
  "actix-web",
+ "derive_more",
  "route-bucket-domain",
  "route-bucket-usecase",
+ "route-bucket-utils",
 ]
 
 [[package]]
@@ -2211,6 +2213,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "derive_more",
+ "jsonwebtoken",
  "reqwest",
  "thiserror",
  "validator",
