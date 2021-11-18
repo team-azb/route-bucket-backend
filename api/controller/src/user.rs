@@ -74,7 +74,7 @@ impl FromRequest for UserAuthInfo {
     where
         F: FnOnce(Self::Config) -> Self::Config,
     {
-        f(Self::Config::default())
+        f(())
     }
 }
 

@@ -73,7 +73,7 @@ where
             async move {
                 self.user_auth_api().verify_token(user_id, token).await?;
 
-                let mut user = self.user_repository().find(user_id, &conn).await?;
+                let mut user = self.user_repository().find(user_id, conn).await?;
 
                 req.name.map(|name| user.set_name(name));
                 req.gender.map(|gender| user.set_gender(gender));
@@ -82,7 +82,7 @@ where
                 req.icon_url
                     .map(|icon_url| user.set_icon_url(Some(icon_url)));
 
-                self.user_repository().update(&user, &conn).await?;
+                self.user_repository().update(&user, conn).await?;
 
                 Ok(user)
             }
@@ -97,7 +97,7 @@ where
             async move {
                 self.user_auth_api().verify_token(user_id, token).await?;
                 self.user_auth_api().delete_account(user_id).await?;
-                self.user_repository().delete(user_id, &conn).await
+                self.user_repository().delete(user_id, conn).await
             }
             .boxed()
         })

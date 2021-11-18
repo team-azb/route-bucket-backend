@@ -21,7 +21,7 @@ struct Claims {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
-struct JWK {
+struct Jwk {
     pub e: String,
     pub alg: String,
     pub kty: String,
@@ -31,10 +31,10 @@ struct JWK {
 
 #[derive(Debug, Deserialize)]
 struct KeysResponse {
-    keys: Vec<JWK>,
+    keys: Vec<Jwk>,
 }
 
-impl From<KeysResponse> for HashMap<String, JWK> {
+impl From<KeysResponse> for HashMap<String, Jwk> {
     fn from(resp: KeysResponse) -> Self {
         let mut key_map = HashMap::new();
         for key in resp.keys {
