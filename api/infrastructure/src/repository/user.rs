@@ -89,9 +89,10 @@ impl UserRepository for UserRepositoryMySql {
         .bind(dto.gender)
         .bind(dto.birthdate)
         .bind(dto.icon_url)
+        .bind(dto.id)
         .execute(&mut *conn)
         .await
-        .map_err(gen_err_mapper("failed to update Operation"))?;
+        .map_err(gen_err_mapper("failed to update User"))?;
 
         Ok(())
     }
