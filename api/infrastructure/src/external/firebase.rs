@@ -18,7 +18,7 @@ use serde_json::{json, Value};
 
 const CREDENTIAL_PATH: &str = "resources/credentials/firebase-adminsdk.json";
 const API_SCOPE: &str = "https://www.googleapis.com/auth/identitytoolkit";
-const JWT_EXP_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
+static JWT_EXP_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct FirebaseCredential {
