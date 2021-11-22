@@ -9,16 +9,19 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.50"
 byteorder = "1.4.3"
+chrono = "0.4.19"
 derive_more = "0.99.16"
 futures = "0.3.15"
 getset = "0.1.1"
 itertools = "0.10.1"
+jsonwebtoken = "7.2.0"
 num-derive = "0.3.3"
 num-traits = "0.2.14"
+once_cell = "1.8.0"
 reqwest = { version = "0.11.3", features = ["json"] }
 route-bucket-domain = { path = "../domain" }
 route-bucket-utils = { path = "../utils" }
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
-sqlx = { version = "0.5.5", features = ["json", "runtime-tokio-native-tls", "mysql", "macros"] }
+sqlx = { version = "0.5.5", features = ["json", "runtime-tokio-native-tls", "mysql", "macros", "chrono"] }
 tokio = "1.8.1"

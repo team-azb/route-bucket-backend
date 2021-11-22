@@ -1,13 +1,17 @@
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use route_bucket_utils::ApplicationResult;
 
 pub use route::{CallRouteRepository, RouteRepository};
-use route_bucket_utils::ApplicationResult;
+pub use user::{CallUserRepository, UserRepository};
 
 #[cfg(feature = "mocking")]
 pub use route::MockRouteRepository;
+#[cfg(feature = "mocking")]
+pub use user::MockUserRepository;
 
 pub(crate) mod route;
+pub(crate) mod user;
 
 #[async_trait]
 pub trait Connection: Sync {

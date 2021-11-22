@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use futures::FutureExt;
 use itertools::{enumerate, Itertools};
-use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
 use tokio::sync::Mutex;
 
@@ -17,19 +18,9 @@ use crate::dto::segment::SegmentDto;
 use crate::repository::{gen_err_mapper, RepositoryConnectionMySql};
 
 // NOTE: MySqlPoolを共有したくなったら、Arcで囲めば良さそう
-pub struct RouteRepositoryMySql(MySqlPool);
+pub struct RouteRepositoryMySql(pub(super) Arc<MySqlPool>);
 
 impl RouteRepositoryMySql {
-    pub async fn new() -> Self {
-        let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
-        MySqlPoolOptions::new()
-            .max_connections(5)
-            .connect(&database_url)
-            .map(|res| res.map(Self))
-            .await
-            .unwrap()
-    }
-
     async fn find_op_list(
         id: &RouteId,
         conn: &<Self as Repository>::Connection,

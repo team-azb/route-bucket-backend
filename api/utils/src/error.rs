@@ -31,6 +31,9 @@ pub enum ApplicationError {
     #[display(fmt = "UseCaseError: {}", _0)]
     UseCaseError(String),
 
+    #[display(fmt = "ValidationError: {}", _0)]
+    ValidationError(String),
+
     #[display(fmt = "ValueObjectError: {}", _0)]
     ValueObjectError(String),
 }
@@ -38,7 +41,9 @@ pub enum ApplicationError {
 impl ResponseError for ApplicationError {
     fn status_code(&self) -> http::StatusCode {
         match *self {
-            ApplicationError::InvalidOperation(..) => http::StatusCode::BAD_REQUEST,
+            ApplicationError::InvalidOperation(..) | ApplicationError::ValidationError(..) => {
+                http::StatusCode::BAD_REQUEST
+            }
             ApplicationError::ResourceNotFound { .. } => http::StatusCode::NOT_FOUND,
             ApplicationError::DataBaseError(..)
             | ApplicationError::DomainError(..)
@@ -51,5 +56,17 @@ impl ResponseError for ApplicationError {
         HttpResponseBuilder::new(self.status_code())
             .content_type("text/html; charset=utf-8")
             .json(hashmap! {"message" => self.to_string()})
+    }
+}
+
+impl From<reqwest::Error> for ApplicationError {
+    fn from(err: reqwest::Error) -> Self {
+        ApplicationError::ExternalError(err.to_string())
+    }
+}
+
+impl From<validator::ValidationErrors> for ApplicationError {
+    fn from(err: validator::ValidationErrors) -> Self {
+        ApplicationError::ValidationError(err.to_string())
     }
 }
