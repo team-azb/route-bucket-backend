@@ -5,6 +5,7 @@ use std::{fs::File, io::BufReader};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
+use once_cell::sync::Lazy;
 use reqwest::Client;
 use route_bucket_domain::{
     external::UserAuthApi,
@@ -18,6 +19,10 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use self::token::verify;
+
+const CREDENTIAL_PATH: &str = "resources/credentials/firebase-adminsdk.json";
+const API_SCOPE: &str = "https://www.googleapis.com/auth/identitytoolkit";
+static JWT_EXP_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct FirebaseCredential {
@@ -41,7 +46,7 @@ pub struct FirebaseAuthApi {
 
 impl FirebaseAuthApi {
     pub async fn new() -> ApplicationResult<Self> {
-        let file = File::open("resources/credentials/firebase-adminsdk.json").unwrap();
+        let file = File::open(CREDENTIAL_PATH).unwrap();
         let reader = BufReader::new(file);
         let credential: FirebaseCredential = serde_json::from_reader(reader).unwrap();
 
@@ -65,8 +70,8 @@ impl FirebaseAuthApi {
             "aud" => self.credential.token_uri.to_string(),
             "iss" => self.credential.client_email.to_string(),
             "iat" => Utc::now().timestamp().to_string(),
-            "exp" => (Utc::now() + Duration::minutes(1)).timestamp().to_string(),
-            "scope" => "https://www.googleapis.com/auth/identitytoolkit".to_string()
+            "exp" => (Utc::now() + *JWT_EXP_DURATION).timestamp().to_string(),
+            "scope" => API_SCOPE.to_string()
         );
         let key = EncodingKey::from_rsa_pem(self.credential.private_key.as_bytes()).unwrap();
 
