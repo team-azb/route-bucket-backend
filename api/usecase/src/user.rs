@@ -96,8 +96,9 @@ where
         conn.transaction(|conn| {
             async move {
                 self.user_auth_api().verify_token(user_id, token).await?;
-                self.user_auth_api().delete_account(user_id).await?;
-                self.user_repository().delete(user_id, conn).await
+
+                self.user_repository().delete(user_id, conn).await?;
+                self.user_auth_api().delete_account(user_id).await
             }
             .boxed()
         })
