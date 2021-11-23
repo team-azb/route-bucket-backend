@@ -2171,6 +2171,7 @@ dependencies = [
  "async-trait",
  "byteorder",
  "chrono",
+ "derivative",
  "derive_more",
  "futures",
  "getset",
