@@ -18,7 +18,7 @@ use route_bucket_domain::{
 use route_bucket_utils::{hashmap, ApplicationError, ApplicationResult};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use self::token::verify;
 
@@ -56,8 +56,12 @@ impl GoogleAccessToken {
         Ok(token)
     }
 
+    fn has_expired(&self) -> bool {
+        self.expires_at < Utc::now()
+    }
+
     async fn refresh(&mut self, credential: &FirebaseCredential) -> ApplicationResult<()> {
-        if self.expires_at < Utc::now() {
+        if self.has_expired() {
             let header = Header {
                 typ: Some("JWT".to_string()),
                 alg: Algorithm::RS256,
@@ -113,7 +117,7 @@ impl GoogleAccessToken {
                         .as_i64()
                         .unwrap(),
                 )
-                - *API_TOKEN_EXP_OFFSET
+                - *API_TOKEN_EXP_OFFSET;
         }
 
         Ok(())
@@ -123,7 +127,7 @@ impl GoogleAccessToken {
 #[derive(Clone, Debug)]
 pub struct FirebaseAuthApi {
     credential: FirebaseCredential,
-    access_token: Arc<Mutex<GoogleAccessToken>>,
+    access_token: Arc<RwLock<GoogleAccessToken>>,
 }
 
 impl FirebaseAuthApi {
@@ -132,7 +136,7 @@ impl FirebaseAuthApi {
         let reader = BufReader::new(file);
 
         let credential: FirebaseCredential = serde_json::from_reader(reader).unwrap();
-        let access_token = Arc::new(Mutex::new(GoogleAccessToken::new(&credential).await?));
+        let access_token = Arc::new(RwLock::new(GoogleAccessToken::new(&credential).await?));
 
         Ok(Self {
             credential,
@@ -141,12 +145,15 @@ impl FirebaseAuthApi {
     }
 
     async fn post_request(&self, url: String, payload: Value) -> ApplicationResult<Response> {
-        let mut access_token = self.access_token.lock().await;
-        access_token.refresh(&self.credential).await?;
+        if self.access_token.read().await.has_expired() {
+            // Get the write-lock only when the token has expired
+            let mut access_token = self.access_token.write().await;
+            access_token.refresh(&self.credential).await?;
+        }
 
         let resp = Client::new()
             .post(&url)
-            .bearer_auth(&access_token.token)
+            .bearer_auth(&self.access_token.read().await.token)
             .json(&payload)
             .send()
             .await?;
