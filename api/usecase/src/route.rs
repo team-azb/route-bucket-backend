@@ -8,7 +8,8 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo};
+use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
+use route_bucket_domain::model::user::UserId;
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -21,7 +22,9 @@ mod responses;
 pub trait RouteUseCase {
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse>;
 
-    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse>;
+    async fn find_all(&self) -> ApplicationResult<RouteSearchResponse>;
+
+    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse>;
 
     async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
 
@@ -80,11 +83,22 @@ where
         route.try_into()
     }
 
-    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
+    async fn find_all(&self) -> ApplicationResult<RouteSearchResponse> {
         let conn = self.route_repository().get_connection().await?;
 
-        Ok(RouteGetAllResponse {
-            route_infos: self.route_repository().find_all_infos(&conn).await?,
+        Ok(RouteSearchResponse {
+            route_infos: self
+                .route_repository()
+                .search_infos(RouteSearchQuery::empty(), &conn)
+                .await?,
+        })
+    }
+
+    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse> {
+        let conn = self.route_repository().get_connection().await?;
+
+        Ok(RouteSearchResponse {
+            route_infos: self.route_repository().search_infos(query, &conn).await?,
         })
     }
 
@@ -99,7 +113,12 @@ where
     }
 
     async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route_info = RouteInfo::new(RouteId::new(), &req.name, 0);
+        let route_info = RouteInfo::new(
+            RouteId::new(),
+            &req.name,
+            UserId::from("guest".to_string()),
+            0,
+        );
 
         let conn = self.route_repository().get_connection().await?;
         self.route_repository()
