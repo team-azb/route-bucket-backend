@@ -1,9 +1,12 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use derive_more::Deref;
+use itertools::Itertools;
 use route_bucket_domain::repository::Connection;
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use serde::Serialize;
 use sqlx::mysql::{MySqlPoolOptions, MySqlTransactionManager};
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, TransactionManager};
@@ -32,6 +35,26 @@ pub async fn init_repositories() -> (RouteRepositoryMySql, UserRepositoryMySql) 
 
 fn gen_err_mapper(msg: &'static str) -> impl FnOnce(sqlx::Error) -> ApplicationError {
     move |err| ApplicationError::DataBaseError(format!("{} ({:?})", msg, err))
+}
+
+fn serializable_to_search_query<T: Serialize>(
+    table: &str,
+    serializable: T,
+) -> ApplicationResult<String> {
+    let hashmap: HashMap<String, String> =
+        serde_json::from_value(serde_json::to_value(serializable).unwrap()).unwrap();
+
+    let mut query = format!("SELECT * FROM {}", table);
+    if hashmap.len() > 0 {
+        let conditions = hashmap
+            .into_iter()
+            .map(|(key, val)| format!("`{}` = '{}'", key, val))
+            .join(", ");
+
+        query = format!("{} WHERE {}", query, conditions);
+    }
+
+    Ok(query)
 }
 
 #[derive(Deref)]

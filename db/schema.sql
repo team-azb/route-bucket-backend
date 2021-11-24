@@ -2,6 +2,7 @@ CREATE TABLE routes
 (
     `id`            VARCHAR(11)      NOT NULL,
     `name`          VARCHAR(50)      NOT NULL,
+    `owner_id`      VARCHAR(40)      NOT NULL,
     `operation_pos` INTEGER UNSIGNED NOT NULL,
     PRIMARY KEY (`id`)
 );
