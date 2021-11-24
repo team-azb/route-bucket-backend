@@ -45,7 +45,7 @@ fn serializable_to_search_query<T: Serialize>(
         serde_json::from_value(serde_json::to_value(serializable).unwrap()).unwrap();
 
     let mut query = format!("SELECT * FROM {}", table);
-    if hashmap.len() > 0 {
+    if !hashmap.is_empty() {
         let conditions = hashmap
             .into_iter()
             .map(|(key, val)| format!("`{}` = '{}'", key, val))
