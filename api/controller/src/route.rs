@@ -1,6 +1,6 @@
 use actix_web::{dev, http, web, HttpResponse, Result};
 
-use route_bucket_domain::model::route::RouteId;
+use route_bucket_domain::model::route::{RouteId, RouteSearchQuery};
 use route_bucket_usecase::route::{
     NewPointRequest, RemovePointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
 };
@@ -16,6 +16,13 @@ async fn get<U: 'static + RouteUseCase>(
 
 async fn get_all<U: 'static + RouteUseCase>(usecase: web::Data<U>) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(usecase.find_all().await?))
+}
+
+async fn get_search<U: 'static + RouteUseCase>(
+    usecase: web::Data<U>,
+    query: web::Query<RouteSearchQuery>,
+) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(usecase.search(query.into_inner()).await?))
 }
 
 async fn get_gpx<U: 'static + RouteUseCase>(
@@ -114,6 +121,7 @@ pub trait BuildRouteService: AddService {
                         .route(web::get().to(get_all::<U>))
                         .route(web::post().to(post::<U>)),
                 )
+                .service(web::resource("/search").route(web::get().to(get_search::<U>)))
                 .service(
                     web::resource("/{id}")
                         .route(web::get().to(get::<U>))
