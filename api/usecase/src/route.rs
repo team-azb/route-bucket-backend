@@ -330,7 +330,7 @@ mod tests {
         model::{
             fixtures::route::{
                 CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
-                RouteInfoFixtures, SegmentFixtures,
+                RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
             },
             route::{Coordinate, DrawingMode, RouteGpx, Segment},
         },
@@ -404,11 +404,31 @@ mod tests {
     #[tokio::test]
     async fn can_find_all() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_find_all_at_route_repository(vec![RouteInfo::route0(0)]);
+        usecase.expect_search_infos_at_route_repository(
+            RouteSearchQuery::empty(),
+            vec![RouteInfo::route0(0)],
+        );
 
         assert_eq!(
             usecase.find_all().await,
-            Ok(RouteGetAllResponse {
+            Ok(RouteSearchResponse {
+                route_infos: vec![RouteInfo::route0(0)]
+            })
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_search() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_search_infos_at_route_repository(
+            RouteSearchQuery::search_guest(),
+            vec![RouteInfo::route0(0)],
+        );
+
+        assert_eq!(
+            usecase.search(RouteSearchQuery::search_guest()).await,
+            Ok(RouteSearchResponse {
                 route_infos: vec![RouteInfo::route0(0)]
             })
         );
@@ -660,8 +680,12 @@ mod tests {
             expect_at_repository!(self, find_info, param_id, return_info);
         }
 
-        fn expect_find_all_at_route_repository(&mut self, return_infos: Vec<RouteInfo>) {
-            expect_at_repository!(self, find_all_infos, return_infos);
+        fn expect_search_infos_at_route_repository(
+            &mut self,
+            query: RouteSearchQuery,
+            return_infos: Vec<RouteInfo>,
+        ) {
+            expect_at_repository!(self, search_infos, query, return_infos);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {

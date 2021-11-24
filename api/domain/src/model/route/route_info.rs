@@ -44,6 +44,8 @@ impl RouteInfo {
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
+    use crate::model::user::tests::UserIdFixtures;
+
     use super::*;
 
     #[fixture]
@@ -73,6 +75,7 @@ pub(crate) mod tests {
             RouteInfo {
                 id: RouteId::new(),
                 name: "route0".into(),
+                owner_id: UserId::guest(),
                 op_num,
             }
         }
@@ -81,6 +84,7 @@ pub(crate) mod tests {
             RouteInfo {
                 id: RouteId::new(),
                 name: "route1".into(),
+                owner_id: UserId::guest(),
                 op_num,
             }
         }
