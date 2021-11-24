@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use derive_more::{Constructor, Display, From, Into};
-use getset::Getters;
+use getset::{Getters, Setters};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -17,12 +17,6 @@ static USER_ID_REGEX: Lazy<Regex> =
 pub struct UserId {
     #[validate(regex = "USER_ID_REGEX")]
     id: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct UserAuthInfo {
-    id: UserId,
-    token: String,
 }
 
 #[derive(
@@ -42,8 +36,9 @@ impl Default for Gender {
     }
 }
 
-#[derive(Clone, Debug, Constructor, Into, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Constructor, Into, Getters, Setters)]
 #[get = "pub"]
+#[set = "pub"]
 #[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct User {
     id: UserId,
@@ -90,6 +85,13 @@ pub(crate) mod tests {
                 gender: Gender::Others,
                 birthdate: None,
                 icon_url: None,
+            }
+        }
+
+        fn porzingis_pretending_like_doncic() -> User {
+            User {
+                id: UserId::porzingis(),
+                ..Self::doncic()
             }
         }
     }
