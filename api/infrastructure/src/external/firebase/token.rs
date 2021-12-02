@@ -44,11 +44,10 @@ impl From<KeysResponse> for HashMap<String, Jwk> {
     }
 }
 
-pub(super) async fn verify(
-    user_id: &UserId,
+pub(super) async fn verify_and_get_user_id(
     token: &str,
     credential: &FirebaseCredential,
-) -> ApplicationResult<()> {
+) -> ApplicationResult<UserId> {
     let kid = decode_header(token)
         .map(|header| header.kid)?
         .ok_or_else(|| {
@@ -76,11 +75,5 @@ pub(super) async fn verify(
     let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e);
     let decoded_token = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)?;
 
-    let uid = decoded_token.claims.sub;
-    (user_id.to_string() == uid).then(|| ()).ok_or_else(|| {
-        ApplicationError::AuthError(format!(
-            "The id of the user ({}) doesn't match the id from the token ({}).",
-            user_id, uid
-        ))
-    })
+    Ok(UserId::from(decoded_token.claims.sub))
 }

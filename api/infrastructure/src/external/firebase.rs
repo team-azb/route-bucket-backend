@@ -217,7 +217,7 @@ impl UserAuthApi for FirebaseAuthApi {
         }
     }
 
-    async fn verify_token(&self, user_id: &UserId, token: &str) -> ApplicationResult<()> {
-        verify(user_id, token, &self.credential).await
+    async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
+        verify_and_get_user_id(token, &self.credential).await
     }
 }
