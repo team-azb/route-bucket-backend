@@ -141,14 +141,14 @@ where
                 let owner_id = self.user_auth_api().authenticate(user_access_token).await?;
                 let route_info = RouteInfo::new(RouteId::new(), &req.name, owner_id, 0);
 
-        self.route_repository()
-            .insert_info(&route_info, &conn)
-            .await?;
+                self.route_repository()
+                    .insert_info(&route_info, &conn)
+                    .await?;
 
-        Ok(RouteCreateResponse {
-            id: route_info.id().clone(),
-        })
-    }
+                Ok(RouteCreateResponse {
+                    id: route_info.id().clone(),
+                })
+            }
             .boxed()
         })
         .await
@@ -387,7 +387,7 @@ where
                     .authorize(info.owner_id(), user_access_token)
                     .await?;
 
-        self.route_repository().delete(route_id, &conn).await
+                self.route_repository().delete(route_id, &conn).await
             }
             .boxed()
         })
@@ -399,13 +399,17 @@ where
 mod tests {
     use crate::{expect_at_repository, expect_once};
     use route_bucket_domain::{
-        external::{MockElevationApi, MockRouteInterpolationApi},
+        external::{MockElevationApi, MockRouteInterpolationApi, MockUserAuthApi},
         model::{
-            fixtures::route::{
-                CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
-                RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
+            fixtures::{
+                route::{
+                    CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
+                    RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
+                },
+                user::UserIdFixtures,
             },
             route::{Coordinate, DrawingMode, RouteGpx, Segment},
+            user::UserId,
         },
         repository::{MockConnection, MockRouteRepository},
     };
@@ -452,6 +456,10 @@ mod tests {
 
     fn yokohama_to_tokyo_before_interpolation() -> Route {
         Route::yokohama_to_tokyo()
+    }
+
+    fn doncic_token() -> String {
+        String::from("token.for.doncic")
     }
 
     #[rstest]
@@ -531,10 +539,11 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_insert_info_at_route_repository(RouteInfo::route0(0));
         // NOTE: unable to check resp since RouteId is auto-generated
         // assert_eq!(usecase.create(&req).await, Ok(expected_resp));
-        assert!(matches!(usecase.create(&req).await, Ok(_)));
+        assert!(matches!(usecase.create(&doncic_token(), &req).await, Ok(_)));
     }
 
     #[rstest]
@@ -545,11 +554,12 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(0));
         usecase.expect_update_info_at_route_repository(RouteInfo::route1(0));
 
         assert_eq!(
-            usecase.rename(&route_id(), &req).await,
+            usecase.rename(&route_id(), &doncic_token(), &req).await,
             Ok(RouteInfo::route1(0))
         );
     }
@@ -563,6 +573,7 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
@@ -585,7 +596,9 @@ mod tests {
         ));
 
         assert_eq!(
-            usecase.add_point(&route_id(), 1, &req).await,
+            usecase
+                .add_point(&route_id(), &doncic_token(), 1, &req)
+                .await,
             Route::yokohama_to_chiba_via_tokyo_filled(true, true).try_into()
         );
     }
@@ -596,7 +609,9 @@ mod tests {
         let req = RemovePointRequest {
             mode: DrawingMode::FollowRoad,
         };
+
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_via_tokyo_filled(false, false),
@@ -612,7 +627,9 @@ mod tests {
         usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_filled(true, true));
 
         assert_eq!(
-            usecase.remove_point(&route_id(), 1, &req).await,
+            usecase
+                .remove_point(&route_id(), &doncic_token(), 1, &req)
+                .await,
             Route::yokohama_to_chiba_filled(true, true).try_into()
         );
     }
@@ -626,6 +643,7 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
@@ -646,7 +664,9 @@ mod tests {
         usecase.expect_update_at_route_repository(Route::yokohama_to_tokyo_filled(true, true));
 
         assert_eq!(
-            usecase.move_point(&route_id(), 1, &req).await,
+            usecase
+                .move_point(&route_id(), &doncic_token(), 1, &req)
+                .await,
             Route::yokohama_to_tokyo_filled(true, true).try_into()
         );
     }
@@ -655,11 +675,12 @@ mod tests {
     #[tokio::test]
     async fn can_clear_route() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(3));
         usecase.expect_update_at_route_repository(Route::empty());
 
         assert_eq!(
-            usecase.clear_route(&route_id()).await,
+            usecase.clear_route(&route_id(), &doncic_token()).await,
             Route::empty().try_into()
         );
     }
@@ -668,6 +689,7 @@ mod tests {
     #[tokio::test]
     async fn can_redo_operation() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
@@ -685,7 +707,7 @@ mod tests {
         ));
 
         assert_eq!(
-            usecase.redo_operation(&route_id()).await,
+            usecase.redo_operation(&route_id(), &doncic_token()).await,
             Route::yokohama_to_chiba_via_tokyo_filled(true, true).try_into()
         );
     }
@@ -694,6 +716,7 @@ mod tests {
     #[tokio::test]
     async fn can_undo_operation() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_via_tokyo_filled(false, false),
@@ -709,7 +732,7 @@ mod tests {
         usecase.expect_update_at_route_repository(Route::yokohama_to_chiba_filled(true, true));
 
         assert_eq!(
-            usecase.undo_operation(&route_id()).await,
+            usecase.undo_operation(&route_id(), &doncic_token()).await,
             Route::yokohama_to_chiba_filled(true, true).try_into()
         );
     }
@@ -718,14 +741,17 @@ mod tests {
     #[tokio::test]
     async fn can_delete() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(0));
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_delete_at_route_repository(route_id());
-        assert_eq!(usecase.delete(&route_id()).await, Ok(()));
+        assert_eq!(usecase.delete(&route_id(), &doncic_token()).await, Ok(()));
     }
 
     struct TestRouteUseCase {
         repository: MockRouteRepository,
         interpolation_api: MockRouteInterpolationApi,
         elevation_api: MockElevationApi,
+        auth_api: MockUserAuthApi,
     }
 
     // setup methods for mocking
@@ -735,6 +761,7 @@ mod tests {
                 repository: MockRouteRepository::new(),
                 interpolation_api: MockRouteInterpolationApi::new(),
                 elevation_api: MockElevationApi::new(),
+                auth_api: MockUserAuthApi::new(),
             };
             expect_at_repository!(usecase, get_connection, MockConnection {});
 
@@ -815,6 +842,14 @@ mod tests {
                 before_route => after_route
             );
         }
+
+        fn expect_authenticate_at_auth_api(&mut self, param_token: String, return_id: UserId) {
+            expect_once!(self.auth_api, authenticate, param_token, return_id);
+        }
+
+        fn expect_authorize_at_auth_api(&mut self, param_id: UserId, param_token: String) {
+            expect_once!(self.auth_api, authorize, param_id, param_token, ());
+        }
     }
 
     // impls to enable trait RouteUseCase
@@ -839,6 +874,14 @@ mod tests {
 
         fn elevation_api(&self) -> &Self::ElevationApi {
             &self.elevation_api
+        }
+    }
+
+    impl CallUserAuthApi for TestRouteUseCase {
+        type UserAuthApi = MockUserAuthApi;
+
+        fn user_auth_api(&self) -> &Self::UserAuthApi {
+            &self.auth_api
         }
     }
 }
