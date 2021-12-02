@@ -142,7 +142,7 @@ where
                 let route_info = RouteInfo::new(RouteId::new(), &req.name, owner_id, 0);
 
                 self.route_repository()
-                    .insert_info(&route_info, &conn)
+                    .insert_info(&route_info, conn)
                     .await?;
 
                 Ok(RouteCreateResponse {
@@ -387,7 +387,7 @@ where
                     .authorize(info.owner_id(), user_access_token)
                     .await?;
 
-                self.route_repository().delete(route_id, &conn).await
+                self.route_repository().delete(route_id, conn).await
             }
             .boxed()
         })
