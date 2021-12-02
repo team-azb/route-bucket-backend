@@ -6,10 +6,10 @@ use futures::FutureExt;
 pub use requests::*;
 pub use responses::*;
 use route_bucket_domain::external::{
-    CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
+    CallElevationApi, CallRouteInterpolationApi, CallUserAuthApi, ElevationApi,
+    RouteInterpolationApi, UserAuthApi,
 };
 use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
-use route_bucket_domain::model::user::UserId;
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -28,17 +28,23 @@ pub trait RouteUseCase {
 
     async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
 
-    async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse>;
+    async fn create(
+        &self,
+        user_access_token: &str,
+        req: &RouteCreateRequest,
+    ) -> ApplicationResult<RouteCreateResponse>;
 
     async fn rename(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         req: &RouteRenameRequest,
     ) -> ApplicationResult<RouteInfo>;
 
     async fn add_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse>;
@@ -46,6 +52,7 @@ pub trait RouteUseCase {
     async fn remove_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &RemovePointRequest,
     ) -> ApplicationResult<RouteOperationResponse>;
@@ -53,25 +60,36 @@ pub trait RouteUseCase {
     async fn move_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse>;
 
-    async fn clear_route(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse>;
+    async fn clear_route(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+    ) -> ApplicationResult<RouteOperationResponse>;
 
-    async fn redo_operation(&self, route_id: &RouteId)
-        -> ApplicationResult<RouteOperationResponse>;
+    async fn redo_operation(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+    ) -> ApplicationResult<RouteOperationResponse>;
 
-    async fn undo_operation(&self, route_id: &RouteId)
-        -> ApplicationResult<RouteOperationResponse>;
+    async fn undo_operation(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+    ) -> ApplicationResult<RouteOperationResponse>;
 
-    async fn delete(&self, route_id: &RouteId) -> ApplicationResult<()>;
+    async fn delete(&self, route_id: &RouteId, user_access_token: &str) -> ApplicationResult<()>;
 }
 
 #[async_trait]
 impl<T> RouteUseCase for T
 where
-    T: CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + Sync,
+    T: CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + CallUserAuthApi + Sync,
 {
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
@@ -112,15 +130,17 @@ where
         route.try_into()
     }
 
-    async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route_info = RouteInfo::new(
-            RouteId::new(),
-            &req.name,
-            UserId::from("guest".to_string()),
-            0,
-        );
-
+    async fn create(
+        &self,
+        user_access_token: &str,
+        req: &RouteCreateRequest,
+    ) -> ApplicationResult<RouteCreateResponse> {
         let conn = self.route_repository().get_connection().await?;
+        conn.transaction(|conn| {
+            async move {
+                let owner_id = self.user_auth_api().authenticate(user_access_token).await?;
+                let route_info = RouteInfo::new(RouteId::new(), &req.name, owner_id, 0);
+
         self.route_repository()
             .insert_info(&route_info, &conn)
             .await?;
@@ -129,16 +149,25 @@ where
             id: route_info.id().clone(),
         })
     }
+            .boxed()
+        })
+        .await
+    }
 
     async fn rename(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         req: &RouteRenameRequest,
     ) -> ApplicationResult<RouteInfo> {
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut route_info = self.route_repository().find_info(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route_info.owner_id(), user_access_token)
+                    .await?;
+
                 route_info.rename(&req.name);
                 self.route_repository()
                     .update_info(&route_info, conn)
@@ -154,6 +183,7 @@ where
     async fn add_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
@@ -161,6 +191,10 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route.info().owner_id(), user_access_token)
+                    .await?;
+
                 let op = Operation::new_add(
                     pos,
                     self.route_interpolation_api()
@@ -189,6 +223,7 @@ where
     async fn remove_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &RemovePointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
@@ -196,6 +231,10 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route.info().owner_id(), user_access_token)
+                    .await?;
+
                 let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
                 route.push_operation(op)?;
 
@@ -217,6 +256,7 @@ where
     async fn move_point(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
         pos: usize,
         req: &NewPointRequest,
     ) -> ApplicationResult<RouteOperationResponse> {
@@ -224,6 +264,10 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route.info().owner_id(), user_access_token)
+                    .await?;
+
                 let op = Operation::new_move(
                     pos,
                     self.route_interpolation_api()
@@ -249,11 +293,19 @@ where
         .await
     }
 
-    async fn clear_route(&self, route_id: &RouteId) -> ApplicationResult<RouteOperationResponse> {
+    async fn clear_route(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+    ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut info = self.route_repository().find_info(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(info.owner_id(), user_access_token)
+                    .await?;
+
                 info.clear_route();
                 let cleared_route = Route::new(info, vec![], vec![].into());
                 self.route_repository().update(&cleared_route, conn).await?;
@@ -269,11 +321,16 @@ where
     async fn redo_operation(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
     ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route.info().owner_id(), user_access_token)
+                    .await?;
+
                 route.redo_operation()?;
 
                 self.route_interpolation_api()
@@ -294,11 +351,16 @@ where
     async fn undo_operation(
         &self,
         route_id: &RouteId,
+        user_access_token: &str,
     ) -> ApplicationResult<RouteOperationResponse> {
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(route.info().owner_id(), user_access_token)
+                    .await?;
+
                 route.undo_operation()?;
 
                 self.route_interpolation_api()
@@ -316,9 +378,20 @@ where
         .await
     }
 
-    async fn delete(&self, route_id: &RouteId) -> ApplicationResult<()> {
+    async fn delete(&self, route_id: &RouteId, user_access_token: &str) -> ApplicationResult<()> {
         let conn = self.route_repository().get_connection().await?;
+        conn.transaction(|conn| {
+            async move {
+                let info = self.route_repository().find_info(route_id, conn).await?;
+                self.user_auth_api()
+                    .authorize(info.owner_id(), user_access_token)
+                    .await?;
+
         self.route_repository().delete(route_id, &conn).await
+            }
+            .boxed()
+        })
+        .await
     }
 }
 
