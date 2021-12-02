@@ -52,13 +52,15 @@ pub(super) async fn verify(
     let kid = decode_header(token)
         .map(|header| header.kid)?
         .ok_or_else(|| {
-            ApplicationError::AuthError("The decoded jwt header didn't contain kid.".into())
+            ApplicationError::AuthenticationError(
+                "The decoded jwt header didn't contain kid.".into(),
+            )
         })?;
 
     // validate: kid
     let jwks_by_kid = HashMap::from(reqwest::get(JWT_URL).await?.json::<KeysResponse>().await?);
     let jwk = jwks_by_kid.get(&kid).ok_or_else(|| {
-        ApplicationError::AuthError("The decoded kid not found in jwks response".into())
+        ApplicationError::AuthenticationError("The decoded kid not found in jwks response".into())
     })?;
 
     // validate: alg, iss, aud

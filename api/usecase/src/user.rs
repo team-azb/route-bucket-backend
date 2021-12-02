@@ -71,7 +71,7 @@ where
 
         conn.transaction(|conn| {
             async move {
-                self.user_auth_api().verify_token(user_id, token).await?;
+                self.user_auth_api().authorize(user_id, token).await?;
 
                 let mut user = self.user_repository().find(user_id, conn).await?;
 
@@ -95,7 +95,7 @@ where
         let conn = self.user_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                self.user_auth_api().verify_token(user_id, token).await?;
+                self.user_auth_api().authorize(user_id, token).await?;
 
                 self.user_repository().delete(user_id, conn).await?;
                 self.user_auth_api().delete_account(user_id).await
