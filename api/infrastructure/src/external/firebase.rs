@@ -231,4 +231,33 @@ impl UserAuthApi for FirebaseAuthApi {
     async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
         verify_and_get_user_id(token, &self.credential).await
     }
+
+    async fn check_if_email_exists(&self, email: &Email) -> ApplicationResult<bool> {
+        let response = self
+            .post_request(
+                format!(
+                    "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts:lookup",
+                    self.credential.project_id
+                ),
+                json!({
+                    "email": [email.to_string()]
+                }),
+            )
+            .await?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<Value>()
+                .await?
+                .get("users")
+                .map(Value::as_array)
+                .flatten()
+                .map_or(false, |arr| !arr.is_empty()))
+        } else {
+            Err(ApplicationError::ExternalError(format!(
+                "Failed to delete account: {:?}",
+                response.json::<Value>().await
+            )))
+        }
+    }
 }

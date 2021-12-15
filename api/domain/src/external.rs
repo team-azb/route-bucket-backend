@@ -81,6 +81,8 @@ pub trait UserAuthApi: Send + Sync {
             ))
         })
     }
+
+    async fn check_if_email_exists(&self, email: &Email) -> ApplicationResult<bool>;
 }
 
 pub trait CallUserAuthApi {

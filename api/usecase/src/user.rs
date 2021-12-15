@@ -8,6 +8,7 @@ use route_bucket_domain::{
     repository::{CallUserRepository, Connection, Repository, UserRepository},
 };
 use route_bucket_utils::ApplicationResult;
+use validator::Validate;
 
 pub use requests::*;
 pub use responses::*;
@@ -29,6 +30,8 @@ pub trait UserUseCase {
     ) -> ApplicationResult<User>;
 
     async fn delete(&self, user_id: &UserId, token: &str) -> ApplicationResult<()>;
+
+    async fn validate(&self, req: UserValidateRequest) -> ApplicationResult<UserValidateResponse>;
 }
 
 #[async_trait]
@@ -103,6 +106,34 @@ where
             .boxed()
         })
         .await
+    }
+
+    async fn validate(&self, req: UserValidateRequest) -> ApplicationResult<UserValidateResponse> {
+        let mut resp: UserValidateResponse = Default::default();
+
+        // Check Formats
+        let validation_result = req.validate();
+        if let Err(errors) = validation_result {
+            let error_map = errors.into_errors();
+            error_map.into_iter().for_each(|(field, _)| {
+                resp.0.insert(field, ValidationErrorCode::InvalidFormat);
+            });
+        }
+
+        // Check for Duplicate Uses
+        if let Some(id) = req.id {
+            let conn = self.user_repository().get_connection().await?;
+            if self.user_repository().find(&id, &conn).await.is_ok() {
+                resp.0.insert("id", ValidationErrorCode::AlreadyExists);
+            };
+        }
+        if let Some(email) = req.email {
+            if self.user_auth_api().check_if_email_exists(&email).await? {
+                resp.0.insert("email", ValidationErrorCode::AlreadyExists);
+            };
+        }
+
+        Ok(resp)
     }
 }
 
