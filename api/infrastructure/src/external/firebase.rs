@@ -187,9 +187,20 @@ impl UserAuthApi for FirebaseAuthApi {
         if response.status().is_success() {
             Ok(())
         } else {
+            let json = response.json::<Value>().await?;
+
+            if let Some(Value::String(msg)) = json.pointer("/error/message") {
+                if ["EMAIL_EXISTS", "INVALID_EMAIL", "DUPLICATE_LOCAL_ID"].contains(&msg.as_str()) {
+                    return Err(ApplicationError::ValidationError(format!(
+                        "Validation failed for create account: {:?}",
+                        json
+                    )));
+                }
+            }
+
             Err(ApplicationError::ExternalError(format!(
                 "Failed to create account: {:?}",
-                response.json::<Value>().await
+                json
             )))
         }
     }
