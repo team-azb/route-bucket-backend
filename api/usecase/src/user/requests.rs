@@ -27,8 +27,6 @@ pub struct UserCreateRequest {
     pub(super) icon_url: Option<Url>,
     #[validate(length(min = 6))]
     pub(super) password: String,
-    #[validate(must_match = "password")]
-    pub(super) password_confirmation: String,
 }
 
 impl UserCreateRequest {

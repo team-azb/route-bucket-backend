@@ -135,7 +135,6 @@ mod tests {
             birthdate: NaiveDate::from_str("1999-02-28").ok(),
             icon_url: Url::try_from("https://on.nba.com/30qMUEI".to_string()).ok(),
             password: "LukaMagic#77".to_string(),
-            password_confirmation: "LukaMagic#77".to_string(),
         }
     }
 
@@ -149,7 +148,6 @@ mod tests {
             birthdate: None,
             icon_url: None,
             password: "LukaMagic#77".to_string(),
-            password_confirmation: "LukaMagic#77".to_string(),
         }
     }
 
