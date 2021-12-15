@@ -152,6 +152,7 @@ mod tests {
         },
         repository::{MockConnection, MockUserRepository},
     };
+    use route_bucket_utils::hashmap;
     use rstest::{fixture, rstest};
 
     use super::*;
@@ -200,6 +201,11 @@ mod tests {
     #[fixture]
     fn porzingis_token() -> String {
         String::from("token.for.porzingis")
+    }
+
+    #[fixture]
+    fn unknown_email() -> Email {
+        Email::try_from("unknown@email.com".to_string()).unwrap()
     }
 
     #[rstest]
@@ -261,6 +267,29 @@ mod tests {
         );
     }
 
+    #[rstest]
+    #[tokio::test]
+    async fn can_validate() {
+        let req = UserValidateRequest {
+            id: Some(UserId::doncic()),
+            name: None,
+            email: Some(unknown_email()),
+            birthdate: None,
+            icon_url: None,
+            password: Some("short".to_string()),
+        };
+        let resp = UserValidateResponse(hashmap! {
+            "id" => ValidationErrorCode::AlreadyExists,
+            "password" => ValidationErrorCode::InvalidFormat
+        });
+
+        let mut usecase = TestUserUseCase::new();
+        usecase.expect_find_at_user_repository(UserId::doncic(), User::doncic());
+        usecase.expect_check_if_email_exists_at_auth_api(unknown_email(), false);
+
+        assert_eq!(usecase.validate(req).await, Ok(resp));
+    }
+
     struct TestUserUseCase {
         repository: MockUserRepository,
         auth_api: MockUserAuthApi,
@@ -316,6 +345,19 @@ mod tests {
 
         fn expect_authorize_at_auth_api(&mut self, param_id: UserId, param_token: String) {
             expect_once!(self.auth_api, authorize, param_id, param_token, ());
+        }
+
+        fn expect_check_if_email_exists_at_auth_api(
+            &mut self,
+            param_email: Email,
+            result_bool: bool,
+        ) {
+            expect_once!(
+                self.auth_api,
+                check_if_email_exists,
+                param_email,
+                result_bool
+            );
         }
     }
 
