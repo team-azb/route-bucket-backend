@@ -29,16 +29,10 @@ static API_TOKEN_EXP_OFFSET: Lazy<Duration> = Lazy::new(|| Duration::seconds(10)
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct FirebaseCredential {
-    r#type: String,
     project_id: String,
-    private_key_id: String,
     private_key: String,
     client_email: String,
-    client_id: String,
-    auth_uri: String,
     token_uri: String,
-    auth_provider_x509_cert_url: String,
-    client_x509_cert_url: String,
 }
 
 #[derive(Clone, Debug, Derivative)]
