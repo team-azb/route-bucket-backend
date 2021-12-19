@@ -138,7 +138,14 @@ impl FirebaseAuthApi {
         })
     }
 
-    async fn post_request(&self, url: String, payload: Value) -> ApplicationResult<Response> {
+    fn get_api_url(&self, method_name: &str) -> String {
+        format!(
+            "https://identitytoolkit.googleapis.com/v1/projects/{}/{}",
+            self.credential.project_id, method_name
+        )
+    }
+
+    async fn request(&self, url: String, payload: Value) -> ApplicationResult<Response> {
         if self.access_token.read().await.has_expired() {
             // Get the write-lock only when the token has expired
             let mut access_token = self.access_token.write().await;
@@ -154,6 +161,25 @@ impl FirebaseAuthApi {
 
         Ok(resp)
     }
+
+    async fn request_and_check_status(
+        &self,
+        url: String,
+        payload: Value,
+        err_msg: &str,
+    ) -> ApplicationResult<Response> {
+        let response = self.request(url, payload).await?;
+
+        if response.status().is_success() {
+            Ok(response)
+        } else {
+            Err(ApplicationError::ExternalError(format!(
+                "{}: {:?}",
+                err_msg,
+                response.json::<Value>().await
+            )))
+        }
+    }
 }
 
 #[async_trait]
@@ -165,11 +191,8 @@ impl UserAuthApi for FirebaseAuthApi {
         password: &str,
     ) -> ApplicationResult<()> {
         let response = self
-            .post_request(
-                format!(
-                    "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts",
-                    self.credential.project_id
-                ),
+            .request(
+                self.get_api_url("accounts"),
                 json!({
                     "email": email.to_string(),
                     "password": password.to_string(),
@@ -200,26 +223,16 @@ impl UserAuthApi for FirebaseAuthApi {
     }
 
     async fn delete_account(&self, user_id: &UserId) -> ApplicationResult<()> {
-        let response = self
-            .post_request(
-                format!(
-                    "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts:delete",
-                    self.credential.project_id
-                ),
+        self.request_and_check_status(
+            self.get_api_url("accounts:delete"),
                 json!({
                     "localId": user_id.to_string()
                 }),
+            "Failed to delete account",
             )
             .await?;
 
-        if response.status().is_success() {
             Ok(())
-        } else {
-            Err(ApplicationError::ExternalError(format!(
-                "Failed to delete account: {:?}",
-                response.json::<Value>().await
-            )))
-        }
     }
 
     async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
@@ -228,18 +241,15 @@ impl UserAuthApi for FirebaseAuthApi {
 
     async fn check_if_email_exists(&self, email: &Email) -> ApplicationResult<bool> {
         let response = self
-            .post_request(
-                format!(
-                    "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts:lookup",
-                    self.credential.project_id
-                ),
+            .request_and_check_status(
+                self.get_api_url("accounts:lookup"),
                 json!({
                     "email": [email.to_string()]
                 }),
+                "Failed to check email existance",
             )
             .await?;
 
-        if response.status().is_success() {
             Ok(response
                 .json::<Value>()
                 .await?
@@ -247,11 +257,5 @@ impl UserAuthApi for FirebaseAuthApi {
                 .map(Value::as_array)
                 .flatten()
                 .map_or(false, |arr| !arr.is_empty()))
-        } else {
-            Err(ApplicationError::ExternalError(format!(
-                "Failed to delete account: {:?}",
-                response.json::<Value>().await
-            )))
-        }
     }
 }
