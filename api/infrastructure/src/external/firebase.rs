@@ -225,18 +225,49 @@ impl UserAuthApi for FirebaseAuthApi {
     async fn delete_account(&self, user_id: &UserId) -> ApplicationResult<()> {
         self.request_and_check_status(
             self.get_api_url("accounts:delete"),
-                json!({
-                    "localId": user_id.to_string()
-                }),
+            json!({
+                "localId": user_id.to_string()
+            }),
             "Failed to delete account",
-            )
-            .await?;
+        )
+        .await?;
 
-            Ok(())
+        Ok(())
     }
 
     async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
-        verify_and_get_user_id(token, &self.credential).await
+        let user_id = verify_and_get_user_id(token, &self.credential).await?;
+
+        // check emailVerified
+        let response = self
+            .request_and_check_status(
+                self.get_api_url("accounts:lookup"),
+                json!({
+                    "localId": [user_id.to_string()]
+                }),
+                &format!("Failed to check emailVerified field of User: {}", user_id),
+            )
+            .await?;
+
+        let email_verified = response
+            .json::<Value>()
+            .await?
+            .pointer("/users/0/emailVerified")
+            .map(Value::as_bool)
+            .flatten()
+            .ok_or_else(|| {
+                ApplicationError::ExternalError(
+                    "Conflicting account status at FirebaseAuthApi::authenticate!".to_string(),
+                )
+            })?;
+
+        if email_verified {
+            Ok(user_id)
+        } else {
+            Err(ApplicationError::AuthenticationError(
+                "Email verification required.".to_string(),
+            ))
+        }
     }
 
     async fn check_if_email_exists(&self, email: &Email) -> ApplicationResult<bool> {
@@ -250,12 +281,12 @@ impl UserAuthApi for FirebaseAuthApi {
             )
             .await?;
 
-            Ok(response
-                .json::<Value>()
-                .await?
-                .get("users")
-                .map(Value::as_array)
-                .flatten()
-                .map_or(false, |arr| !arr.is_empty()))
+        Ok(response
+            .json::<Value>()
+            .await?
+            .get("users")
+            .map(Value::as_array)
+            .flatten()
+            .map_or(false, |arr| !arr.is_empty()))
     }
 }
