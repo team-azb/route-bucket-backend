@@ -312,7 +312,8 @@ impl RouteRepository for RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO routes VALUES (?, ?, ?, ?)
+            INSERT INTO routes (`id`, `name`, `owner_id`, `operation_pos`)
+            VALUES (?, ?, ?, ?)
             ",
         )
         .bind(dto.id())
