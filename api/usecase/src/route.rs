@@ -8,7 +8,8 @@ pub use responses::*;
 use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, ElevationApi, RouteInterpolationApi,
 };
-use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo};
+use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
+use route_bucket_domain::model::user::UserId;
 use route_bucket_domain::repository::{
     CallRouteRepository, Connection, Repository, RouteRepository,
 };
@@ -21,7 +22,9 @@ mod responses;
 pub trait RouteUseCase {
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse>;
 
-    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse>;
+    async fn find_all(&self) -> ApplicationResult<RouteSearchResponse>;
+
+    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse>;
 
     async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
 
@@ -80,11 +83,22 @@ where
         route.try_into()
     }
 
-    async fn find_all(&self) -> ApplicationResult<RouteGetAllResponse> {
+    async fn find_all(&self) -> ApplicationResult<RouteSearchResponse> {
         let conn = self.route_repository().get_connection().await?;
 
-        Ok(RouteGetAllResponse {
-            route_infos: self.route_repository().find_all_infos(&conn).await?,
+        Ok(RouteSearchResponse {
+            route_infos: self
+                .route_repository()
+                .search_infos(RouteSearchQuery::empty(), &conn)
+                .await?,
+        })
+    }
+
+    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse> {
+        let conn = self.route_repository().get_connection().await?;
+
+        Ok(RouteSearchResponse {
+            route_infos: self.route_repository().search_infos(query, &conn).await?,
         })
     }
 
@@ -99,7 +113,12 @@ where
     }
 
     async fn create(&self, req: &RouteCreateRequest) -> ApplicationResult<RouteCreateResponse> {
-        let route_info = RouteInfo::new(RouteId::new(), &req.name, 0);
+        let route_info = RouteInfo::new(
+            RouteId::new(),
+            &req.name,
+            UserId::from("guest".to_string()),
+            0,
+        );
 
         let conn = self.route_repository().get_connection().await?;
         self.route_repository()
@@ -311,7 +330,7 @@ mod tests {
         model::{
             fixtures::route::{
                 CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
-                RouteInfoFixtures, SegmentFixtures,
+                RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
             },
             route::{Coordinate, DrawingMode, RouteGpx, Segment},
         },
@@ -385,11 +404,31 @@ mod tests {
     #[tokio::test]
     async fn can_find_all() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_find_all_at_route_repository(vec![RouteInfo::route0(0)]);
+        usecase.expect_search_infos_at_route_repository(
+            RouteSearchQuery::empty(),
+            vec![RouteInfo::route0(0)],
+        );
 
         assert_eq!(
             usecase.find_all().await,
-            Ok(RouteGetAllResponse {
+            Ok(RouteSearchResponse {
+                route_infos: vec![RouteInfo::route0(0)]
+            })
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_search() {
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_search_infos_at_route_repository(
+            RouteSearchQuery::search_guest(),
+            vec![RouteInfo::route0(0)],
+        );
+
+        assert_eq!(
+            usecase.search(RouteSearchQuery::search_guest()).await,
+            Ok(RouteSearchResponse {
                 route_infos: vec![RouteInfo::route0(0)]
             })
         );
@@ -641,8 +680,12 @@ mod tests {
             expect_at_repository!(self, find_info, param_id, return_info);
         }
 
-        fn expect_find_all_at_route_repository(&mut self, return_infos: Vec<RouteInfo>) {
-            expect_at_repository!(self, find_all_infos, return_infos);
+        fn expect_search_infos_at_route_repository(
+            &mut self,
+            query: RouteSearchQuery,
+            return_infos: Vec<RouteInfo>,
+        ) {
+            expect_at_repository!(self, search_infos, query, return_infos);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {

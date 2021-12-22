@@ -21,7 +21,7 @@ pub struct RouteGetResponse {
 
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct RouteGetAllResponse {
+pub struct RouteSearchResponse {
     #[serde(rename = "routes")]
     pub route_infos: Vec<RouteInfo>,
 }

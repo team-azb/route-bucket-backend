@@ -10,6 +10,7 @@ pub use self::coordinate::Coordinate;
 pub use self::operation::{Operation, OperationId, OperationType, SegmentTemplate};
 pub use self::route_gpx::RouteGpx;
 pub use self::route_info::RouteInfo;
+pub use self::search_query::RouteSearchQuery;
 pub use self::segment_list::{DrawingMode, Segment, SegmentList};
 pub use self::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
@@ -20,6 +21,7 @@ pub(crate) mod coordinate;
 pub(crate) mod operation;
 pub(crate) mod route_gpx;
 pub(crate) mod route_info;
+pub(crate) mod search_query;
 pub(crate) mod segment_list;
 pub(crate) mod types;
 

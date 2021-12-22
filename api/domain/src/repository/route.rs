@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use route_bucket_utils::ApplicationResult;
 
+use crate::model::route::search_query::RouteSearchQuery;
 use crate::model::route::{Route, RouteId, RouteInfo};
 use crate::repository::Repository;
 
@@ -23,7 +24,11 @@ pub trait RouteRepository: Repository {
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<RouteInfo>;
 
-    async fn find_all_infos(&self, conn: &Self::Connection) -> ApplicationResult<Vec<RouteInfo>>;
+    async fn search_infos(
+        &self,
+        query: RouteSearchQuery,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<Vec<RouteInfo>>;
 
     async fn insert_info(
         &self,
@@ -72,7 +77,7 @@ mockall::mock! {
 
         async fn find_info(&self, id: &RouteId, conn: &super::MockConnection) -> ApplicationResult<RouteInfo>;
 
-        async fn find_all_infos(&self, conn: &super::MockConnection) -> ApplicationResult<Vec<RouteInfo>>;
+        async fn search_infos(&self, query: RouteSearchQuery, conn: &super::MockConnection) -> ApplicationResult<Vec<RouteInfo>>;
 
         async fn insert_info(&self, info: &RouteInfo, conn: &super::MockConnection) -> ApplicationResult<()>;
 

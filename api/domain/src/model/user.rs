@@ -62,6 +62,10 @@ pub(crate) mod tests {
         fn porzingis() -> UserId {
             UserId::from("kporzee".to_string())
         }
+
+        fn guest() -> UserId {
+            UserId::from("guest".to_string())
+        }
     }
 
     impl UserIdFixtures for UserId {}

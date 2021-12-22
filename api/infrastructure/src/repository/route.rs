@@ -7,7 +7,7 @@ use sqlx::MySqlPool;
 use tokio::sync::Mutex;
 
 use route_bucket_domain::model::route::{
-    Operation, Route, RouteId, RouteInfo, Segment, SegmentList,
+    Operation, Route, RouteId, RouteInfo, RouteSearchQuery, Segment, SegmentList,
 };
 use route_bucket_domain::repository::{Connection, Repository, RouteRepository};
 use route_bucket_utils::{ApplicationError, ApplicationResult};
@@ -16,6 +16,8 @@ use crate::dto::operation::OperationDto;
 use crate::dto::route::RouteDto;
 use crate::dto::segment::SegmentDto;
 use crate::repository::{gen_err_mapper, RepositoryConnectionMySql};
+
+use super::serializable_to_search_query;
 
 // NOTE: MySqlPoolを共有したくなったら、Arcで囲めば良さそう
 pub struct RouteRepositoryMySql(pub(super) Arc<MySqlPool>);
@@ -284,20 +286,20 @@ impl RouteRepository for RouteRepositoryMySql {
         .into_model()
     }
 
-    async fn find_all_infos(&self, conn: &Self::Connection) -> ApplicationResult<Vec<RouteInfo>> {
+    async fn search_infos(
+        &self,
+        query: RouteSearchQuery,
+        conn: &Self::Connection,
+    ) -> ApplicationResult<Vec<RouteInfo>> {
         let mut conn = conn.lock().await;
 
-        sqlx::query_as::<_, RouteDto>(
-            r"
-            SELECT * FROM routes
-            ",
-        )
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(gen_err_mapper("failed to find infos"))?
-        .into_iter()
-        .map(RouteDto::into_model)
-        .collect::<ApplicationResult<Vec<_>>>()
+        sqlx::query_as::<_, RouteDto>(&serializable_to_search_query("routes", query)?)
+            .fetch_all(&mut *conn)
+            .await
+            .map_err(gen_err_mapper("failed to find infos"))?
+            .into_iter()
+            .map(RouteDto::into_model)
+            .collect::<ApplicationResult<Vec<_>>>()
     }
 
     async fn insert_info(
@@ -310,11 +312,12 @@ impl RouteRepository for RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO routes VALUES (?, ?, ?)
+            INSERT INTO routes VALUES (?, ?, ?, ?)
             ",
         )
         .bind(dto.id())
         .bind(dto.name())
+        .bind(dto.owner_id())
         .bind(dto.operation_pos())
         .execute(&mut *conn)
         .await
@@ -333,11 +336,12 @@ impl RouteRepository for RouteRepositoryMySql {
         sqlx::query(
             r"
             UPDATE routes
-            SET name = ?, operation_pos = ?
+            SET name = ?, owner_id = ?, operation_pos = ?
             WHERE id = ?
             ",
         )
         .bind(dto.name())
+        .bind(dto.owner_id())
         .bind(dto.operation_pos())
         .bind(dto.id())
         .execute(&mut *conn)
