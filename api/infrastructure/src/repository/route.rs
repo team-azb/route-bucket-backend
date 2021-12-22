@@ -14,10 +14,9 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::dto::operation::OperationDto;
 use crate::dto::route::RouteDto;
+use crate::dto::search_query::SearchQuery;
 use crate::dto::segment::SegmentDto;
 use crate::repository::{gen_err_mapper, RepositoryConnectionMySql};
-
-use super::serializable_to_search_query;
 
 // NOTE: MySqlPoolを共有したくなったら、Arcで囲めば良さそう
 pub struct RouteRepositoryMySql(pub(super) Arc<MySqlPool>);
@@ -293,7 +292,7 @@ impl RouteRepository for RouteRepositoryMySql {
     ) -> ApplicationResult<Vec<RouteInfo>> {
         let mut conn = conn.lock().await;
 
-        sqlx::query_as::<_, RouteDto>(&serializable_to_search_query("routes", query)?)
+        sqlx::query_as::<_, RouteDto>(&SearchQuery::from(query).to_sql())
             .fetch_all(&mut *conn)
             .await
             .map_err(gen_err_mapper("failed to find infos"))?

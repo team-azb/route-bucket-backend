@@ -6,7 +6,10 @@ use crate::model::user::UserId;
 #[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct RouteSearchQuery {
     #[serde(skip_serializing_if = "Option::is_none")]
-    owner_id: Option<UserId>,
+    pub owner_id: Option<UserId>,
+    #[serde(default)]
+    pub page_offset: usize,
+    pub page_size: Option<usize>,
 }
 
 impl RouteSearchQuery {
@@ -25,6 +28,7 @@ pub(crate) mod tests {
         fn search_guest() -> RouteSearchQuery {
             RouteSearchQuery {
                 owner_id: Some(UserId::doncic()),
+                ..Default::default()
             }
         }
     }
