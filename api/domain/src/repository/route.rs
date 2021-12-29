@@ -30,6 +30,12 @@ pub trait RouteRepository: Repository {
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<Vec<RouteInfo>>;
 
+    async fn count_infos(
+        &self,
+        query: RouteSearchQuery,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<usize>;
+
     async fn insert_info(
         &self,
         info: &RouteInfo,
@@ -78,6 +84,8 @@ mockall::mock! {
         async fn find_info(&self, id: &RouteId, conn: &super::MockConnection) -> ApplicationResult<RouteInfo>;
 
         async fn search_infos(&self, query: RouteSearchQuery, conn: &super::MockConnection) -> ApplicationResult<Vec<RouteInfo>>;
+
+        async fn count_infos(&self, query: RouteSearchQuery, conn: &super::MockConnection) -> ApplicationResult<usize>;
 
         async fn insert_info(&self, info: &RouteInfo, conn: &super::MockConnection) -> ApplicationResult<()>;
 

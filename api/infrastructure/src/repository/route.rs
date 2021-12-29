@@ -292,13 +292,27 @@ impl RouteRepository for RouteRepositoryMySql {
     ) -> ApplicationResult<Vec<RouteInfo>> {
         let mut conn = conn.lock().await;
 
-        sqlx::query_as::<_, RouteDto>(&SearchQuery::from(query).to_sql())
+        sqlx::query_as::<_, RouteDto>(&SearchQuery::from(query).to_sql(false))
             .fetch_all(&mut *conn)
             .await
             .map_err(gen_err_mapper("failed to find infos"))?
             .into_iter()
             .map(RouteDto::into_model)
             .collect::<ApplicationResult<Vec<_>>>()
+    }
+
+    async fn count_infos(
+        &self,
+        query: RouteSearchQuery,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<usize> {
+        let mut conn = conn.lock().await;
+
+        sqlx::query_as::<_, (i64,)>(&SearchQuery::from(query).to_sql(true))
+            .fetch_one(&mut *conn)
+            .await
+            .map(|(count,)| count as usize)
+            .map_err(gen_err_mapper("failed to count infos"))
     }
 
     async fn insert_info(

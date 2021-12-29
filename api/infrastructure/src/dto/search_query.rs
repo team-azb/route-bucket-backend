@@ -9,7 +9,7 @@ enum WhereCondition {
 }
 
 impl WhereCondition {
-    fn to_query(self, field_name: &'static str) -> String {
+    fn to_query(&self, field_name: &'static str) -> String {
         match self {
             Self::Eq(value) => {
                 format!("{} = \"{}\"", field_name, value)
@@ -25,7 +25,7 @@ struct OrderBy {
 }
 
 impl OrderBy {
-    fn to_query(self) -> String {
+    fn to_query(&self) -> String {
         format!(
             "`{}` {}",
             self.field_name,
@@ -44,20 +44,24 @@ pub(crate) struct SearchQuery {
 }
 
 impl SearchQuery {
-    pub fn to_sql(self) -> String {
-        let mut query = format!("SELECT * FROM {} ", self.table_name);
+    pub fn to_sql(&self, is_for_counting: bool) -> String {
+        let mut query = format!(
+            "SELECT {} FROM {} ",
+            if is_for_counting { "COUNT(*)" } else { "*" },
+            self.table_name
+        );
 
         if !self.where_conditions.is_empty() {
             query += &format!(
                 "WHERE {} ",
                 self.where_conditions
-                    .into_iter()
+                    .iter()
                     .map(|(field, cond)| cond.to_query(field))
                     .join(", "),
             );
         }
 
-        if let Some(order_by) = self.order_by {
+        if let Some(order_by) = &self.order_by {
             query += &format!("ORDER BY {} ", order_by.to_query());
         }
 

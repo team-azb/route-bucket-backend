@@ -24,6 +24,7 @@ pub struct RouteGetResponse {
 pub struct RouteSearchResponse {
     #[serde(rename = "routes")]
     pub route_infos: Vec<RouteInfo>,
+    pub result_num: usize,
 }
 
 pub type RouteGetGpxResponse = RouteGpx;
