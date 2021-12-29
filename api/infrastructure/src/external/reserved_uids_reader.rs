@@ -34,7 +34,7 @@ impl InnerReservedUidsReader {
                     TEXT_PATH, err
                 ))
             })?
-            .split("\n")
+            .split('\n')
             .map(String::from)
             .map(UserId::from)
             .collect();
