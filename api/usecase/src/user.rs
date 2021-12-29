@@ -3,7 +3,9 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use futures::FutureExt;
 use route_bucket_domain::{
-    external::{CallUserAuthApi, UserAuthApi},
+    external::{
+        CallReservedUserIdCheckerApi, CallUserAuthApi, ReservedUserIdCheckerApi, UserAuthApi,
+    },
     model::user::{User, UserId},
     repository::{CallUserRepository, Connection, Repository, UserRepository},
 };
@@ -37,7 +39,7 @@ pub trait UserUseCase {
 #[async_trait]
 impl<T> UserUseCase for T
 where
-    T: CallUserRepository + CallUserAuthApi + Sync,
+    T: CallUserRepository + CallUserAuthApi + CallReservedUserIdCheckerApi + Sync,
 {
     async fn find(&self, user_id: &UserId) -> ApplicationResult<User> {
         let conn = self.user_repository().get_connection().await?;
@@ -122,10 +124,20 @@ where
 
         // Check for Duplicate Uses
         if let Some(id) = req.id {
-            let conn = self.user_repository().get_connection().await?;
-            if self.user_repository().find(&id, &conn).await.is_ok() {
-                resp.0.insert("id", ValidationErrorCode::AlreadyExists);
-            };
+            let is_reserved = self
+                .reserved_user_id_checker_api()
+                .check_if_reserved(&id)
+                .await?;
+            if is_reserved {
+                resp.0.insert("id", ValidationErrorCode::ReservedWord);
+            } else {
+                let conn = self.user_repository().get_connection().await?;
+
+                let is_already_used = self.user_repository().find(&id, &conn).await.is_ok();
+                if is_already_used {
+                    resp.0.insert("id", ValidationErrorCode::AlreadyExists);
+                };
+            }
         }
         if let Some(email) = req.email {
             if self.user_auth_api().check_if_email_exists(&email).await? {
