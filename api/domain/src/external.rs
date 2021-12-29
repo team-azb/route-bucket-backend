@@ -90,3 +90,15 @@ pub trait CallUserAuthApi {
 
     fn user_auth_api(&self) -> &Self::UserAuthApi;
 }
+
+#[cfg_attr(feature = "mocking", mockall::automock)]
+#[async_trait]
+pub trait ReservedUserIdCheckerApi: Send + Sync {
+    async fn check_if_reserved(&self, id: &UserId) -> ApplicationResult<bool>;
+}
+
+pub trait CallReservedUserIdCheckerApi {
+    type ReservedUserIdCheckerApi: ReservedUserIdCheckerApi;
+
+    fn reserved_user_id_checker_api(&self) -> &Self::ReservedUserIdCheckerApi;
+}

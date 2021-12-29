@@ -1,8 +1,10 @@
-use route_bucket_domain::external::{CallElevationApi, CallRouteInterpolationApi, CallUserAuthApi};
+use route_bucket_domain::external::{
+    CallElevationApi, CallReservedUserIdCheckerApi, CallRouteInterpolationApi, CallUserAuthApi,
+};
 use route_bucket_domain::repository::{CallRouteRepository, CallUserRepository};
 use route_bucket_infrastructure::{
-    init_repositories, FirebaseAuthApi, OsrmApi, RouteRepositoryMySql, SrtmReader,
-    UserRepositoryMySql,
+    init_repositories, FirebaseAuthApi, OsrmApi, ReservedUidsReader, RouteRepositoryMySql,
+    SrtmReader, UserRepositoryMySql,
 };
 
 pub struct Server {
@@ -11,6 +13,7 @@ pub struct Server {
     srtm_reader: SrtmReader,
     osrm_api: OsrmApi,
     firebase_auth_api: FirebaseAuthApi,
+    reserved_uids_reader: ReservedUidsReader,
 }
 
 impl Server {
@@ -22,6 +25,7 @@ impl Server {
             srtm_reader: SrtmReader::new().unwrap(),
             osrm_api: OsrmApi::new(),
             firebase_auth_api: FirebaseAuthApi::new().await.unwrap(),
+            reserved_uids_reader: ReservedUidsReader::new().unwrap(),
         }
     }
 }
@@ -64,5 +68,13 @@ impl CallUserAuthApi for Server {
 
     fn user_auth_api(&self) -> &Self::UserAuthApi {
         &self.firebase_auth_api
+    }
+}
+
+impl CallReservedUserIdCheckerApi for Server {
+    type ReservedUserIdCheckerApi = ReservedUidsReader;
+
+    fn reserved_user_id_checker_api(&self) -> &Self::ReservedUserIdCheckerApi {
+        &self.reserved_uids_reader
     }
 }
