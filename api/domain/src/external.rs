@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use itertools::Itertools;
 
-use route_bucket_utils::ApplicationResult;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::{
     route::{Coordinate, DrawingMode, Elevation, Route, Segment},
@@ -70,7 +70,17 @@ pub trait UserAuthApi: Send + Sync {
 
     async fn delete_account(&self, user_id: &UserId) -> ApplicationResult<()>;
 
-    async fn verify_token(&self, user_id: &UserId, token: &str) -> ApplicationResult<()>;
+    async fn authenticate(&self, token: &str) -> ApplicationResult<UserId>;
+
+    async fn authorize(&self, user_id: &UserId, token: &str) -> ApplicationResult<()> {
+        let id_from_token = self.authenticate(token).await?;
+        (*user_id == id_from_token).then(|| ()).ok_or_else(|| {
+            ApplicationError::AuthorizationError(format!(
+                "The id of the user ({}) doesn't match the id from the token ({}).",
+                user_id, id_from_token
+            ))
+        })
+    }
 }
 
 pub trait CallUserAuthApi {

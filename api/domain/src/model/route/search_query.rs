@@ -24,7 +24,7 @@ pub(crate) mod tests {
     pub trait RouteSearchQueryFixtures {
         fn search_guest() -> RouteSearchQuery {
             RouteSearchQuery {
-                owner_id: Some(UserId::guest()),
+                owner_id: Some(UserId::doncic()),
             }
         }
     }

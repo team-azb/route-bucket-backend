@@ -1,5 +1,6 @@
 use actix_web::{dev, http, web, HttpResponse, Result};
 
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use route_bucket_domain::model::route::{RouteId, RouteSearchQuery};
 use route_bucket_usecase::route::{
     NewPointRequest, RemovePointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
@@ -42,72 +43,93 @@ async fn get_gpx<U: 'static + RouteUseCase>(
 
 async fn post<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: BearerAuth,
     req: web::Json<RouteCreateRequest>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Created().json(usecase.create(&req).await?))
+    Ok(HttpResponse::Created().json(usecase.create(auth.token(), &req).await?))
 }
 
 async fn patch_rename<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     id: web::Path<RouteId>,
+    auth: BearerAuth,
     req: web::Json<RouteRenameRequest>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.rename(&id, &req).await?))
+    Ok(HttpResponse::Ok().json(usecase.rename(&id, auth.token(), &req).await?))
 }
 
 async fn patch_add<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     path_params: web::Path<(RouteId, usize)>,
+    auth: BearerAuth,
     req: web::Json<NewPointRequest>,
 ) -> Result<HttpResponse> {
     let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(usecase.add_point(&route_id, pos, &req).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .add_point(&route_id, auth.token(), pos, &req)
+            .await?,
+    ))
 }
 
 async fn patch_remove<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     path_params: web::Path<(RouteId, usize)>,
+    auth: BearerAuth,
     req: web::Json<RemovePointRequest>,
 ) -> Result<HttpResponse> {
     let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(usecase.remove_point(&route_id, pos, &req).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .remove_point(&route_id, auth.token(), pos, &req)
+            .await?,
+    ))
 }
 
 async fn patch_move<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     path_params: web::Path<(RouteId, usize)>,
+    auth: BearerAuth,
     req: web::Json<NewPointRequest>,
 ) -> Result<HttpResponse> {
     let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(usecase.move_point(&route_id, pos, &req).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .move_point(&route_id, auth.token(), pos, &req)
+            .await?,
+    ))
 }
 
 async fn patch_clear<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: BearerAuth,
     route_id: web::Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.clear_route(&route_id).await?))
+    Ok(HttpResponse::Ok().json(usecase.clear_route(&route_id, auth.token()).await?))
 }
 
 async fn patch_undo<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: BearerAuth,
     route_id: web::Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.undo_operation(&route_id).await?))
+    Ok(HttpResponse::Ok().json(usecase.undo_operation(&route_id, auth.token()).await?))
 }
 
 async fn patch_redo<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: BearerAuth,
     route_id: web::Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.redo_operation(&route_id).await?))
+    Ok(HttpResponse::Ok().json(usecase.redo_operation(&route_id, auth.token()).await?))
 }
 
 async fn delete<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     id: web::Path<RouteId>,
+    auth: BearerAuth,
 ) -> Result<HttpResponse> {
-    usecase.delete(&id).await?;
+    usecase.delete(&id, auth.token()).await?;
     Ok(HttpResponse::Ok().finish())
 }
 

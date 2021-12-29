@@ -75,7 +75,7 @@ pub(crate) mod tests {
             RouteInfo {
                 id: RouteId::new(),
                 name: "route0".into(),
-                owner_id: UserId::guest(),
+                owner_id: UserId::doncic(),
                 op_num,
             }
         }
@@ -84,7 +84,7 @@ pub(crate) mod tests {
             RouteInfo {
                 id: RouteId::new(),
                 name: "route1".into(),
-                owner_id: UserId::guest(),
+                owner_id: UserId::doncic(),
                 op_num,
             }
         }

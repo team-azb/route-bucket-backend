@@ -71,7 +71,7 @@ where
 
         conn.transaction(|conn| {
             async move {
-                self.user_auth_api().verify_token(user_id, token).await?;
+                self.user_auth_api().authorize(user_id, token).await?;
 
                 let mut user = self.user_repository().find(user_id, conn).await?;
 
@@ -95,7 +95,7 @@ where
         let conn = self.user_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                self.user_auth_api().verify_token(user_id, token).await?;
+                self.user_auth_api().authorize(user_id, token).await?;
 
                 self.user_repository().delete(user_id, conn).await?;
                 self.user_auth_api().delete_account(user_id).await
@@ -202,7 +202,7 @@ mod tests {
     #[tokio::test]
     async fn can_update() {
         let mut usecase = TestUserUseCase::new();
-        usecase.expect_verify_token_at_auth_api(UserId::porzingis(), porzingis_token());
+        usecase.expect_authorize_at_auth_api(UserId::porzingis(), porzingis_token());
         usecase.expect_find_at_user_repository(UserId::porzingis(), User::porzingis());
         usecase.expect_update_at_user_repository(User::porzingis_pretending_like_doncic());
 
@@ -222,7 +222,7 @@ mod tests {
     #[tokio::test]
     async fn can_delete() {
         let mut usecase = TestUserUseCase::new();
-        usecase.expect_verify_token_at_auth_api(UserId::doncic(), doncic_token());
+        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_delete_account_at_auth_api(UserId::doncic());
         usecase.expect_delete_at_user_repository(UserId::doncic());
 
@@ -285,8 +285,8 @@ mod tests {
             expect_once!(self.auth_api, delete_account, param_id, ());
         }
 
-        fn expect_verify_token_at_auth_api(&mut self, param_id: UserId, param_token: String) {
-            expect_once!(self.auth_api, verify_token, param_id, param_token, ());
+        fn expect_authorize_at_auth_api(&mut self, param_id: UserId, param_token: String) {
+            expect_once!(self.auth_api, authorize, param_id, param_token, ());
         }
     }
 

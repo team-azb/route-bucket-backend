@@ -20,7 +20,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-use self::token::verify;
+use self::token::verify_and_get_user_id;
 
 const CREDENTIAL_PATH: &str = "resources/credentials/firebase-adminsdk.json";
 const API_SCOPE: &str = "https://www.googleapis.com/auth/identitytoolkit";
@@ -95,7 +95,7 @@ impl GoogleAccessToken {
             self.token = response
                 .get("access_token")
                 .ok_or_else(|| {
-                    ApplicationError::AuthError(format!(
+                    ApplicationError::ExternalError(format!(
                         "Unable to find access_token in the response: {:?}",
                         response.clone()
                     ))
@@ -109,7 +109,7 @@ impl GoogleAccessToken {
                     response
                         .get("expires_in")
                         .ok_or_else(|| {
-                            ApplicationError::AuthError(format!(
+                            ApplicationError::ExternalError(format!(
                                 "Unable to find expires_in in the response: {:?}",
                                 response.clone()
                             ))
@@ -187,7 +187,7 @@ impl UserAuthApi for FirebaseAuthApi {
         if response.status().is_success() {
             Ok(())
         } else {
-            Err(ApplicationError::AuthError(format!(
+            Err(ApplicationError::ExternalError(format!(
                 "Failed to create account: {:?}",
                 response.json::<Value>().await
             )))
@@ -210,14 +210,14 @@ impl UserAuthApi for FirebaseAuthApi {
         if response.status().is_success() {
             Ok(())
         } else {
-            Err(ApplicationError::AuthError(format!(
+            Err(ApplicationError::ExternalError(format!(
                 "Failed to delete account: {:?}",
                 response.json::<Value>().await
             )))
         }
     }
 
-    async fn verify_token(&self, user_id: &UserId, token: &str) -> ApplicationResult<()> {
-        verify(user_id, token, &self.credential).await
+    async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
+        verify_and_get_user_id(token, &self.credential).await
     }
 }
