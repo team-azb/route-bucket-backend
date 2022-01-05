@@ -46,6 +46,7 @@ enum IfdTag {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct IfdEntry {
     datatype: u16,
     count: u32,

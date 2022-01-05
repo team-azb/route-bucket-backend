@@ -8,6 +8,7 @@ use route_bucket_domain::{
     repository::{CallUserRepository, Connection, Repository, UserRepository},
 };
 use route_bucket_utils::ApplicationResult;
+use validator::Validate;
 
 pub use requests::*;
 pub use responses::*;
@@ -29,6 +30,8 @@ pub trait UserUseCase {
     ) -> ApplicationResult<User>;
 
     async fn delete(&self, user_id: &UserId, token: &str) -> ApplicationResult<()>;
+
+    async fn validate(&self, req: UserValidateRequest) -> ApplicationResult<UserValidateResponse>;
 }
 
 #[async_trait]
@@ -104,6 +107,34 @@ where
         })
         .await
     }
+
+    async fn validate(&self, req: UserValidateRequest) -> ApplicationResult<UserValidateResponse> {
+        let mut resp: UserValidateResponse = Default::default();
+
+        // Check Formats
+        let validation_result = req.validate();
+        if let Err(errors) = validation_result {
+            let error_map = errors.into_errors();
+            error_map.into_iter().for_each(|(field, _)| {
+                resp.0.insert(field, ValidationErrorCode::InvalidFormat);
+            });
+        }
+
+        // Check for Duplicate Uses
+        if let Some(id) = req.id {
+            let conn = self.user_repository().get_connection().await?;
+            if self.user_repository().find(&id, &conn).await.is_ok() {
+                resp.0.insert("id", ValidationErrorCode::AlreadyExists);
+            };
+        }
+        if let Some(email) = req.email {
+            if self.user_auth_api().check_if_email_exists(&email).await? {
+                resp.0.insert("email", ValidationErrorCode::AlreadyExists);
+            };
+        }
+
+        Ok(resp)
+    }
 }
 
 #[cfg(test)]
@@ -121,6 +152,7 @@ mod tests {
         },
         repository::{MockConnection, MockUserRepository},
     };
+    use route_bucket_utils::hashmap;
     use rstest::{fixture, rstest};
 
     use super::*;
@@ -135,7 +167,6 @@ mod tests {
             birthdate: NaiveDate::from_str("1999-02-28").ok(),
             icon_url: Url::try_from("https://on.nba.com/30qMUEI".to_string()).ok(),
             password: "LukaMagic#77".to_string(),
-            password_confirmation: "LukaMagic#77".to_string(),
         }
     }
 
@@ -149,7 +180,6 @@ mod tests {
             birthdate: None,
             icon_url: None,
             password: "LukaMagic#77".to_string(),
-            password_confirmation: "LukaMagic#77".to_string(),
         }
     }
 
@@ -171,6 +201,11 @@ mod tests {
     #[fixture]
     fn porzingis_token() -> String {
         String::from("token.for.porzingis")
+    }
+
+    #[fixture]
+    fn unknown_email() -> Email {
+        Email::try_from("unknown@email.com".to_string()).unwrap()
     }
 
     #[rstest]
@@ -232,6 +267,29 @@ mod tests {
         );
     }
 
+    #[rstest]
+    #[tokio::test]
+    async fn can_validate() {
+        let req = UserValidateRequest {
+            id: Some(UserId::doncic()),
+            name: None,
+            email: Some(unknown_email()),
+            birthdate: None,
+            icon_url: None,
+            password: Some("short".to_string()),
+        };
+        let resp = UserValidateResponse(hashmap! {
+            "id" => ValidationErrorCode::AlreadyExists,
+            "password" => ValidationErrorCode::InvalidFormat
+        });
+
+        let mut usecase = TestUserUseCase::new();
+        usecase.expect_find_at_user_repository(UserId::doncic(), User::doncic());
+        usecase.expect_check_if_email_exists_at_auth_api(unknown_email(), false);
+
+        assert_eq!(usecase.validate(req).await, Ok(resp));
+    }
+
     struct TestUserUseCase {
         repository: MockUserRepository,
         auth_api: MockUserAuthApi,
@@ -287,6 +345,19 @@ mod tests {
 
         fn expect_authorize_at_auth_api(&mut self, param_id: UserId, param_token: String) {
             expect_once!(self.auth_api, authorize, param_id, param_token, ());
+        }
+
+        fn expect_check_if_email_exists_at_auth_api(
+            &mut self,
+            param_email: Email,
+            result_bool: bool,
+        ) {
+            expect_once!(
+                self.auth_api,
+                check_if_email_exists,
+                param_email,
+                result_bool
+            );
         }
     }
 

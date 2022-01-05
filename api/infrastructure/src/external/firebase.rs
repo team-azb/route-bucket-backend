@@ -29,16 +29,10 @@ static API_TOKEN_EXP_OFFSET: Lazy<Duration> = Lazy::new(|| Duration::seconds(10)
 
 #[derive(Clone, Debug, Deserialize, Default)]
 struct FirebaseCredential {
-    r#type: String,
     project_id: String,
-    private_key_id: String,
     private_key: String,
     client_email: String,
-    client_id: String,
-    auth_uri: String,
     token_uri: String,
-    auth_provider_x509_cert_url: String,
-    client_x509_cert_url: String,
 }
 
 #[derive(Clone, Debug, Derivative)]
@@ -187,9 +181,20 @@ impl UserAuthApi for FirebaseAuthApi {
         if response.status().is_success() {
             Ok(())
         } else {
+            let json = response.json::<Value>().await?;
+
+            if let Some(Value::String(msg)) = json.pointer("/error/message") {
+                if ["EMAIL_EXISTS", "INVALID_EMAIL", "DUPLICATE_LOCAL_ID"].contains(&msg.as_str()) {
+                    return Err(ApplicationError::ValidationError(format!(
+                        "Validation failed for create account: {:?}",
+                        json
+                    )));
+                }
+            }
+
             Err(ApplicationError::ExternalError(format!(
                 "Failed to create account: {:?}",
-                response.json::<Value>().await
+                json
             )))
         }
     }
@@ -219,5 +224,34 @@ impl UserAuthApi for FirebaseAuthApi {
 
     async fn authenticate(&self, token: &str) -> ApplicationResult<UserId> {
         verify_and_get_user_id(token, &self.credential).await
+    }
+
+    async fn check_if_email_exists(&self, email: &Email) -> ApplicationResult<bool> {
+        let response = self
+            .post_request(
+                format!(
+                    "https://identitytoolkit.googleapis.com/v1/projects/{}/accounts:lookup",
+                    self.credential.project_id
+                ),
+                json!({
+                    "email": [email.to_string()]
+                }),
+            )
+            .await?;
+
+        if response.status().is_success() {
+            Ok(response
+                .json::<Value>()
+                .await?
+                .get("users")
+                .map(Value::as_array)
+                .flatten()
+                .map_or(false, |arr| !arr.is_empty()))
+        } else {
+            Err(ApplicationError::ExternalError(format!(
+                "Failed to delete account: {:?}",
+                response.json::<Value>().await
+            )))
+        }
     }
 }

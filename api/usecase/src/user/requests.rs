@@ -11,33 +11,29 @@ use route_bucket_domain::model::{
     user::{Gender, User, UserId},
 };
 
-#[derive(From, Deserialize, Validate)]
+#[derive(From, Deserialize)]
 pub struct UserCreateRequest {
-    #[validate]
     pub(super) id: UserId,
-    #[validate(length(min = 1, max = 50))]
     pub(super) name: String,
-    #[validate]
     pub(super) email: Email,
     #[serde(default)]
     pub(super) gender: Gender,
-    #[validate(custom = "UserCreateRequest::validate_birthdate")]
     pub(super) birthdate: Option<NaiveDate>,
-    #[validate]
     pub(super) icon_url: Option<Url>,
-    #[validate(length(min = 6))]
     pub(super) password: String,
-    #[validate(must_match = "password")]
-    pub(super) password_confirmation: String,
 }
 
-impl UserCreateRequest {
-    fn validate_birthdate(birthdate: &NaiveDate) -> Result<(), validator::ValidationError> {
-        if *birthdate <= Utc::today().naive_utc() {
-            Ok(())
-        } else {
-            Err(validator::ValidationError::new("FUTURE_BIRTHDATE"))
+impl Validate for UserCreateRequest {
+    fn validate(&self) -> Result<(), validator::ValidationErrors> {
+        UserValidateRequest {
+            id: Some(self.id.clone()),
+            name: Some(self.name.clone()),
+            email: Some(self.email.clone()),
+            birthdate: self.birthdate,
+            icon_url: self.icon_url.clone(),
+            password: Some(self.password.clone()),
         }
+        .validate()
     }
 }
 
@@ -66,8 +62,34 @@ pub struct UserUpdateRequest {
     pub(super) name: Option<String>,
     #[serde(default)]
     pub(super) gender: Option<Gender>,
-    #[validate(custom = "UserCreateRequest::validate_birthdate")]
+    #[validate(custom = "UserValidateRequest::validate_birthdate")]
     pub(super) birthdate: Option<NaiveDate>,
     #[validate]
     pub(super) icon_url: Option<Url>,
+}
+
+#[derive(From, Deserialize, Validate)]
+pub struct UserValidateRequest {
+    #[validate]
+    pub(super) id: Option<UserId>,
+    #[validate(length(min = 1, max = 50))]
+    pub(super) name: Option<String>,
+    #[validate]
+    pub(super) email: Option<Email>,
+    #[validate(custom = "UserValidateRequest::validate_birthdate")]
+    pub(super) birthdate: Option<NaiveDate>,
+    #[validate]
+    pub(super) icon_url: Option<Url>,
+    #[validate(length(min = 6))]
+    pub(super) password: Option<String>,
+}
+
+impl UserValidateRequest {
+    fn validate_birthdate(birthdate: &NaiveDate) -> Result<(), validator::ValidationError> {
+        if *birthdate <= Utc::today().naive_utc() {
+            Ok(())
+        } else {
+            Err(validator::ValidationError::new("FUTURE_BIRTHDATE"))
+        }
+    }
 }
