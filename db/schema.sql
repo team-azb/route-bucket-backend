@@ -37,6 +37,6 @@ CREATE TABLE users
     `name`      VARCHAR(50)      NOT NULL,
     `gender`    VARCHAR(6)       NOT NULL,
     `birthdate` DATE                     ,
-    `icon_url`  VARCHAR(100)             ,
+    `icon_url`  TEXT                     ,
     PRIMARY KEY (`id`)
 );
