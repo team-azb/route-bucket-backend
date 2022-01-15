@@ -101,7 +101,7 @@ impl Route {
 
     // methods from SegmentList ( No tests for them! )
 
-    pub fn calc_elevation_gain(&self) -> Elevation {
+    pub fn calc_elevation_gain(&self) -> (Elevation, Elevation) {
         self.seg_list.calc_elevation_gain()
     }
 
