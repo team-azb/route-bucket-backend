@@ -80,8 +80,7 @@ impl<const MAX_ABS: u32> TryFrom<f64> for NumericValueObject<OrderedFloat<f64>, 
                 // TODO: stringのconst genericsが追加されたら、
                 // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
                 "Invalid value {} for NumericValueObject<OrderedFloat<f64>, {}>",
-                val,
-                MAX_ABS
+                val, MAX_ABS
             )))
         }
     }
@@ -99,8 +98,7 @@ impl<const MAX_ABS: u32> TryFrom<i32> for NumericValueObject<i32, MAX_ABS> {
                 // TODO: stringのconst genericsが追加されたら、
                 // メッセージに具体的なエイリアス名(Latitudeとか)を入れる
                 "Invalid value {} for NumericValueObject<i32, {}>",
-                val,
-                MAX_ABS
+                val, MAX_ABS
             )))
         }
     }
