@@ -8,8 +8,8 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::types::NanoId;
 
-use super::coordinate::Coordinate;
-use super::segment_list::{DrawingMode, Segment, SegmentList};
+use super::super::coordinate::Coordinate;
+use super::{DrawingMode, Segment, SegmentList};
 
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
@@ -69,12 +69,12 @@ impl From<SegmentTemplate> for Segment {
 #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct Operation {
     #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
-    id: OperationId,
+    pub(super) id: OperationId,
     // NOTE: typeはロジック的には不要だが、デバッグ用に残している
-    op_type: OperationType,
-    pos: usize,
-    org_seg_templates: Vec<SegmentTemplate>,
-    new_seg_templates: Vec<SegmentTemplate>,
+    pub(super) op_type: OperationType,
+    pub(super) pos: usize,
+    pub(super) org_seg_templates: Vec<SegmentTemplate>,
+    pub(super) new_seg_templates: Vec<SegmentTemplate>,
 }
 
 impl Operation {

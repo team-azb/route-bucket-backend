@@ -13,8 +13,10 @@ use super::bounding_box::BoundingBox;
 use super::coordinate::Coordinate;
 use super::types::{Distance, Elevation};
 
+pub use self::operation::{Operation, OperationId, OperationType, SegmentTemplate};
 pub use self::segment::{DrawingMode, Segment};
 
+mod operation;
 mod segment;
 
 #[derive(Clone, Debug, Serialize, Getters)]
@@ -185,6 +187,7 @@ pub(crate) mod tests {
     use crate::model::route::bounding_box::tests::BoundingBoxFixture;
     #[cfg(test)]
     use crate::model::route::coordinate::tests::CoordinateFixtures;
+    pub use crate::model::route::segment_list::operation::tests::OperationFixtures;
     pub use crate::model::route::segment_list::segment::tests::SegmentFixtures;
 
     use super::*;
