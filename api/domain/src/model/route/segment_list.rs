@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::ops::RangeBounds;
 use std::slice::{Iter, IterMut};
 
 use geo::algorithm::haversine_distance::HaversineDistance;
@@ -27,6 +26,17 @@ pub struct SegmentList {
 }
 
 impl SegmentList {
+    pub fn apply_operation(&mut self, op: Operation) -> ApplicationResult<()> {
+        self.segments.splice(
+            op.pos..op.pos + op.org_seg_templates.len(),
+            op.new_seg_templates
+                .iter()
+                .map(Clone::clone)
+                .map(Segment::from),
+        );
+        Ok(())
+    }
+
     pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
         if let Some(last_seg) = self.segments.last() {
             let last_point = last_seg.points.last().ok_or_else(|| {
@@ -157,14 +167,6 @@ impl SegmentList {
     pub fn len(&self) -> usize {
         self.segments.len()
     }
-
-    pub fn splice<R, I>(&mut self, range: R, replace_with: I)
-    where
-        R: RangeBounds<usize>,
-        I: IntoIterator<Item = Segment>,
-    {
-        self.segments.splice(range, replace_with);
-    }
 }
 
 impl From<Vec<Segment>> for SegmentList {
@@ -215,6 +217,31 @@ pub(crate) mod tests {
     #[fixture]
     fn yokohama_to_chiba_via_tokyo_verbose() -> SegmentList {
         SegmentList::yokohama_to_chiba_via_tokyo(true, true, false)
+    }
+
+    #[rstest]
+    #[case::add(
+        Operation::add_tokyo(),
+        yokohama_to_chiba_empty(),
+        yokohama_to_chiba_via_tokyo_empty()
+    )]
+    #[case::remove(
+        Operation::remove_tokyo(),
+        yokohama_to_chiba_via_tokyo_empty(),
+        yokohama_to_chiba_empty()
+    )]
+    #[case::move_(
+        Operation::move_chiba_to_tokyo(),
+        yokohama_to_chiba_empty(),
+        SegmentList::yokohama_to_tokyo(false, false, true)
+    )]
+    fn can_apply_operation(
+        #[case] op: Operation,
+        #[case] mut seg_list: SegmentList,
+        #[case] expected: SegmentList,
+    ) {
+        seg_list.apply_operation(op).unwrap();
+        assert_eq!(seg_list, expected)
     }
 
     #[rstest]

@@ -210,17 +210,6 @@ impl Operation {
         ))
     }
 
-    pub fn apply(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
-        seg_list.splice(
-            self.pos..self.pos + self.org_seg_templates.len(),
-            self.new_seg_templates
-                .iter()
-                .map(Clone::clone)
-                .map(Segment::from),
-        );
-        Ok(())
-    }
-
     pub fn reverse(&mut self) {
         self.op_type = self.op_type.reverse();
         swap(&mut self.org_seg_templates, &mut self.new_seg_templates);
@@ -325,31 +314,6 @@ pub(crate) mod tests {
     fn can_reverse_to_inverse_operation(#[case] mut op: Operation, #[case] op_inv: Operation) {
         op.reverse();
         assert_eq!(op, op_inv)
-    }
-
-    #[rstest]
-    #[case::add(
-        add_tokyo(),
-        SegmentList::yokohama_to_chiba(false, false, true),
-        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true)
-    )]
-    #[case::remove(
-        remove_tokyo(),
-        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true),
-        SegmentList::yokohama_to_chiba(false, false, true)
-    )]
-    #[case::move_(
-        move_chiba_to_tokyo(),
-        SegmentList::yokohama_to_chiba(false, false, true),
-        SegmentList::yokohama_to_tokyo(false, false, true)
-    )]
-    fn can_apply_to_seg_list(
-        #[case] op: Operation,
-        #[case] mut seg_list: SegmentList,
-        #[case] expected: SegmentList,
-    ) {
-        op.apply(&mut seg_list).unwrap();
-        assert_eq!(seg_list, expected)
     }
 
     macro_rules! concat_op_list {

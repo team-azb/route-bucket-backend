@@ -94,7 +94,7 @@ impl Route {
             self.info.op_num += 1;
         };
 
-        op.apply(&mut self.seg_list)?;
+        self.seg_list.apply_operation(op)?;
 
         Ok(())
     }
