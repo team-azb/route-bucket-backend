@@ -1,7 +1,6 @@
 use std::cmp::max;
 use std::slice::{Iter, IterMut};
 
-use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
@@ -79,21 +78,12 @@ impl SegmentList {
             .reduce(gain_tuple_identity, gain_tuple_add)
     }
 
-    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+    pub fn attach_distance_from_start(&mut self) {
         // compute cumulative distance within the segments
-        self.iter_mut().par_bridge().for_each(|seg| {
-            seg.iter_mut()
-                .scan((Distance::zero(), None), |(dist, prev_op), coord| {
-                    if let Some(prev_coord) = prev_op {
-                        *dist += coord.haversine_distance(prev_coord);
-                    }
-                    coord.set_distance_from_start(*dist);
-                    *prev_op = Some(coord.clone());
-                    Some(*dist)
-                })
-                .last()
-                .unwrap();
-        });
+        self.iter_mut()
+            .par_bridge()
+            .filter(|seg| !seg.has_distance())
+            .for_each(Segment::calc_distance_from_start);
 
         // convert to global cumulative distance
         self.iter_mut()
@@ -104,13 +94,8 @@ impl SegmentList {
             })
             .par_bridge()
             .for_each(|(seg, offset)| {
-                seg.iter_mut().par_bridge().for_each(|coord| {
-                    let org_dist = coord.distance_from_start().unwrap();
-                    coord.set_distance_from_start(org_dist + offset);
-                });
+                seg.set_distance_offset(offset);
             });
-
-        Ok(())
     }
 
     pub fn calc_bounding_box(&self) -> ApplicationResult<BoundingBox> {
@@ -294,7 +279,7 @@ pub(crate) mod tests {
         #[case] mut seg_list_without_dist: SegmentList,
         #[case] expected_seg_list: SegmentList,
     ) {
-        seg_list_without_dist.attach_distance_from_start().unwrap();
+        seg_list_without_dist.attach_distance_from_start();
         assert_eq!(seg_list_without_dist, expected_seg_list)
     }
 

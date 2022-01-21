@@ -95,7 +95,7 @@ where
         let conn = self.route_repository().get_connection().await?;
 
         let mut route = self.route_repository().find(route_id, &conn).await?;
-        route.attach_distance_from_start()?;
+        route.attach_distance_from_start();
         self.elevation_api().attach_elevations(&mut route)?;
 
         route.try_into()
@@ -132,7 +132,7 @@ where
         let conn = self.route_repository().get_connection().await?;
 
         let mut route = self.route_repository().find(route_id, &conn).await?;
-        route.attach_distance_from_start()?;
+        route.attach_distance_from_start();
         self.elevation_api().attach_elevations(&mut route)?;
 
         route.try_into()
@@ -217,7 +217,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
+                route.attach_distance_from_start();
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -250,7 +250,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
+                route.attach_distance_from_start();
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -290,7 +290,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
+                route.attach_distance_from_start();
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -345,7 +345,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
+                route.attach_distance_from_start();
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -375,7 +375,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start()?;
+                route.attach_distance_from_start();
 
                 self.route_repository().update(&route, conn).await?;
 

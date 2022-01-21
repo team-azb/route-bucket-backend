@@ -105,7 +105,7 @@ impl Route {
         self.seg_list.calc_elevation_gain()
     }
 
-    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+    pub fn attach_distance_from_start(&mut self) {
         self.seg_list.attach_distance_from_start()
     }
 
