@@ -14,9 +14,6 @@ pub struct RouteGetResponse {
     pub route_info: RouteInfo,
     pub waypoints: Vec<Coordinate>,
     pub segments: Vec<Segment>,
-    pub ascent_elevation_gain: Elevation,
-    pub descent_elevation_gain: Elevation,
-    pub total_distance: Distance,
     pub bounding_box: Option<BoundingBox>,
 }
 
@@ -49,15 +46,12 @@ pub struct RouteOperationResponse {
 impl TryFrom<Route> for RouteGetResponse {
     type Error = ApplicationError;
 
-    fn try_from(route: Route) -> Result<Self, Self::Error> {
-        let (ascent_elevation_gain, descent_elevation_gain) = route.calc_elevation_gain();
+    fn try_from(mut route: Route) -> Result<Self, Self::Error> {
+        route.reflect_update_on_seg_list_to_info()?;
         let (info, _, seg_list) = route.into();
         Ok(RouteGetResponse {
             route_info: info,
             waypoints: seg_list.gather_waypoints(),
-            ascent_elevation_gain,
-            descent_elevation_gain,
-            total_distance: seg_list.get_total_distance()?,
             bounding_box: (!seg_list.is_empty())
                 .then(|| seg_list.calc_bounding_box())
                 .transpose()?,
@@ -69,14 +63,15 @@ impl TryFrom<Route> for RouteGetResponse {
 impl TryFrom<Route> for RouteOperationResponse {
     type Error = ApplicationError;
 
-    fn try_from(route: Route) -> Result<Self, Self::Error> {
-        let (ascent_elevation_gain, descent_elevation_gain) = route.calc_elevation_gain();
+    fn try_from(mut route: Route) -> Result<Self, Self::Error> {
+        route.reflect_update_on_seg_list_to_info()?;
+        let (info, _, seg_list) = route.into();
         Ok(RouteOperationResponse {
-            waypoints: route.gather_waypoints(),
-            ascent_elevation_gain,
-            descent_elevation_gain,
-            total_distance: route.get_total_distance()?,
-            segments: route.into_segments_in_between(),
+            waypoints: seg_list.gather_waypoints(),
+            ascent_elevation_gain: *info.ascent_elevation_gain(),
+            descent_elevation_gain: *info.descent_elevation_gain(),
+            total_distance: *info.total_distance(),
+            segments: seg_list.into_segments_in_between(),
         })
     }
 }

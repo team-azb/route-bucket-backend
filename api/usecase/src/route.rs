@@ -147,7 +147,7 @@ where
         conn.transaction(|conn| {
             async move {
                 let owner_id = self.user_auth_api().authenticate(user_access_token).await?;
-                let route_info = RouteInfo::new(RouteId::new(), &req.name, owner_id, 0);
+                let route_info = RouteInfo::new(&req.name, owner_id);
 
                 self.route_repository()
                     .insert_info(&route_info, conn)
