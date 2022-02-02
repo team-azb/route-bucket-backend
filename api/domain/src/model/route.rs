@@ -99,18 +99,16 @@ impl Route {
         Ok(())
     }
 
-    // methods from SegmentList ( No tests for them! )
-
-    pub fn calc_elevation_gain(&self) -> (Elevation, Elevation) {
-        self.seg_list.calc_elevation_gain()
+    pub fn reflect_update_on_seg_list_to_info(&mut self) -> ApplicationResult<()> {
+        let (asc_gain, desc_gain) = self.seg_list.calc_elevation_gain();
+        self.info.ascent_elevation_gain = asc_gain;
+        self.info.descent_elevation_gain = desc_gain;
+        self.info.total_distance = self.seg_list.get_total_distance()?;
+        Ok(())
     }
 
     pub fn attach_distance_from_start(&mut self) {
         self.seg_list.attach_distance_from_start()
-    }
-
-    pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
-        self.seg_list.get_total_distance()
     }
 
     pub fn gather_waypoints(&self) -> Vec<Coordinate> {
