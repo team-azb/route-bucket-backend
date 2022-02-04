@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use derivative::Derivative;
+use derive_more::From;
 use getset::Getters;
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +8,7 @@ use crate::model::user::UserId;
 
 use super::{Distance, Elevation, RouteId};
 
-#[derive(Clone, Debug, Getters, Derivative, Deserialize, Serialize)]
+#[derive(Clone, Debug, From, Getters, Derivative, Deserialize, Serialize)]
 #[get = "pub"]
 #[derivative(Default)]
 #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
@@ -35,30 +36,6 @@ impl RouteInfo {
             name: name.to_string(),
             owner_id,
             ..Default::default()
-        }
-    }
-
-    pub fn with_details(
-        id: RouteId,
-        name: &str,
-        owner_id: UserId,
-        op_num: usize,
-        ascent_elevation_gain: Elevation,
-        descent_elevation_gain: Elevation,
-        total_distance: Distance,
-        created_at: DateTime<Utc>,
-        updated_at: DateTime<Utc>,
-    ) -> RouteInfo {
-        RouteInfo {
-            id,
-            name: name.to_string(),
-            owner_id,
-            op_num,
-            ascent_elevation_gain,
-            descent_elevation_gain,
-            total_distance,
-            created_at,
-            updated_at,
         }
     }
 

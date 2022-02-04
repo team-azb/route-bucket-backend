@@ -36,9 +36,9 @@ impl RouteDto {
             created_at,
             updated_at,
         } = self;
-        Ok(RouteInfo::with_details(
+        Ok(RouteInfo::from((
             RouteId::from_string(id),
-            &name,
+            name,
             UserId::from(owner_id),
             operation_pos as usize,
             Elevation::try_from(ascent_elevation_gain as i32)?,
@@ -46,7 +46,7 @@ impl RouteDto {
             Distance::try_from(total_distance)?,
             created_at,
             updated_at,
-        ))
+        )))
     }
 
     pub fn from_model(route_info: &RouteInfo) -> ApplicationResult<RouteDto> {
@@ -58,8 +58,8 @@ impl RouteDto {
             ascent_elevation_gain: route_info.ascent_elevation_gain().value() as u32,
             descent_elevation_gain: route_info.descent_elevation_gain().value() as u32,
             total_distance: route_info.total_distance().value(),
-            created_at: route_info.created_at().clone(),
-            updated_at: route_info.updated_at().clone(),
+            created_at: *route_info.created_at(),
+            updated_at: *route_info.updated_at(),
         })
     }
 }
