@@ -160,20 +160,13 @@ impl TryFrom<Route> for RouteGpx {
 pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
-    use crate::model::route::route_info::tests::RouteInfoFixtures;
-    use crate::model::route::segment_list::tests::OperationFixtures;
-    use crate::model::route::segment_list::tests::SegmentListFixture;
-    use crate::model::route::segment_list::Operation;
+    use crate::model::route::tests::RouteFixtures;
 
     use super::*;
 
     #[fixture]
     fn route0() -> Route {
-        Route {
-            info: RouteInfo::route0(3),
-            op_list: Operation::after_add_tokyo_op_list(),
-            seg_list: SegmentList::yokohama_to_chiba_via_tokyo(true, true, false),
-        }
+        Route::yokohama_to_chiba_via_tokyo_filled(true, true)
     }
 
     #[fixture]

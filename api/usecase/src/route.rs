@@ -95,8 +95,8 @@ where
         let conn = self.route_repository().get_connection().await?;
 
         let mut route = self.route_repository().find(route_id, &conn).await?;
-        route.attach_distance_from_start();
         self.elevation_api().attach_elevations(&mut route)?;
+        route.calc_route_features_from_seg_list()?;
 
         route.try_into()
     }
@@ -132,8 +132,8 @@ where
         let conn = self.route_repository().get_connection().await?;
 
         let mut route = self.route_repository().find(route_id, &conn).await?;
-        route.attach_distance_from_start();
         self.elevation_api().attach_elevations(&mut route)?;
+        route.calc_route_features_from_seg_list()?;
 
         route.try_into()
     }
@@ -217,7 +217,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start();
+                route.calc_route_features_from_seg_list()?;
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -250,7 +250,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start();
+                route.calc_route_features_from_seg_list()?;
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -290,7 +290,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start();
+                route.calc_route_features_from_seg_list()?;
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -345,7 +345,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start();
+                route.calc_route_features_from_seg_list()?;
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -375,7 +375,7 @@ where
                     .interpolate_empty_segments(&mut route)
                     .await?;
                 self.elevation_api().attach_elevations(&mut route)?;
-                route.attach_distance_from_start();
+                route.calc_route_features_from_seg_list()?;
 
                 self.route_repository().update(&route, conn).await?;
 
@@ -435,7 +435,7 @@ mod tests {
 
     fn yokohama_to_chiba_before_interpolation(is_undone: bool) -> Route {
         Route::new(
-            RouteInfo::route0(if is_undone { 2 } else { 4 }),
+            RouteInfo::empty_route0(if is_undone { 2 } else { 4 }),
             if is_undone {
                 Operation::after_add_tokyo_op_list()
             } else {
@@ -451,7 +451,7 @@ mod tests {
 
     fn yokohama_to_chiba_via_tokyo_before_interpolation() -> Route {
         Route::new(
-            RouteInfo::route0(3),
+            RouteInfo::empty_route0(3),
             Operation::after_add_tokyo_op_list(),
             vec![
                 Segment::yokohama_to_tokyo(false, None, true, DrawingMode::Freehand),
@@ -479,8 +479,8 @@ mod tests {
             Route::yokohama_to_chiba_filled(false, false),
         );
         usecase.expect_attach_elevations_at_elevation_api(
-            Route::yokohama_to_chiba_filled(false, true),
-            Route::yokohama_to_chiba_filled(true, true),
+            Route::yokohama_to_chiba_filled(false, false),
+            Route::yokohama_to_chiba_filled(true, false),
         );
 
         assert_eq!(
@@ -495,13 +495,13 @@ mod tests {
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_search_infos_at_route_repository(
             RouteSearchQuery::empty(),
-            vec![RouteInfo::route0(0)],
+            vec![RouteInfo::empty_route0(0)],
         );
 
         assert_eq!(
             usecase.find_all().await,
             Ok(RouteSearchResponse {
-                route_infos: vec![RouteInfo::route0(0)],
+                route_infos: vec![RouteInfo::empty_route0(0)],
                 result_num: 1
             })
         );
@@ -513,14 +513,14 @@ mod tests {
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_search_infos_at_route_repository(
             RouteSearchQuery::search_guest(),
-            vec![RouteInfo::route0(0)],
+            vec![RouteInfo::empty_route0(0)],
         );
         usecase.expect_count_infos_at_route_repository(RouteSearchQuery::search_guest(), 1);
 
         assert_eq!(
             usecase.search(RouteSearchQuery::search_guest()).await,
             Ok(RouteSearchResponse {
-                route_infos: vec![RouteInfo::route0(0)],
+                route_infos: vec![RouteInfo::empty_route0(0)],
                 result_num: 1
             })
         );
@@ -535,8 +535,8 @@ mod tests {
             Route::yokohama_to_chiba_via_tokyo_filled(false, false),
         );
         usecase.expect_attach_elevations_at_elevation_api(
-            Route::yokohama_to_chiba_via_tokyo_filled(false, true),
-            Route::yokohama_to_chiba_via_tokyo_filled(true, true),
+            Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+            Route::yokohama_to_chiba_via_tokyo_filled(true, false),
         );
 
         assert_eq!(usecase.find_gpx(&route_id()).await, Ok(RouteGpx::route0()));
@@ -551,7 +551,7 @@ mod tests {
 
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
-        usecase.expect_insert_info_at_route_repository(RouteInfo::route0(0));
+        usecase.expect_insert_info_at_route_repository(RouteInfo::empty_route0(0));
         // NOTE: unable to check resp since RouteId is auto-generated
         // assert_eq!(usecase.create(&req).await, Ok(expected_resp));
         assert!(matches!(usecase.create(&doncic_token(), &req).await, Ok(_)));
@@ -566,12 +566,12 @@ mod tests {
 
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
-        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(0));
-        usecase.expect_update_info_at_route_repository(RouteInfo::route1(0));
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(0));
+        usecase.expect_update_info_at_route_repository(RouteInfo::empty_route1(0));
 
         assert_eq!(
             usecase.rename(&route_id(), &doncic_token(), &req).await,
-            Ok(RouteInfo::route1(0))
+            Ok(RouteInfo::empty_route1(0))
         );
     }
 
@@ -687,7 +687,7 @@ mod tests {
     async fn can_clear_route() {
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
-        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(3));
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(3));
         usecase.expect_update_at_route_repository(Route::empty());
 
         assert_eq!(
@@ -752,7 +752,7 @@ mod tests {
     #[tokio::test]
     async fn can_delete() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::route0(0));
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(0));
         usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_delete_at_route_repository(route_id());
         assert_eq!(usecase.delete(&route_id(), &doncic_token()).await, Ok(()));

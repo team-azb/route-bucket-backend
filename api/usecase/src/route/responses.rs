@@ -46,8 +46,7 @@ pub struct RouteOperationResponse {
 impl TryFrom<Route> for RouteGetResponse {
     type Error = ApplicationError;
 
-    fn try_from(mut route: Route) -> Result<Self, Self::Error> {
-        route.reflect_update_on_seg_list_to_info()?;
+    fn try_from(route: Route) -> Result<Self, Self::Error> {
         let (info, _, seg_list) = route.into();
         Ok(RouteGetResponse {
             route_info: info,
@@ -63,8 +62,7 @@ impl TryFrom<Route> for RouteGetResponse {
 impl TryFrom<Route> for RouteOperationResponse {
     type Error = ApplicationError;
 
-    fn try_from(mut route: Route) -> Result<Self, Self::Error> {
-        route.reflect_update_on_seg_list_to_info()?;
+    fn try_from(route: Route) -> Result<Self, Self::Error> {
         let (info, _, seg_list) = route.into();
         Ok(RouteOperationResponse {
             waypoints: seg_list.gather_waypoints(),
@@ -89,11 +87,8 @@ mod tests {
 
     fn empty_route_get_resp() -> RouteGetResponse {
         RouteGetResponse {
-            route_info: RouteInfo::route0(0),
+            route_info: RouteInfo::empty_route0(0),
             waypoints: Vec::new(),
-            ascent_elevation_gain: Elevation::zero(),
-            descent_elevation_gain: Elevation::zero(),
-            total_distance: Distance::zero(),
             segments: Vec::new(),
             bounding_box: None,
         }
@@ -102,11 +97,8 @@ mod tests {
     fn full_route_get_resp() -> RouteGetResponse {
         let dist = 26936.42633640023;
         RouteGetResponse {
-            route_info: RouteInfo::route0(3),
+            route_info: RouteInfo::filled_route0(10, 0, 58759.973932514884, 3),
             waypoints: Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
-            ascent_elevation_gain: 10.try_into().unwrap(),
-            descent_elevation_gain: 0.try_into().unwrap(),
-            total_distance: 58759.973932514884.try_into().unwrap(),
             segments: vec![
                 Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
                 Segment::tokyo_to_chiba(true, Some(dist), false, DrawingMode::Freehand),
