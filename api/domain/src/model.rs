@@ -1,3 +1,4 @@
+pub mod permission;
 pub mod route;
 pub mod types;
 pub mod user;
