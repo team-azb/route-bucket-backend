@@ -1,15 +1,18 @@
 use route_bucket_domain::external::{
     CallElevationApi, CallReservedUserIdCheckerApi, CallRouteInterpolationApi, CallUserAuthApi,
 };
-use route_bucket_domain::repository::{CallRouteRepository, CallUserRepository};
+use route_bucket_domain::repository::{
+    CallPermissionRepository, CallRouteRepository, CallUserRepository,
+};
 use route_bucket_infrastructure::{
-    init_repositories, FirebaseAuthApi, OsrmApi, ReservedUidsReader, RouteRepositoryMySql,
-    SrtmReader, UserRepositoryMySql,
+    init_repositories, FirebaseAuthApi, OsrmApi, PermissionRepositoryMySql, ReservedUidsReader,
+    RouteRepositoryMySql, SrtmReader, UserRepositoryMySql,
 };
 
 pub struct Server {
     route_repository: RouteRepositoryMySql,
     user_repository: UserRepositoryMySql,
+    permission_repository: PermissionRepositoryMySql,
     srtm_reader: SrtmReader,
     osrm_api: OsrmApi,
     firebase_auth_api: FirebaseAuthApi,
@@ -18,10 +21,11 @@ pub struct Server {
 
 impl Server {
     pub async fn new() -> Self {
-        let (route_repository, user_repository) = init_repositories().await;
+        let (route_repository, user_repository, permission_repository) = init_repositories().await;
         Self {
             route_repository,
             user_repository,
+            permission_repository,
             srtm_reader: SrtmReader::new().unwrap(),
             osrm_api: OsrmApi::new(),
             firebase_auth_api: FirebaseAuthApi::new().await.unwrap(),
@@ -44,6 +48,14 @@ impl CallUserRepository for Server {
 
     fn user_repository(&self) -> &Self::UserRepository {
         &self.user_repository
+    }
+}
+
+impl CallPermissionRepository for Server {
+    type PermissionRepository = PermissionRepositoryMySql;
+
+    fn permission_repository(&self) -> &Self::PermissionRepository {
+        &self.permission_repository
     }
 }
 

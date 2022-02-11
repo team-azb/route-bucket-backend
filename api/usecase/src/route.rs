@@ -9,9 +9,11 @@ use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, CallUserAuthApi, ElevationApi,
     RouteInterpolationApi, UserAuthApi,
 };
+use route_bucket_domain::model::permission::PermissionType;
 use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
 use route_bucket_domain::repository::{
-    CallRouteRepository, Connection, Repository, RouteRepository,
+    CallPermissionRepository, CallRouteRepository, Connection, PermissionRepository, Repository,
+    RouteRepository,
 };
 use route_bucket_utils::ApplicationResult;
 
@@ -89,7 +91,12 @@ pub trait RouteUseCase {
 #[async_trait]
 impl<T> RouteUseCase for T
 where
-    T: CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + CallUserAuthApi + Sync,
+    T: CallRouteRepository
+        + CallPermissionRepository
+        + CallRouteInterpolationApi
+        + CallElevationApi
+        + CallUserAuthApi
+        + Sync,
 {
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
@@ -172,8 +179,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route_info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route_info.owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route_info.rename(&req.name);
@@ -199,8 +209,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_add(
@@ -239,8 +252,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
@@ -272,8 +288,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_move(
@@ -310,8 +329,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(info.owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 info.clear_route();
@@ -335,8 +357,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route.redo_operation()?;
@@ -365,8 +390,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route.undo_operation()?;
@@ -390,9 +418,12 @@ where
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(info.owner_id(), user_access_token)
+                let route_info = self.route_repository().find_info(route_id, conn).await?;
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 self.route_repository().delete(route_id, conn).await
