@@ -14,10 +14,9 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::dto::operation::OperationDto;
 use crate::dto::route::RouteDto;
+use crate::dto::search_query::SearchQuery;
 use crate::dto::segment::SegmentDto;
 use crate::repository::{gen_err_mapper, RepositoryConnectionMySql};
-
-use super::serializable_to_search_query;
 
 // NOTE: MySqlPoolを共有したくなったら、Arcで囲めば良さそう
 pub struct RouteRepositoryMySql(pub(super) Arc<MySqlPool>);
@@ -293,13 +292,27 @@ impl RouteRepository for RouteRepositoryMySql {
     ) -> ApplicationResult<Vec<RouteInfo>> {
         let mut conn = conn.lock().await;
 
-        sqlx::query_as::<_, RouteDto>(&serializable_to_search_query("routes", query)?)
+        sqlx::query_as::<_, RouteDto>(&SearchQuery::from(query).to_sql(false))
             .fetch_all(&mut *conn)
             .await
             .map_err(gen_err_mapper("failed to find infos"))?
             .into_iter()
             .map(RouteDto::into_model)
             .collect::<ApplicationResult<Vec<_>>>()
+    }
+
+    async fn count_infos(
+        &self,
+        query: RouteSearchQuery,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<usize> {
+        let mut conn = conn.lock().await;
+
+        sqlx::query_as::<_, (i64,)>(&SearchQuery::from(query).to_sql(true))
+            .fetch_one(&mut *conn)
+            .await
+            .map(|(count,)| count as usize)
+            .map_err(gen_err_mapper("failed to count infos"))
     }
 
     async fn insert_info(
@@ -312,7 +325,8 @@ impl RouteRepository for RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO routes VALUES (?, ?, ?, ?)
+            INSERT INTO routes (`id`, `name`, `owner_id`, `operation_pos`)
+            VALUES (?, ?, ?, ?)
             ",
         )
         .bind(dto.id())

@@ -104,11 +104,15 @@ where
     async fn find_all(&self) -> ApplicationResult<RouteSearchResponse> {
         let conn = self.route_repository().get_connection().await?;
 
+        let route_infos = self
+            .route_repository()
+            .search_infos(RouteSearchQuery::empty(), &conn)
+            .await?;
+        let result_num = route_infos.len();
+
         Ok(RouteSearchResponse {
-            route_infos: self
-                .route_repository()
-                .search_infos(RouteSearchQuery::empty(), &conn)
-                .await?,
+            route_infos,
+            result_num,
         })
     }
 
@@ -116,7 +120,11 @@ where
         let conn = self.route_repository().get_connection().await?;
 
         Ok(RouteSearchResponse {
-            route_infos: self.route_repository().search_infos(query, &conn).await?,
+            route_infos: self
+                .route_repository()
+                .search_infos(query.clone(), &conn)
+                .await?,
+            result_num: self.route_repository().count_infos(query, &conn).await?,
         })
     }
 
@@ -493,7 +501,8 @@ mod tests {
         assert_eq!(
             usecase.find_all().await,
             Ok(RouteSearchResponse {
-                route_infos: vec![RouteInfo::route0(0)]
+                route_infos: vec![RouteInfo::route0(0)],
+                result_num: 1
             })
         );
     }
@@ -506,11 +515,13 @@ mod tests {
             RouteSearchQuery::search_guest(),
             vec![RouteInfo::route0(0)],
         );
+        usecase.expect_count_infos_at_route_repository(RouteSearchQuery::search_guest(), 1);
 
         assert_eq!(
             usecase.search(RouteSearchQuery::search_guest()).await,
             Ok(RouteSearchResponse {
-                route_infos: vec![RouteInfo::route0(0)]
+                route_infos: vec![RouteInfo::route0(0)],
+                result_num: 1
             })
         );
     }
@@ -786,6 +797,14 @@ mod tests {
             return_infos: Vec<RouteInfo>,
         ) {
             expect_at_repository!(self, search_infos, query, return_infos);
+        }
+
+        fn expect_count_infos_at_route_repository(
+            &mut self,
+            query: RouteSearchQuery,
+            return_count: usize,
+        ) {
+            expect_at_repository!(self, count_infos, query, return_count);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {
