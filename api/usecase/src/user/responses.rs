@@ -15,6 +15,7 @@ pub struct UserCreateResponse {
 pub(super) enum ValidationErrorCode {
     InvalidFormat,
     AlreadyExists,
+    ReservedWord,
 }
 
 #[derive(Debug, Default, Serialize)]

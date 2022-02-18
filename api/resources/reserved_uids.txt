@@ -1,0 +1,11 @@
+routes
+posts
+comments
+about
+privacy
+terms
+signin
+signup
+signout
+password_reset
+icons

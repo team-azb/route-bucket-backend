@@ -3,7 +3,9 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use futures::FutureExt;
 use route_bucket_domain::{
-    external::{CallUserAuthApi, UserAuthApi},
+    external::{
+        CallReservedUserIdCheckerApi, CallUserAuthApi, ReservedUserIdCheckerApi, UserAuthApi,
+    },
     model::user::{User, UserId},
     repository::{CallUserRepository, Connection, Repository, UserRepository},
 };
@@ -37,7 +39,7 @@ pub trait UserUseCase {
 #[async_trait]
 impl<T> UserUseCase for T
 where
-    T: CallUserRepository + CallUserAuthApi + Sync,
+    T: CallUserRepository + CallUserAuthApi + CallReservedUserIdCheckerApi + Sync,
 {
     async fn find(&self, user_id: &UserId) -> ApplicationResult<User> {
         let conn = self.user_repository().get_connection().await?;
@@ -122,10 +124,20 @@ where
 
         // Check for Duplicate Uses
         if let Some(id) = req.id {
-            let conn = self.user_repository().get_connection().await?;
-            if self.user_repository().find(&id, &conn).await.is_ok() {
-                resp.0.insert("id", ValidationErrorCode::AlreadyExists);
-            };
+            let is_reserved = self
+                .reserved_user_id_checker_api()
+                .check_if_reserved(&id)
+                .await?;
+            if is_reserved {
+                resp.0.insert("id", ValidationErrorCode::ReservedWord);
+            } else {
+                let conn = self.user_repository().get_connection().await?;
+
+                let is_already_used = self.user_repository().find(&id, &conn).await.is_ok();
+                if is_already_used {
+                    resp.0.insert("id", ValidationErrorCode::AlreadyExists);
+                };
+            }
         }
         if let Some(email) = req.email {
             if self.user_auth_api().check_if_email_exists(&email).await? {
@@ -144,7 +156,7 @@ mod tests {
     use crate::{expect_at_repository, expect_once};
     use chrono::NaiveDate;
     use route_bucket_domain::{
-        external::MockUserAuthApi,
+        external::{MockReservedUserIdCheckerApi, MockUserAuthApi},
         model::{
             fixtures::user::{UserFixtures, UserIdFixtures},
             types::{Email, Url},
@@ -284,6 +296,7 @@ mod tests {
         });
 
         let mut usecase = TestUserUseCase::new();
+        usecase.expect_check_if_reserved_at_uid_check_api(UserId::doncic(), false);
         usecase.expect_find_at_user_repository(UserId::doncic(), User::doncic());
         usecase.expect_check_if_email_exists_at_auth_api(unknown_email(), false);
 
@@ -293,6 +306,7 @@ mod tests {
     struct TestUserUseCase {
         repository: MockUserRepository,
         auth_api: MockUserAuthApi,
+        uid_check_api: MockReservedUserIdCheckerApi,
     }
 
     // setup methods for mocking
@@ -301,6 +315,7 @@ mod tests {
             let mut usecase = TestUserUseCase {
                 repository: MockUserRepository::new(),
                 auth_api: MockUserAuthApi::new(),
+                uid_check_api: MockReservedUserIdCheckerApi::new(),
             };
             expect_at_repository!(usecase, get_connection, MockConnection {});
 
@@ -359,6 +374,14 @@ mod tests {
                 result_bool
             );
         }
+
+        fn expect_check_if_reserved_at_uid_check_api(
+            &mut self,
+            param_id: UserId,
+            result_bool: bool,
+        ) {
+            expect_once!(self.uid_check_api, check_if_reserved, param_id, result_bool);
+        }
     }
 
     // impls to enable trait RouteUseCase
@@ -375,6 +398,14 @@ mod tests {
 
         fn user_auth_api(&self) -> &Self::UserAuthApi {
             &self.auth_api
+        }
+    }
+
+    impl CallReservedUserIdCheckerApi for TestUserUseCase {
+        type ReservedUserIdCheckerApi = MockReservedUserIdCheckerApi;
+
+        fn reserved_user_id_checker_api(&self) -> &Self::ReservedUserIdCheckerApi {
+            &self.uid_check_api
         }
     }
 }
