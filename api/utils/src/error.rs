@@ -28,11 +28,8 @@ pub enum ApplicationError {
     #[display(fmt = "InvalidOperation: {}", _0)]
     InvalidOperation(&'static str),
 
-    #[display(fmt = "ResourceNotFound: {} {} not found", resource_name, id)]
-    ResourceNotFound {
-        resource_name: &'static str,
-        id: String,
-    },
+    #[display(fmt = "ResourceNotFound: {}", _0)]
+    ResourceNotFound(String),
 
     #[display(fmt = "UseCaseError: {}", _0)]
     UseCaseError(String),
