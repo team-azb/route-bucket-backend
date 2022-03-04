@@ -61,16 +61,18 @@ impl SearchQuery {
             );
         }
 
-        if let Some(order_by) = &self.order_by {
-            query += &format!("ORDER BY {} ", order_by.to_query());
-        }
+        if !is_for_counting {
+            if let Some(order_by) = &self.order_by {
+                query += &format!("ORDER BY {} ", order_by.to_query());
+            }
 
-        if let Some(limit) = self.limit {
-            query += &format!("LIMIT {} ", limit);
-        }
+            if let Some(limit) = self.limit {
+                query += &format!("LIMIT {} ", limit);
+            }
 
-        if let Some(offset) = self.offset {
-            query += &format!("OFFSET {} ", offset);
+            if let Some(offset) = self.offset {
+                query += &format!("OFFSET {} ", offset);
+            }
         }
 
         query
