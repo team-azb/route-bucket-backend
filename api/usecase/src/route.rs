@@ -805,13 +805,13 @@ mod tests {
                 elevation_api: MockElevationApi::new(),
                 auth_api: MockUserAuthApi::new(),
             };
-            expect_at_repository!(usecase, get_connection, MockConnection {});
+            expect_at_repository!(usecase.route_repository, get_connection, MockConnection {});
 
             usecase
         }
 
         fn expect_find_at_route_repository(&mut self, param_id: RouteId, return_route: Route) {
-            expect_at_repository!(self, find, param_id, return_route);
+            expect_at_repository!(self.route_repository, find, param_id, return_route);
         }
 
         fn expect_find_info_at_route_repository(
@@ -819,7 +819,7 @@ mod tests {
             param_id: RouteId,
             return_info: RouteInfo,
         ) {
-            expect_at_repository!(self, find_info, param_id, return_info);
+            expect_at_repository!(self.route_repository, find_info, param_id, return_info);
         }
 
         fn expect_search_infos_at_route_repository(
@@ -827,7 +827,7 @@ mod tests {
             query: RouteSearchQuery,
             return_infos: Vec<RouteInfo>,
         ) {
-            expect_at_repository!(self, search_infos, query, return_infos);
+            expect_at_repository!(self.route_repository, search_infos, query, return_infos);
         }
 
         fn expect_count_infos_at_route_repository(
@@ -835,23 +835,23 @@ mod tests {
             query: RouteSearchQuery,
             return_count: usize,
         ) {
-            expect_at_repository!(self, count_infos, query, return_count);
+            expect_at_repository!(self.route_repository, count_infos, query, return_count);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            expect_at_repository!(self, insert_info, param_info, ());
+            expect_at_repository!(self.route_repository, insert_info, param_info, ());
         }
 
         fn expect_update_at_route_repository(&mut self, param_route: Route) {
-            expect_at_repository!(self, update, param_route, ());
+            expect_at_repository!(self.route_repository, update, param_route, ());
         }
 
         fn expect_update_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            expect_at_repository!(self, update_info, param_info, ());
+            expect_at_repository!(self.route_repository, update_info, param_info, ());
         }
 
         fn expect_delete_at_route_repository(&mut self, param_id: RouteId) {
-            expect_at_repository!(self, delete, param_id, ());
+            expect_at_repository!(self.route_repository, delete, param_id, ());
         }
 
         fn expect_correct_coordinate_at_interpolation_api(
