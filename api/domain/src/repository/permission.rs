@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use route_bucket_utils::ApplicationResult;
+use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::{
     permission::{Permission, PermissionType},
@@ -11,13 +11,32 @@ use super::Repository;
 
 #[async_trait]
 pub trait PermissionRepository: Repository {
+    async fn find_type(
+        &self,
+        route_info: &RouteInfo,
+        user_id: &UserId,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<PermissionType>;
+
     async fn authorize_user(
         &self,
         route_info: &RouteInfo,
         user_id: &UserId,
         target_type: PermissionType,
         conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()>;
+    ) -> ApplicationResult<()> {
+        let permission_type = self.find_type(route_info, user_id, conn).await?;
+
+        (target_type <= permission_type).then(|| ()).ok_or_else(|| {
+            ApplicationError::AuthorizationError(format!(
+                "User {} doesn't have {} permission on Route {} (actual permission: {}).",
+                user_id,
+                target_type,
+                route_info.id(),
+                permission_type
+            ))
+        })
+    }
 
     async fn insert_or_update(
         &self,
@@ -52,6 +71,8 @@ mockall::mock! {
 
     #[async_trait]
     impl PermissionRepository for PermissionRepository {
+        async fn find_type(&self, route_info: &RouteInfo, user_id: &UserId, conn: &super::MockConnection) -> ApplicationResult<PermissionType>;
+
         async fn authorize_user(&self, route_info: &RouteInfo, user_id: &UserId, target_type: PermissionType, conn: &super::MockConnection) -> ApplicationResult<()>;
 
         async fn insert_or_update(&self, permission: &Permission, conn: &super::MockConnection) -> ApplicationResult<()>;

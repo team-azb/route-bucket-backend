@@ -16,11 +16,13 @@ use super::{route::RouteId, user::UserId};
     strum::Display,
     strum::EnumString,
 )]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "snake_case")]
 pub enum PermissionType {
+    None,
     Viewer,
     Editor,
+    Owner,
 }
 
 #[derive(Clone, Debug, From, Into, Getters)]

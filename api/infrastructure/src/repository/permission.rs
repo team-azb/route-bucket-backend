@@ -9,7 +9,7 @@ use route_bucket_domain::{
     },
     repository::{PermissionRepository, Repository},
 };
-use route_bucket_utils::{ApplicationError, ApplicationResult};
+use route_bucket_utils::ApplicationResult;
 use sqlx::MySqlPool;
 use tokio::sync::Mutex;
 
@@ -35,29 +35,19 @@ impl Repository for PermissionRepositoryMySql {
 
 #[async_trait]
 impl PermissionRepository for PermissionRepositoryMySql {
-    async fn authorize_user(
+    async fn find_type(
         &self,
         route_info: &RouteInfo,
         user_id: &UserId,
-        target_type: PermissionType,
         conn: &<Self as Repository>::Connection,
-    ) -> ApplicationResult<()> {
+    ) -> ApplicationResult<PermissionType> {
         if *user_id == *route_info.owner_id() {
-            return Ok(());
+            return Ok(PermissionType::Owner);
         }
 
         let mut conn = conn.lock().await;
 
-        let auth_err_closure = || {
-            ApplicationError::AuthorizationError(format!(
-                "User {} doesn't have {} permission on Route {}",
-                user_id,
-                target_type,
-                route_info.id()
-            ))
-        };
-
-        sqlx::query_as::<_, PermissionDto>(
+        let sqlx_result = sqlx::query_as::<_, PermissionDto>(
             r"
             SELECT * FROM permissions WHERE route_id = ?, user_id = ?
             ",
@@ -65,17 +55,16 @@ impl PermissionRepository for PermissionRepositoryMySql {
         .bind(route_info.id().to_string())
         .bind(user_id.to_string())
         .fetch_one(&mut *conn)
-        .await
-        .map_err(|sqlx_err| match sqlx_err {
-            sqlx::Error::RowNotFound => auth_err_closure(),
-            other => gen_err_mapper("failed to find permission")(other),
-        })
-        .and_then(|dto| {
-            let permission = dto.into_model()?;
-            (target_type <= *permission.permission_type())
-                .then(|| ())
-                .ok_or_else(auth_err_closure)
-        })
+        .await;
+
+        match sqlx_result {
+            Ok(dto) => {
+                let permission = dto.into_model()?;
+                Ok(*permission.permission_type())
+            }
+            Err(sqlx::Error::RowNotFound) => Ok(PermissionType::None),
+            Err(other_sqlx_err) => Err(gen_err_mapper("failed to find permission")(other_sqlx_err)),
+        }
     }
 
     async fn insert_or_update(
