@@ -49,7 +49,7 @@ impl PermissionRepository for PermissionRepositoryMySql {
 
         let sqlx_result = sqlx::query_as::<_, PermissionDto>(
             r"
-            SELECT * FROM permissions WHERE route_id = ?, user_id = ?
+            SELECT * FROM permissions WHERE `route_id` = ? AND `user_id` = ?
             ",
         )
         .bind(route_info.id().to_string())
@@ -102,7 +102,7 @@ impl PermissionRepository for PermissionRepositoryMySql {
 
         sqlx::query(
             r"
-            DELETE FROM permissions WHERE route_id = ?, user_id = ?
+            DELETE FROM permissions WHERE `route_id` = ? AND `user_id` = ?
             ",
         )
         .bind(route_id.to_string())
