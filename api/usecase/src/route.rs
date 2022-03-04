@@ -9,7 +9,7 @@ use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, CallUserAuthApi, ElevationApi,
     RouteInterpolationApi, UserAuthApi,
 };
-use route_bucket_domain::model::permission::PermissionType;
+use route_bucket_domain::model::permission::{Permission, PermissionType};
 use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
 use route_bucket_domain::repository::{
     CallPermissionRepository, CallRouteRepository, Connection, PermissionRepository, Repository,
@@ -86,6 +86,20 @@ pub trait RouteUseCase {
     ) -> ApplicationResult<RouteOperationResponse>;
 
     async fn delete(&self, route_id: &RouteId, user_access_token: &str) -> ApplicationResult<()>;
+
+    async fn update_permission(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+        req: &UpdatePermissionRequest,
+    ) -> ApplicationResult<()>;
+
+    async fn delete_permission(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+        req: &DeletePermissionRequest,
+    ) -> ApplicationResult<()>;
 }
 
 #[async_trait]
@@ -432,6 +446,51 @@ where
         })
         .await
     }
+
+    async fn update_permission(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+        req: &UpdatePermissionRequest,
+    ) -> ApplicationResult<()> {
+        let conn = self.route_repository().get_connection().await?;
+        let route_info = self.route_repository().find_info(route_id, &conn).await?;
+        let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+        let perm_conn = self.permission_repository().get_connection().await?;
+        self.permission_repository()
+            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .await?;
+        self.permission_repository()
+            .insert_or_update(
+                &Permission::from((
+                    route_info.id().clone(),
+                    req.user_id.clone(),
+                    req.permission_type,
+                )),
+                &perm_conn,
+            )
+            .await
+    }
+
+    async fn delete_permission(
+        &self,
+        route_id: &RouteId,
+        user_access_token: &str,
+        req: &DeletePermissionRequest,
+    ) -> ApplicationResult<()> {
+        let conn = self.route_repository().get_connection().await?;
+        let route_info = self.route_repository().find_info(route_id, &conn).await?;
+        let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+        let perm_conn = self.permission_repository().get_connection().await?;
+        self.permission_repository()
+            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .await?;
+        self.permission_repository()
+            .delete(route_info.id(), &req.user_id, &perm_conn)
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -442,8 +501,8 @@ mod tests {
         model::{
             fixtures::{
                 route::{
-                    CoordinateFixtures, OperationFixtures, RouteFixtures, RouteGpxFixtures,
-                    RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
+                    CoordinateFixtures, OperationFixtures, PermissionFixtures, RouteFixtures,
+                    RouteGpxFixtures, RouteInfoFixtures, RouteSearchQueryFixtures, SegmentFixtures,
                 },
                 user::UserIdFixtures,
             },
@@ -830,6 +889,57 @@ mod tests {
         assert_eq!(usecase.delete(&route_id(), &doncic_token()).await, Ok(()));
     }
 
+    #[rstest]
+    #[tokio::test]
+    async fn can_update_permission() {
+        let req = UpdatePermissionRequest {
+            user_id: UserId::porzingis(),
+            permission_type: PermissionType::Viewer,
+        };
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(0));
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(0),
+            UserId::doncic(),
+            PermissionType::Editor,
+        );
+        usecase.expect_insert_or_update_at_permission_repository(
+            Permission::porzingis_viewer_permission(),
+        );
+        assert_eq!(
+            usecase
+                .update_permission(&route_id(), &doncic_token(), &req)
+                .await,
+            Ok(())
+        );
+    }
+
+    #[rstest]
+    #[tokio::test]
+    async fn can_delete_permission() {
+        let req = DeletePermissionRequest {
+            user_id: UserId::porzingis(),
+        };
+        let info = RouteInfo::empty_route0(0);
+        let id = info.id();
+
+        let mut usecase = TestRouteUseCase::new();
+        usecase.expect_find_info_at_route_repository(id.clone(), info.clone());
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            info.clone(),
+            UserId::doncic(),
+            PermissionType::Editor,
+        );
+        usecase.expect_delete_at_permission_repository(id.clone(), UserId::porzingis());
+        assert_eq!(
+            usecase.delete_permission(id, &doncic_token(), &req).await,
+            Ok(())
+        );
+    }
+
     struct TestRouteUseCase {
         route_repository: MockRouteRepository,
         permission_repository: MockPermissionRepository,
@@ -940,12 +1050,10 @@ mod tests {
             );
         }
 
-        #[allow(dead_code)]
         fn expect_insert_or_update_at_permission_repository(
             &mut self,
             param_permission: Permission,
         ) {
-            self.expect_get_connection_at_permission_repository();
             expect_at_repository!(
                 self.permission_repository,
                 insert_or_update,
@@ -954,13 +1062,11 @@ mod tests {
             );
         }
 
-        #[allow(dead_code)]
         fn expect_delete_at_permission_repository(
             &mut self,
             param_route_id: RouteId,
             param_user_id: UserId,
         ) {
-            self.expect_get_connection_at_permission_repository();
             expect_at_repository!(
                 self.permission_repository,
                 delete,

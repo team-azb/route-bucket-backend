@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{route::RouteId, user::UserId};
 
+#[cfg(any(test, feature = "fixtures"))]
+use derivative::Derivative;
+
 #[derive(
     Copy,
     Clone,
@@ -27,9 +30,30 @@ pub enum PermissionType {
 
 #[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
-#[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
+#[cfg_attr(any(test, feature = "fixtures"), derive(Derivative))]
+#[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct Permission {
+    #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
     route_id: RouteId,
     user_id: UserId,
     permission_type: PermissionType,
+}
+
+#[cfg(any(test, feature = "fixtures"))]
+pub(crate) mod tests {
+    use crate::model::user::tests::UserIdFixtures;
+
+    use super::*;
+
+    pub trait PermissionFixtures {
+        fn porzingis_viewer_permission() -> Permission {
+            Permission {
+                route_id: RouteId::new(),
+                user_id: UserId::porzingis(),
+                permission_type: PermissionType::Viewer,
+            }
+        }
+    }
+
+    impl PermissionFixtures for Permission {}
 }
