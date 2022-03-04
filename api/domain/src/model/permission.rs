@@ -27,6 +27,7 @@ pub enum PermissionType {
 
 #[derive(Clone, Debug, From, Into, Getters)]
 #[get = "pub"]
+#[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct Permission {
     route_id: RouteId,
     user_id: UserId,
