@@ -186,7 +186,7 @@ impl RouteRepositoryMySql {
         } else {
             let seg_ids = segment_list
                 .iter()
-                .map(|seg| format!("'{}'", seg.id().to_string()))
+                .map(|seg| format!("'{}'", seg.id()))
                 .collect_vec()
                 .join(",");
             format!("id NOT IN ({})", seg_ids)

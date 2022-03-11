@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::convert::TryInto;
 use std::ops::RangeBounds;
 use std::slice::{Iter, IterMut};
 
@@ -45,23 +44,27 @@ impl SegmentList {
         }
     }
 
-    pub fn calc_elevation_gain(&self) -> Elevation {
+    pub fn calc_elevation_gain(&self) -> (Elevation, Elevation) {
+        let gain_tuple_identity = || (Elevation::zero(), Elevation::zero());
+        let gain_tuple_add = |(asc0, desc0), (asc1, desc1)| (asc0 + asc1, desc0 + desc1);
         self.iter()
             .par_bridge()
-            .fold(Elevation::zero, |total_gain, seg| {
-                let mut gain = Elevation::zero();
-                let mut prev_elev = Elevation::max_value();
+            .fold(gain_tuple_identity, |(ascent_total, descent_total), seg| {
+                let mut ascent_gain = Elevation::zero();
+                let mut descent_gain = Elevation::zero();
+                let mut prev_elev = None;
                 seg.iter().for_each(|coord| {
                     if let Some(elev) = coord.elevation() {
-                        gain += max(*elev - prev_elev, 0.try_into().unwrap());
-                        prev_elev = *elev;
+                        if let Some(prev_elev_value) = prev_elev {
+                            ascent_gain += max(*elev - prev_elev_value, Elevation::zero());
+                            descent_gain += max(prev_elev_value - *elev, Elevation::zero());
+                        }
+                        prev_elev = Some(*elev);
                     }
                 });
-                // NOTE: const genericsのあるNumericValueObjectに、Sumがderiveできないので、i32にしている
-                // pull request -> https://github.com/JelteF/derive_more/pull/167
-                total_gain + gain
+                gain_tuple_add((ascent_total, descent_total), (ascent_gain, descent_gain))
             })
-            .sum::<Elevation>()
+            .reduce(gain_tuple_identity, gain_tuple_add)
     }
 
     pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
@@ -233,12 +236,18 @@ pub(crate) mod tests {
     }
 
     #[rstest]
-    #[case::empty(SegmentList::empty(), 0)]
-    #[case::single_point(yokohama_verbose(), 0)]
-    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 10)]
-    #[case::yokohama_to_chiba_empty(yokohama_to_chiba_via_tokyo_empty(), 0)]
-    fn can_calc_elevation_gain(#[case] seg_list: SegmentList, #[case] expected_gain: i32) {
-        assert_eq!(seg_list.calc_elevation_gain().value(), expected_gain)
+    #[case::empty(SegmentList::empty(), 0, 0)]
+    #[case::single_point(yokohama_verbose(), 0, 0)]
+    #[case::yokohama_to_chiba(yokohama_to_chiba_via_tokyo_verbose(), 10, 0)]
+    #[case::yokohama_to_chiba_empty(yokohama_to_chiba_via_tokyo_empty(), 0, 0)]
+    fn can_calc_elevation_gain(
+        #[case] seg_list: SegmentList,
+        #[case] expected_asc_gain: i32,
+        #[case] expected_desc_gain: i32,
+    ) {
+        let (asc_gain, desc_gain) = seg_list.calc_elevation_gain();
+        assert_eq!(asc_gain.value(), expected_asc_gain);
+        assert_eq!(desc_gain.value(), expected_desc_gain)
     }
 
     #[rstest]
