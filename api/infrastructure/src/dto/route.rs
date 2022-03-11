@@ -19,6 +19,7 @@ pub struct RouteDto {
     ascent_elevation_gain: u32,
     descent_elevation_gain: u32,
     total_distance: f64,
+    is_public: bool,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -33,6 +34,7 @@ impl RouteDto {
             ascent_elevation_gain,
             descent_elevation_gain,
             total_distance,
+            is_public,
             created_at,
             updated_at,
         } = self;
@@ -44,6 +46,7 @@ impl RouteDto {
             Elevation::try_from(ascent_elevation_gain as i32)?,
             Elevation::try_from(descent_elevation_gain as i32)?,
             Distance::try_from(total_distance)?,
+            is_public,
             created_at,
             updated_at,
         )))
@@ -58,6 +61,7 @@ impl RouteDto {
             ascent_elevation_gain: route_info.ascent_elevation_gain().value() as u32,
             descent_elevation_gain: route_info.descent_elevation_gain().value() as u32,
             total_distance: route_info.total_distance().value(),
+            is_public: *route_info.is_public(),
             created_at: *route_info.created_at(),
             updated_at: *route_info.updated_at(),
         })

@@ -24,6 +24,7 @@ pub struct RouteInfo {
     pub(super) ascent_elevation_gain: Elevation,
     pub(super) descent_elevation_gain: Elevation,
     pub(super) total_distance: Distance,
+    pub(super) is_public: bool,
     #[derivative(Default(value = "chrono::MIN_DATETIME"))]
     pub(super) created_at: DateTime<Utc>,
     #[derivative(Default(value = "chrono::MIN_DATETIME"))]
@@ -31,10 +32,11 @@ pub struct RouteInfo {
 }
 
 impl RouteInfo {
-    pub fn new(name: &str, owner_id: UserId) -> RouteInfo {
+    pub fn new(name: &str, owner_id: UserId, is_public: bool) -> RouteInfo {
         RouteInfo {
             name: name.to_string(),
             owner_id,
+            is_public,
             ..Default::default()
         }
     }
