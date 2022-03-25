@@ -459,7 +459,7 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
             .await?;
         self.permission_repository()
             .insert_or_update(
@@ -485,7 +485,7 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
             .await?;
         self.permission_repository()
             .delete(route_info.id(), &req.user_id, &perm_conn)
