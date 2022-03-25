@@ -638,6 +638,7 @@ mod tests {
     async fn can_create() {
         let req = RouteCreateRequest {
             name: "route0".into(),
+            is_public: false,
         };
 
         let mut usecase = TestRouteUseCase::new();

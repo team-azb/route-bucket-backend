@@ -124,6 +124,13 @@ pub(crate) mod tests {
         fn yokohama_to_tokyo() -> RouteInfo {
             RouteInfo::filled_route0(3, 0, 26936.42633640023, 3)
         }
+
+        fn public_route0() -> RouteInfo {
+            RouteInfo {
+                is_public: true,
+                ..Self::empty_route0(0)
+            }
+        }
     }
 
     impl RouteInfoFixtures for RouteInfo {}
