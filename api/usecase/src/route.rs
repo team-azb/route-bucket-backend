@@ -22,7 +22,11 @@ mod responses;
 
 #[async_trait]
 pub trait RouteUseCase {
-    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse>;
+    async fn find(
+        &self,
+        route_id: &RouteId,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteGetResponse>;
 
     async fn find_all(&self) -> ApplicationResult<RouteSearchResponse>;
 
@@ -112,10 +116,26 @@ where
         + CallUserAuthApi
         + Sync,
 {
-    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
+    async fn find(
+        &self,
+        route_id: &RouteId,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
 
+        let user_id = if let Some(token) = user_access_token {
+            Some(self.user_auth_api().authenticate(&token).await?)
+        } else {
+            None
+        };
+
         let mut route = self.route_repository().find(route_id, &conn).await?;
+
+        let perm_conn = self.permission_repository().get_connection().await?;
+        self.permission_repository()
+            .authorize_user(route.info(), user_id, PermissionType::Viewer, &perm_conn)
+            .await?;
+
         self.elevation_api().attach_elevations(&mut route)?;
         route.calc_route_features_from_seg_list()?;
 
@@ -197,7 +217,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        &route_info,
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route_info.rename(&req.name);
@@ -227,7 +252,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_add(
@@ -270,7 +300,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
@@ -306,7 +341,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_move(
@@ -347,7 +387,7 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(&info, Some(user_id), PermissionType::Editor, &perm_conn)
                     .await?;
 
                 info.clear_route();
@@ -375,7 +415,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route.redo_operation()?;
@@ -408,7 +453,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route.undo_operation()?;
@@ -437,7 +487,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        &route_info,
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 self.route_repository().delete(route_id, conn).await
@@ -459,7 +514,12 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
+            .authorize_user(
+                &route_info,
+                Some(user_id),
+                PermissionType::Owner,
+                &perm_conn,
+            )
             .await?;
         self.permission_repository()
             .insert_or_update(
@@ -485,7 +545,12 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
+            .authorize_user(
+                &route_info,
+                Some(user_id),
+                PermissionType::Owner,
+                &perm_conn,
+            )
             .await?;
         self.permission_repository()
             .delete(route_info.id(), &req.user_id, &perm_conn)

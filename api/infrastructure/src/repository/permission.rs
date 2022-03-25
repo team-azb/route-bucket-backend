@@ -38,24 +38,29 @@ impl PermissionRepository for PermissionRepositoryMySql {
     async fn find_type(
         &self,
         route_info: &RouteInfo,
-        user_id: &UserId,
+        user_id: Option<UserId>,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<PermissionType> {
-        if *user_id == *route_info.owner_id() {
-            return Ok(PermissionType::Owner);
-        }
+        let sqlx_result = if let Some(id) = user_id {
+            if id == *route_info.owner_id() {
+                return Ok(PermissionType::Owner);
+            }
 
-        let mut conn = conn.lock().await;
+            let mut conn = conn.lock().await;
 
-        let sqlx_result = sqlx::query_as::<_, PermissionDto>(
-            r"
-            SELECT * FROM permissions WHERE `route_id` = ? AND `user_id` = ?
-            ",
-        )
-        .bind(route_info.id().to_string())
-        .bind(user_id.to_string())
-        .fetch_one(&mut *conn)
-        .await;
+            sqlx::query_as::<_, PermissionDto>(
+                r"
+                SELECT * FROM permissions WHERE `route_id` = ? AND `user_id` = ?
+                ",
+            )
+            .bind(route_info.id().to_string())
+            .bind(id.to_string())
+            .fetch_one(&mut *conn)
+            .await
+        } else {
+            // user_idを指定しない場合は、何も権限がない人と同じ扱いとなる
+            Err(sqlx::Error::RowNotFound)
+        };
 
         match sqlx_result {
             Ok(dto) => {
