@@ -27,9 +27,17 @@ async fn get_all<U: 'static + RouteUseCase>(usecase: web::Data<U>) -> Result<Htt
 
 async fn get_search<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: Option<BearerAuth>,
     query: web::Query<RouteSearchQuery>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.search(query.into_inner()).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .search(
+                query.into_inner(),
+                auth.map(|auth| auth.token().to_string()),
+            )
+            .await?,
+    ))
 }
 
 async fn get_gpx<U: 'static + RouteUseCase>(

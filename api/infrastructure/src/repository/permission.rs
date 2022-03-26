@@ -78,6 +78,27 @@ impl PermissionRepository for PermissionRepositoryMySql {
         }
     }
 
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<Vec<Permission>> {
+        let mut conn = conn.lock().await;
+
+        sqlx::query_as::<_, PermissionDto>(
+            r"
+                SELECT * FROM permissions WHERE `user_id` = ?
+                ",
+        )
+        .bind(user_id.to_string())
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(gen_err_mapper("failed to find infos"))?
+        .into_iter()
+        .map(PermissionDto::into_model)
+        .collect::<ApplicationResult<Vec<_>>>()
+    }
+
     async fn insert_or_update(
         &self,
         permission: &Permission,

@@ -18,6 +18,12 @@ pub trait PermissionRepository: Repository {
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<PermissionType>;
 
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<Vec<Permission>>;
+
     async fn authorize_user(
         &self,
         route_info: &RouteInfo,
@@ -77,6 +83,8 @@ mockall::mock! {
     #[async_trait]
     impl PermissionRepository for PermissionRepository {
         async fn find_type(&self, route_info: &RouteInfo, user_id: Option<UserId>, conn: &super::MockConnection) -> ApplicationResult<PermissionType>;
+
+        async fn find_by_user_id(&self, user_id: &UserId, conn: &super::MockConnection) -> ApplicationResult<Vec<Permission>>;
 
         async fn authorize_user(&self, route_info: &RouteInfo, user_id: Option<UserId>, target_type: PermissionType, conn: &super::MockConnection) -> ApplicationResult<()>;
 

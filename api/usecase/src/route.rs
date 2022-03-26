@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use futures::FutureExt;
 
+use itertools::Itertools;
 pub use requests::*;
 pub use responses::*;
 use route_bucket_domain::external::{
@@ -30,7 +31,11 @@ pub trait RouteUseCase {
 
     async fn find_all(&self) -> ApplicationResult<RouteSearchResponse>;
 
-    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse>;
+    async fn search(
+        &self,
+        query: RouteSearchQuery,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteSearchResponse>;
 
     async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
 
@@ -157,8 +162,29 @@ where
         })
     }
 
-    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse> {
+    async fn search(
+        &self,
+        mut query: RouteSearchQuery,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteSearchResponse> {
         let conn = self.route_repository().get_connection().await?;
+
+        if let Some(token) = user_access_token {
+            let user_id = self.user_auth_api().authenticate(&token).await?;
+
+            let perm_conn = self.permission_repository().get_connection().await?;
+            let visible_route_ids = self
+                .permission_repository()
+                .find_by_user_id(&user_id, &perm_conn)
+                .await?
+                .into_iter()
+                .map(|perm| perm.route_id().clone())
+                .collect_vec();
+
+            // TODO: query.idsが指定されていた場合は、ここはmergeしなきゃいけない
+            query.ids = Some(visible_route_ids);
+            query.caller_id = Some(user_id);
+        }
 
         Ok(RouteSearchResponse {
             route_infos: self
