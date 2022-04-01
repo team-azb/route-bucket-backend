@@ -31,8 +31,10 @@ pub(crate) mod tests {
     use super::*;
 
     pub trait RouteSearchQueryFixtures {
-        fn search_guest() -> RouteSearchQuery {
+        fn search_guest(ids: Option<Vec<RouteId>>, caller_id: Option<UserId>) -> RouteSearchQuery {
             RouteSearchQuery {
+                ids,
+                caller_id,
                 owner_id: Some(UserId::doncic()),
                 ..Default::default()
             }

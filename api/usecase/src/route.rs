@@ -656,9 +656,15 @@ mod tests {
     #[tokio::test]
     async fn can_find() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(2),
+            Some(UserId::doncic()),
+            PermissionType::Viewer,
         );
         usecase.expect_attach_elevations_at_elevation_api(
             Route::yokohama_to_chiba_filled(false, false),
@@ -666,7 +672,7 @@ mod tests {
         );
 
         assert_eq!(
-            usecase.find(&route_id()).await,
+            usecase.find(&route_id(), Some(doncic_token())).await,
             Route::yokohama_to_chiba_filled(true, true).try_into()
         );
     }
@@ -692,15 +698,32 @@ mod tests {
     #[rstest]
     #[tokio::test]
     async fn can_search() {
+        let editted_query =
+            RouteSearchQuery::search_guest(Some(vec![route_id()]), Some(UserId::doncic()));
+
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_find_by_id_at_permission_repository(
+            UserId::doncic(),
+            vec![Permission::from((
+                route_id(),
+                UserId::doncic(),
+                PermissionType::Viewer,
+            ))],
+        );
         usecase.expect_search_infos_at_route_repository(
-            RouteSearchQuery::search_guest(),
+            editted_query.clone(),
             vec![RouteInfo::empty_route0(0)],
         );
-        usecase.expect_count_infos_at_route_repository(RouteSearchQuery::search_guest(), 1);
+        usecase.expect_count_infos_at_route_repository(editted_query, 1);
 
         assert_eq!(
-            usecase.search(RouteSearchQuery::search_guest()).await,
+            usecase
+                .search(
+                    RouteSearchQuery::search_guest(None, None),
+                    Some(doncic_token())
+                )
+                .await,
             Ok(RouteSearchResponse {
                 route_infos: vec![RouteInfo::empty_route0(0)],
                 result_num: 1
@@ -752,7 +775,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_update_info_at_route_repository(RouteInfo::empty_route1(0));
@@ -779,7 +802,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
@@ -822,7 +845,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -859,7 +882,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
@@ -893,7 +916,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_update_at_route_repository(Route::empty());
@@ -915,7 +938,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -947,7 +970,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -974,7 +997,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_delete_at_route_repository(route_id());
@@ -994,7 +1017,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Owner,
         );
         usecase.expect_insert_or_update_at_permission_repository(
@@ -1022,7 +1045,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             info.clone(),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Owner,
         );
         usecase.expect_delete_at_permission_repository(id.clone(), UserId::porzingis());
@@ -1112,7 +1135,7 @@ mod tests {
         fn expect_find_type_at_permission_repository(
             &mut self,
             param_info: RouteInfo,
-            param_user_id: UserId,
+            param_user_id: Option<UserId>,
             return_permission_type: PermissionType,
         ) {
             self.expect_get_connection_at_permission_repository();
@@ -1125,10 +1148,25 @@ mod tests {
             );
         }
 
+        #[allow(dead_code)]
+        fn expect_find_by_id_at_permission_repository(
+            &mut self,
+            param_user_id: UserId,
+            return_permissions: Vec<Permission>,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                find_by_user_id,
+                param_user_id,
+                return_permissions
+            );
+        }
+
         fn expect_authorize_user_at_permission_repository(
             &mut self,
             param_info: RouteInfo,
-            param_user_id: UserId,
+            param_user_id: Option<UserId>,
             param_permission_type: PermissionType,
         ) {
             self.expect_get_connection_at_permission_repository();
