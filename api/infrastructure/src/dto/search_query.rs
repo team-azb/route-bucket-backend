@@ -17,7 +17,7 @@ impl WhereCondition {
             }
             Self::In(field_name, values) => {
                 if values.is_empty() {
-                    format!("false")
+                    "false".to_string()
                 } else {
                     format!("{} IN ({})", field_name, values.join(","))
                 }
@@ -31,7 +31,7 @@ impl WhereCondition {
                     } else {
                         " OR "
                     };
-                    format!("({})", values.into_iter().map(Self::to_query).join(sep))
+                    format!("({})", values.iter().map(Self::to_query).join(sep))
                 }
             },
         }
