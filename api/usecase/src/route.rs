@@ -172,10 +172,16 @@ where
         if let Some(token) = user_access_token {
             let user_id = self.user_auth_api().authenticate(&token).await?;
 
+            let target_type = if query.is_editable {
+                PermissionType::Editor
+            } else {
+                PermissionType::Viewer
+            };
+
             let perm_conn = self.permission_repository().get_connection().await?;
             let visible_route_ids = self
                 .permission_repository()
-                .find_by_user_id(&user_id, &perm_conn)
+                .find_by_user_id(&user_id, target_type, &perm_conn)
                 .await?
                 .into_iter()
                 .map(|perm| perm.route_id().clone())
@@ -697,19 +703,27 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn can_search() {
-        let editted_query =
-            RouteSearchQuery::search_guest(Some(vec![route_id()]), Some(UserId::doncic()));
+    async fn can_search(#[values(false, true)] for_editable_route: bool) {
+        let filter_permission_type = if for_editable_route {
+            PermissionType::Editor
+        } else {
+            PermissionType::Viewer
+        };
+
+        let permissions = vec![Permission::doncic_owner_permission()];
+        let route_ids = permissions
+            .iter()
+            .map(|p| p.route_id().clone())
+            .collect_vec();
+
+        let editted_query = RouteSearchQuery::doncic_query(route_ids, for_editable_route);
 
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
-        usecase.expect_find_by_id_at_permission_repository(
+        usecase.expect_find_by_user_id_at_permission_repository(
             UserId::doncic(),
-            vec![Permission::from((
-                route_id(),
-                UserId::doncic(),
-                PermissionType::Viewer,
-            ))],
+            filter_permission_type,
+            permissions,
         );
         usecase.expect_search_infos_at_route_repository(
             editted_query.clone(),
@@ -720,7 +734,7 @@ mod tests {
         assert_eq!(
             usecase
                 .search(
-                    RouteSearchQuery::search_guest(None, None),
+                    RouteSearchQuery::doncic_request(for_editable_route),
                     Some(doncic_token())
                 )
                 .await,
@@ -1149,9 +1163,10 @@ mod tests {
         }
 
         #[allow(dead_code)]
-        fn expect_find_by_id_at_permission_repository(
+        fn expect_find_by_user_id_at_permission_repository(
             &mut self,
             param_user_id: UserId,
+            param_target_type: PermissionType,
             return_permissions: Vec<Permission>,
         ) {
             self.expect_get_connection_at_permission_repository();
@@ -1159,6 +1174,7 @@ mod tests {
                 self.permission_repository,
                 find_by_user_id,
                 param_user_id,
+                param_target_type,
                 return_permissions
             );
         }

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use itertools::Itertools;
 use route_bucket_domain::{
     model::{
         permission::{Permission, PermissionType},
@@ -81,6 +82,7 @@ impl PermissionRepository for PermissionRepositoryMySql {
     async fn find_by_user_id(
         &self,
         user_id: &UserId,
+        target_type: PermissionType,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<Vec<Permission>> {
         let mut conn = conn.lock().await;
@@ -96,6 +98,7 @@ impl PermissionRepository for PermissionRepositoryMySql {
         .map_err(gen_err_mapper("failed to find infos"))?
         .into_iter()
         .map(PermissionDto::into_model)
+        .filter_ok(|perm| *perm.permission_type() >= target_type)
         .collect::<ApplicationResult<Vec<_>>>()
     }
 

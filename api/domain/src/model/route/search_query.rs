@@ -16,6 +16,8 @@ pub struct RouteSearchQuery {
     #[serde(default)]
     pub page_offset: usize,
     pub page_size: Option<usize>,
+    #[serde(default)]
+    pub is_editable: bool,
 }
 
 impl RouteSearchQuery {
@@ -31,11 +33,18 @@ pub(crate) mod tests {
     use super::*;
 
     pub trait RouteSearchQueryFixtures {
-        fn search_guest(ids: Option<Vec<RouteId>>, caller_id: Option<UserId>) -> RouteSearchQuery {
+        fn doncic_query(ids: Vec<RouteId>, is_editable: bool) -> RouteSearchQuery {
             RouteSearchQuery {
-                ids,
-                caller_id,
+                ids: Some(ids),
+                caller_id: Some(UserId::doncic()),
+                ..Self::doncic_request(is_editable)
+            }
+        }
+
+        fn doncic_request(is_editable: bool) -> RouteSearchQuery {
+            RouteSearchQuery {
                 owner_id: Some(UserId::doncic()),
+                is_editable,
                 ..Default::default()
             }
         }
