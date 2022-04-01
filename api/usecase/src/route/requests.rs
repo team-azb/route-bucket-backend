@@ -1,11 +1,16 @@
 use derive_more::From;
 use serde::Deserialize;
 
-use route_bucket_domain::model::route::{Coordinate, DrawingMode};
+use route_bucket_domain::model::{
+    permission::PermissionType,
+    route::{Coordinate, DrawingMode},
+    user::UserId,
+};
 
 #[derive(From, Deserialize)]
 pub struct RouteCreateRequest {
     pub(super) name: String,
+    pub(super) is_public: bool,
 }
 
 #[derive(From, Deserialize)]
@@ -22,4 +27,16 @@ pub struct RemovePointRequest {
 #[derive(From, Deserialize)]
 pub struct RouteRenameRequest {
     pub(super) name: String,
+}
+
+#[derive(From, Deserialize)]
+pub struct UpdatePermissionRequest {
+    pub(super) user_id: UserId,
+    #[serde(alias = "type")]
+    pub(super) permission_type: PermissionType,
+}
+
+#[derive(From, Deserialize)]
+pub struct DeletePermissionRequest {
+    pub(super) user_id: UserId,
 }

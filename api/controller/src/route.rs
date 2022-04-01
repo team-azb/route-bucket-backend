@@ -3,7 +3,8 @@ use actix_web::{dev, http, web, HttpResponse, Result};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use route_bucket_domain::model::route::{RouteId, RouteSearchQuery};
 use route_bucket_usecase::route::{
-    NewPointRequest, RemovePointRequest, RouteCreateRequest, RouteRenameRequest, RouteUseCase,
+    DeletePermissionRequest, NewPointRequest, RemovePointRequest, RouteCreateRequest,
+    RouteRenameRequest, RouteUseCase, UpdatePermissionRequest,
 };
 
 use crate::AddService;
@@ -11,8 +12,13 @@ use crate::AddService;
 async fn get<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     id: web::Path<RouteId>,
+    auth: Option<BearerAuth>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.find(id.as_ref()).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .find(id.as_ref(), auth.map(|auth| auth.token().to_string()))
+            .await?,
+    ))
 }
 
 async fn get_all<U: 'static + RouteUseCase>(usecase: web::Data<U>) -> Result<HttpResponse> {
@@ -21,9 +27,17 @@ async fn get_all<U: 'static + RouteUseCase>(usecase: web::Data<U>) -> Result<Htt
 
 async fn get_search<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
+    auth: Option<BearerAuth>,
     query: web::Query<RouteSearchQuery>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.search(query.into_inner()).await?))
+    Ok(HttpResponse::Ok().json(
+        usecase
+            .search(
+                query.into_inner(),
+                auth.map(|auth| auth.token().to_string()),
+            )
+            .await?,
+    ))
 }
 
 async fn get_gpx<U: 'static + RouteUseCase>(
@@ -133,6 +147,26 @@ async fn delete<U: 'static + RouteUseCase>(
     Ok(HttpResponse::Ok().finish())
 }
 
+async fn put_permission<U: 'static + RouteUseCase>(
+    usecase: web::Data<U>,
+    id: web::Path<RouteId>,
+    auth: BearerAuth,
+    req: web::Json<UpdatePermissionRequest>,
+) -> Result<HttpResponse> {
+    usecase.update_permission(&id, auth.token(), &req).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+async fn delete_permission<U: 'static + RouteUseCase>(
+    usecase: web::Data<U>,
+    id: web::Path<RouteId>,
+    auth: BearerAuth,
+    req: web::Json<DeletePermissionRequest>,
+) -> Result<HttpResponse> {
+    usecase.delete_permission(&id, auth.token(), &req).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
 pub trait BuildRouteService: AddService {
     fn build_route_service<U: 'static + RouteUseCase>(self) -> Self {
         // TODO: /の過不足は許容する ex) "/{id}/"
@@ -158,7 +192,14 @@ pub trait BuildRouteService: AddService {
                 .service(web::resource("/{id}/move/{pos}").route(web::patch().to(patch_move::<U>)))
                 .service(web::resource("/{id}/clear/").route(web::patch().to(patch_clear::<U>)))
                 .service(web::resource("/{id}/undo/").route(web::patch().to(patch_undo::<U>)))
-                .service(web::resource("/{id}/redo/").route(web::patch().to(patch_redo::<U>))),
+                .service(web::resource("/{id}/redo/").route(web::patch().to(patch_redo::<U>)))
+                .service(
+                    web::resource("/{id}/permissions/").route(web::put().to(put_permission::<U>)),
+                )
+                .service(
+                    web::resource("/{id}/permissions/")
+                        .route(web::delete().to(delete_permission::<U>)),
+                ),
         )
     }
 }

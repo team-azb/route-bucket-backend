@@ -325,14 +325,21 @@ impl RouteRepository for RouteRepositoryMySql {
 
         sqlx::query(
             r"
-            INSERT INTO routes (`id`, `name`, `owner_id`, `operation_pos`)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO routes (
+                `id`, `name`, `owner_id`, `operation_pos`, `ascent_elevation_gain`, 
+                `descent_elevation_gain`, `total_distance`, `is_public`
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ",
         )
         .bind(dto.id())
         .bind(dto.name())
         .bind(dto.owner_id())
         .bind(dto.operation_pos())
+        .bind(dto.ascent_elevation_gain())
+        .bind(dto.descent_elevation_gain())
+        .bind(dto.total_distance())
+        .bind(dto.is_public())
         .execute(&mut *conn)
         .await
         .map_err(gen_err_mapper("failed to insert RouteInfo"))?;
@@ -350,13 +357,18 @@ impl RouteRepository for RouteRepositoryMySql {
         sqlx::query(
             r"
             UPDATE routes
-            SET name = ?, owner_id = ?, operation_pos = ?
+            SET 
+                name = ?, owner_id = ?, operation_pos = ?, ascent_elevation_gain = ?,
+                descent_elevation_gain = ?, total_distance = ?
             WHERE id = ?
             ",
         )
         .bind(dto.name())
         .bind(dto.owner_id())
         .bind(dto.operation_pos())
+        .bind(dto.ascent_elevation_gain())
+        .bind(dto.descent_elevation_gain())
+        .bind(dto.total_distance())
         .bind(dto.id())
         .execute(&mut *conn)
         .await

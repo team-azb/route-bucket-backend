@@ -1,8 +1,6 @@
 use std::cmp::max;
-use std::ops::RangeBounds;
 use std::slice::{Iter, IterMut};
 
-use geo::algorithm::haversine_distance::HaversineDistance;
 use getset::Getters;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
@@ -13,8 +11,10 @@ use super::bounding_box::BoundingBox;
 use super::coordinate::Coordinate;
 use super::types::{Distance, Elevation};
 
+pub use self::operation::{Operation, OperationId, OperationType, SegmentTemplate};
 pub use self::segment::{DrawingMode, Segment};
 
+mod operation;
 mod segment;
 
 #[derive(Clone, Debug, Serialize, Getters)]
@@ -25,6 +25,17 @@ pub struct SegmentList {
 }
 
 impl SegmentList {
+    pub fn apply_operation(&mut self, op: Operation) -> ApplicationResult<()> {
+        self.segments.splice(
+            op.pos..op.pos + op.org_seg_templates.len(),
+            op.new_seg_templates
+                .iter()
+                .map(Clone::clone)
+                .map(Segment::from),
+        );
+        Ok(())
+    }
+
     pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
         if let Some(last_seg) = self.segments.last() {
             let last_point = last_seg.points.last().ok_or_else(|| {
@@ -67,21 +78,12 @@ impl SegmentList {
             .reduce(gain_tuple_identity, gain_tuple_add)
     }
 
-    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+    pub fn attach_distance_from_start(&mut self) {
         // compute cumulative distance within the segments
-        self.iter_mut().par_bridge().for_each(|seg| {
-            seg.iter_mut()
-                .scan((Distance::zero(), None), |(dist, prev_op), coord| {
-                    if let Some(prev_coord) = prev_op {
-                        *dist += coord.haversine_distance(prev_coord);
-                    }
-                    coord.set_distance_from_start(*dist);
-                    *prev_op = Some(coord.clone());
-                    Some(*dist)
-                })
-                .last()
-                .unwrap();
-        });
+        self.iter_mut()
+            .par_bridge()
+            .filter(|seg| !seg.has_distance())
+            .for_each(Segment::calc_distance_from_start);
 
         // convert to global cumulative distance
         self.iter_mut()
@@ -92,13 +94,8 @@ impl SegmentList {
             })
             .par_bridge()
             .for_each(|(seg, offset)| {
-                seg.iter_mut().par_bridge().for_each(|coord| {
-                    let org_dist = coord.distance_from_start().unwrap();
-                    coord.set_distance_from_start(org_dist + offset);
-                });
+                seg.set_distance_offset(offset);
             });
-
-        Ok(())
     }
 
     pub fn calc_bounding_box(&self) -> ApplicationResult<BoundingBox> {
@@ -155,14 +152,6 @@ impl SegmentList {
     pub fn len(&self) -> usize {
         self.segments.len()
     }
-
-    pub fn splice<R, I>(&mut self, range: R, replace_with: I)
-    where
-        R: RangeBounds<usize>,
-        I: IntoIterator<Item = Segment>,
-    {
-        self.segments.splice(range, replace_with);
-    }
 }
 
 impl From<Vec<Segment>> for SegmentList {
@@ -185,6 +174,7 @@ pub(crate) mod tests {
     use crate::model::route::bounding_box::tests::BoundingBoxFixture;
     #[cfg(test)]
     use crate::model::route::coordinate::tests::CoordinateFixtures;
+    pub use crate::model::route::segment_list::operation::tests::OperationFixtures;
     pub use crate::model::route::segment_list::segment::tests::SegmentFixtures;
 
     use super::*;
@@ -212,6 +202,31 @@ pub(crate) mod tests {
     #[fixture]
     fn yokohama_to_chiba_via_tokyo_verbose() -> SegmentList {
         SegmentList::yokohama_to_chiba_via_tokyo(true, true, false)
+    }
+
+    #[rstest]
+    #[case::add(
+        Operation::add_tokyo(),
+        yokohama_to_chiba_empty(),
+        yokohama_to_chiba_via_tokyo_empty()
+    )]
+    #[case::remove(
+        Operation::remove_tokyo(),
+        yokohama_to_chiba_via_tokyo_empty(),
+        yokohama_to_chiba_empty()
+    )]
+    #[case::move_(
+        Operation::move_chiba_to_tokyo(),
+        yokohama_to_chiba_empty(),
+        SegmentList::yokohama_to_tokyo(false, false, true)
+    )]
+    fn can_apply_operation(
+        #[case] op: Operation,
+        #[case] mut seg_list: SegmentList,
+        #[case] expected: SegmentList,
+    ) {
+        seg_list.apply_operation(op).unwrap();
+        assert_eq!(seg_list, expected)
     }
 
     #[rstest]
@@ -264,7 +279,7 @@ pub(crate) mod tests {
         #[case] mut seg_list_without_dist: SegmentList,
         #[case] expected_seg_list: SegmentList,
     ) {
-        seg_list_without_dist.attach_distance_from_start().unwrap();
+        seg_list_without_dist.attach_distance_from_start();
         assert_eq!(seg_list_without_dist, expected_seg_list)
     }
 

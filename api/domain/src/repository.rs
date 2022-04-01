@@ -2,14 +2,16 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use route_bucket_utils::ApplicationResult;
 
+pub use permission::{CallPermissionRepository, PermissionRepository};
 pub use route::{CallRouteRepository, RouteRepository};
 pub use user::{CallUserRepository, UserRepository};
 
 #[cfg(feature = "mocking")]
-pub use route::MockRouteRepository;
-#[cfg(feature = "mocking")]
-pub use user::MockUserRepository;
+pub use self::{
+    permission::MockPermissionRepository, route::MockRouteRepository, user::MockUserRepository,
+};
 
+pub(crate) mod permission;
 pub(crate) mod route;
 pub(crate) mod user;
 

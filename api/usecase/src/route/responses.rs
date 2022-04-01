@@ -14,9 +14,6 @@ pub struct RouteGetResponse {
     pub route_info: RouteInfo,
     pub waypoints: Vec<Coordinate>,
     pub segments: Vec<Segment>,
-    pub ascent_elevation_gain: Elevation,
-    pub descent_elevation_gain: Elevation,
-    pub total_distance: Distance,
     pub bounding_box: Option<BoundingBox>,
 }
 
@@ -50,14 +47,10 @@ impl TryFrom<Route> for RouteGetResponse {
     type Error = ApplicationError;
 
     fn try_from(route: Route) -> Result<Self, Self::Error> {
-        let (ascent_elevation_gain, descent_elevation_gain) = route.calc_elevation_gain();
         let (info, _, seg_list) = route.into();
         Ok(RouteGetResponse {
             route_info: info,
             waypoints: seg_list.gather_waypoints(),
-            ascent_elevation_gain,
-            descent_elevation_gain,
-            total_distance: seg_list.get_total_distance()?,
             bounding_box: (!seg_list.is_empty())
                 .then(|| seg_list.calc_bounding_box())
                 .transpose()?,
@@ -70,13 +63,13 @@ impl TryFrom<Route> for RouteOperationResponse {
     type Error = ApplicationError;
 
     fn try_from(route: Route) -> Result<Self, Self::Error> {
-        let (ascent_elevation_gain, descent_elevation_gain) = route.calc_elevation_gain();
+        let (info, _, seg_list) = route.into();
         Ok(RouteOperationResponse {
-            waypoints: route.gather_waypoints(),
-            ascent_elevation_gain,
-            descent_elevation_gain,
-            total_distance: route.get_total_distance()?,
-            segments: route.into_segments_in_between(),
+            waypoints: seg_list.gather_waypoints(),
+            ascent_elevation_gain: *info.ascent_elevation_gain(),
+            descent_elevation_gain: *info.descent_elevation_gain(),
+            total_distance: *info.total_distance(),
+            segments: seg_list.into_segments_in_between(),
         })
     }
 }
@@ -94,11 +87,8 @@ mod tests {
 
     fn empty_route_get_resp() -> RouteGetResponse {
         RouteGetResponse {
-            route_info: RouteInfo::route0(0),
+            route_info: RouteInfo::empty_route0(0),
             waypoints: Vec::new(),
-            ascent_elevation_gain: Elevation::zero(),
-            descent_elevation_gain: Elevation::zero(),
-            total_distance: Distance::zero(),
             segments: Vec::new(),
             bounding_box: None,
         }
@@ -107,11 +97,8 @@ mod tests {
     fn full_route_get_resp() -> RouteGetResponse {
         let dist = 26936.42633640023;
         RouteGetResponse {
-            route_info: RouteInfo::route0(3),
+            route_info: RouteInfo::filled_route0(10, 0, 58759.973932514884, 3),
             waypoints: Coordinate::yokohama_to_chiba_via_tokyo_coords(false, None),
-            ascent_elevation_gain: 10.try_into().unwrap(),
-            descent_elevation_gain: 0.try_into().unwrap(),
-            total_distance: 58759.973932514884.try_into().unwrap(),
             segments: vec![
                 Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::Freehand),
                 Segment::tokyo_to_chiba(true, Some(dist), false, DrawingMode::Freehand),
