@@ -100,10 +100,10 @@ impl From<RouteSearchQuery> for SearchQuery {
             ..Default::default()
         };
 
-        let mut visibility_conditions = if route_search_query.is_editable {
-            Vec::new()
-        } else {
-            vec![WhereCondition::Eq("is_public", "true".into())]
+        let mut visibility_conditions = Vec::new();
+
+        if !route_search_query.is_editable {
+            visibility_conditions.push(WhereCondition::Eq("is_public", "true".into()))
         };
 
         if let Some(ids) = route_search_query.ids {
