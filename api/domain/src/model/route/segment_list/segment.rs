@@ -3,7 +3,9 @@ use std::slice::{Iter, IterMut};
 use std::str::FromStr;
 
 use derive_more::IntoIterator;
+use geo::prelude::HaversineDistance;
 use getset::Getters;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
@@ -54,6 +56,47 @@ impl Segment {
             mode,
             points: Vec::new(),
         }
+    }
+
+    pub(super) fn calc_distance_from_start(&mut self) {
+        self.iter_mut()
+            .scan((Distance::zero(), None), |(dist, prev_op), coord| {
+                if let Some(prev_coord) = prev_op {
+                    *dist += coord.haversine_distance(prev_coord);
+                }
+                coord.set_distance_from_start(*dist);
+                *prev_op = Some(coord.clone());
+                Some(*dist)
+            })
+            .last()
+            .unwrap();
+    }
+
+    pub(super) fn get_distance_offset(&self) -> Distance {
+        self.points
+            .first()
+            .map(|coord| *coord.distance_from_start())
+            .flatten()
+            .unwrap_or_else(Distance::zero)
+    }
+
+    pub(super) fn set_distance_offset(&mut self, offset: Distance) {
+        let org_offset = self.get_distance_offset();
+        if org_offset != offset {
+            self.points.iter_mut().par_bridge().for_each(|coord| {
+                if let Some(org_distance) = coord.distance_from_start {
+                    coord.set_distance_from_start(org_distance - org_offset + offset);
+                }
+            });
+        }
+    }
+
+    pub(super) fn has_distance(&self) -> bool {
+        self.points
+            .first()
+            .map(|coord| *coord.distance_from_start())
+            .flatten()
+            .is_some()
     }
 
     pub fn get_distance(&self) -> Distance {
@@ -136,6 +179,15 @@ pub(crate) mod tests {
     }
 
     #[fixture]
+    fn yokohama_to_tokyo_with_distance() -> Segment {
+        yokohama_to_tokyo_with_distance_offset(0.)
+    }
+
+    fn yokohama_to_tokyo_with_distance_offset(offset: f64) -> Segment {
+        Segment::yokohama_to_tokyo(false, Some(offset), false, DrawingMode::FollowRoad)
+    }
+
+    #[fixture]
     fn yokohama_to_tokyo_verbose() -> Segment {
         Segment::yokohama_to_tokyo(true, Some(0.), false, DrawingMode::FollowRoad)
     }
@@ -151,12 +203,51 @@ pub(crate) mod tests {
     }
 
     #[rstest]
+    #[case(yokohama_to_tokyo(), yokohama_to_tokyo_with_distance())]
+    fn can_calc_distance_from_start(#[case] mut org_seg: Segment, #[case] expected_seg: Segment) {
+        org_seg.calc_distance_from_start();
+        assert_eq!(org_seg, expected_seg)
+    }
+
+    #[rstest]
+    #[case::no_offset(yokohama_to_tokyo_with_distance(), 0.)]
+    #[case::has_offset(yokohama_to_tokyo_with_distance_offset(1234.56), 1234.56)]
+    fn can_get_distance_offset(#[case] seg: Segment, #[case] expected: f64) {
+        assert_eq!(seg.get_distance_offset().value(), expected)
+    }
+
+    #[rstest]
+    #[case::init_offset(
+        yokohama_to_tokyo_with_distance(),
+        1234.56,
+        yokohama_to_tokyo_with_distance_offset(1234.56)
+    )]
+    #[case::reset_offset(
+        yokohama_to_tokyo_with_distance_offset(32.1),
+        12.3,
+        yokohama_to_tokyo_with_distance_offset(12.3)
+    )]
+    fn set_distance_offset(
+        #[case] mut org_seg: Segment,
+        #[case] offset: f64,
+        #[case] expected_seg: Segment,
+    ) {
+        org_seg.set_distance_offset(Distance::try_from(offset).unwrap());
+        assert_eq!(org_seg, expected_seg)
+    }
+
+    #[rstest]
+    #[case::empty(yokohama_to_tokyo_empty(), false)]
+    #[case::no_distance(yokohama_to_tokyo_empty(), false)]
+    #[case::has_distance(yokohama_to_tokyo_with_distance(), true)]
+    fn can_check_has_distance(#[case] org_seg: Segment, #[case] expected: bool) {
+        assert_eq!(org_seg.has_distance(), expected)
+    }
+
+    #[rstest]
     #[case::empty_segment(yokohama_to_tokyo_empty(), 0.)]
     #[case::yokohama_to_tokyo(yokohama_to_tokyo_verbose(), 26936.42633640023)]
-    fn can_return_last_distance_from_start_as_distance(
-        #[case] seg: Segment,
-        #[case] expected: f64,
-    ) {
+    fn can_return_segment_distance(#[case] seg: Segment, #[case] expected: f64) {
         assert_eq!(seg.get_distance().value(), expected)
     }
 

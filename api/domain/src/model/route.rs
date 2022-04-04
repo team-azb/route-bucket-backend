@@ -7,18 +7,18 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 pub use self::bounding_box::BoundingBox;
 pub use self::coordinate::Coordinate;
-pub use self::operation::{Operation, OperationId, OperationType, SegmentTemplate};
 pub use self::route_gpx::RouteGpx;
 pub use self::route_info::RouteInfo;
 pub use self::search_query::RouteSearchQuery;
-pub use self::segment_list::{DrawingMode, Segment, SegmentList};
+pub use self::segment_list::{
+    DrawingMode, Operation, OperationId, OperationType, Segment, SegmentList, SegmentTemplate,
+};
 pub use self::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 use super::types::NanoId;
 
 pub(crate) mod bounding_box;
 pub(crate) mod coordinate;
-pub(crate) mod operation;
 pub(crate) mod route_gpx;
 pub(crate) mod route_info;
 pub(crate) mod search_query;
@@ -94,7 +94,7 @@ impl Route {
             self.info.op_num += 1;
         };
 
-        op.apply(&mut self.seg_list)?;
+        self.seg_list.apply_operation(op)?;
 
         Ok(())
     }
@@ -105,7 +105,7 @@ impl Route {
         self.seg_list.calc_elevation_gain()
     }
 
-    pub fn attach_distance_from_start(&mut self) -> ApplicationResult<()> {
+    pub fn attach_distance_from_start(&mut self) {
         self.seg_list.attach_distance_from_start()
     }
 
@@ -131,7 +131,7 @@ pub(crate) mod tests {
     use rstest::{fixture, rstest};
 
     use crate::model::route::{
-        operation::tests::OperationFixtures, route_info::tests::RouteInfoFixtures,
+        route_info::tests::RouteInfoFixtures, segment_list::tests::OperationFixtures,
         segment_list::tests::SegmentListFixture,
     };
 

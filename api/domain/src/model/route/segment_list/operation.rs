@@ -8,8 +8,8 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 
 use crate::model::types::NanoId;
 
-use super::coordinate::Coordinate;
-use super::segment_list::{DrawingMode, Segment, SegmentList};
+use super::super::coordinate::Coordinate;
+use super::{DrawingMode, Segment, SegmentList};
 
 #[cfg(any(test, feature = "fixtures"))]
 use derivative::Derivative;
@@ -69,12 +69,12 @@ impl From<SegmentTemplate> for Segment {
 #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq))]
 pub struct Operation {
     #[cfg_attr(any(test, feature = "fixtures"), derivative(PartialEq = "ignore"))]
-    id: OperationId,
+    pub(super) id: OperationId,
     // NOTE: typeはロジック的には不要だが、デバッグ用に残している
-    op_type: OperationType,
-    pos: usize,
-    org_seg_templates: Vec<SegmentTemplate>,
-    new_seg_templates: Vec<SegmentTemplate>,
+    pub(super) op_type: OperationType,
+    pub(super) pos: usize,
+    pub(super) org_seg_templates: Vec<SegmentTemplate>,
+    pub(super) new_seg_templates: Vec<SegmentTemplate>,
 }
 
 impl Operation {
@@ -210,17 +210,6 @@ impl Operation {
         ))
     }
 
-    pub fn apply(&self, seg_list: &mut SegmentList) -> ApplicationResult<()> {
-        seg_list.splice(
-            self.pos..self.pos + self.org_seg_templates.len(),
-            self.new_seg_templates
-                .iter()
-                .map(Clone::clone)
-                .map(Segment::from),
-        );
-        Ok(())
-    }
-
     pub fn reverse(&mut self) {
         self.op_type = self.op_type.reverse();
         swap(&mut self.org_seg_templates, &mut self.new_seg_templates);
@@ -325,31 +314,6 @@ pub(crate) mod tests {
     fn can_reverse_to_inverse_operation(#[case] mut op: Operation, #[case] op_inv: Operation) {
         op.reverse();
         assert_eq!(op, op_inv)
-    }
-
-    #[rstest]
-    #[case::add(
-        add_tokyo(),
-        SegmentList::yokohama_to_chiba(false, false, true),
-        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true)
-    )]
-    #[case::remove(
-        remove_tokyo(),
-        SegmentList::yokohama_to_chiba_via_tokyo(false, false, true),
-        SegmentList::yokohama_to_chiba(false, false, true)
-    )]
-    #[case::move_(
-        move_chiba_to_tokyo(),
-        SegmentList::yokohama_to_chiba(false, false, true),
-        SegmentList::yokohama_to_tokyo(false, false, true)
-    )]
-    fn can_apply_to_seg_list(
-        #[case] op: Operation,
-        #[case] mut seg_list: SegmentList,
-        #[case] expected: SegmentList,
-    ) {
-        op.apply(&mut seg_list).unwrap();
-        assert_eq!(seg_list, expected)
     }
 
     macro_rules! concat_op_list {
