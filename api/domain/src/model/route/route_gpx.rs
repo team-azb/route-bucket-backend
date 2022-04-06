@@ -89,8 +89,8 @@ impl RouteGpx {
         &self.name
     }
 
-    pub fn as_slice(&self) -> &[u8] {
-        self.data.as_slice()
+    pub fn into_data(self) -> Vec<u8> {
+        self.data
     }
 }
 

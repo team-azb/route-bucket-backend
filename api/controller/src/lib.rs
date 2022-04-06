@@ -16,7 +16,7 @@ pub trait AddService: Sized {
         F: HttpServiceFactory + 'static;
 }
 
-impl<T, B> AddService for App<T, B>
+impl<T, B> AddService for App<T>
 where
     B: MessageBody,
     T: ServiceFactory<

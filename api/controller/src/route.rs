@@ -1,4 +1,4 @@
-use actix_web::{dev, http, web, HttpResponse, Result};
+use actix_web::{http, web, HttpResponse, Result};
 
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use route_bucket_domain::model::route::{RouteId, RouteSearchQuery};
@@ -52,7 +52,7 @@ async fn get_gpx<U: 'static + RouteUseCase>(
             format!("attachment;filename=\"{}.gpx\"", gpx_resp.name()),
         ))
         .content_type("application/gpx+xml")
-        .body(dev::Body::from_slice(gpx_resp.as_slice())))
+        .body(gpx_resp.into_data()))
 }
 
 async fn post<U: 'static + RouteUseCase>(
