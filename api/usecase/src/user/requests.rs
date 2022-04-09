@@ -1,8 +1,5 @@
-use std::convert::TryFrom;
-
 use chrono::{NaiveDate, Utc};
 use derive_more::From;
-use route_bucket_utils::ApplicationError;
 use serde::Deserialize;
 use validator::Validate;
 
@@ -37,12 +34,9 @@ impl Validate for UserCreateRequest {
     }
 }
 
-impl TryFrom<UserCreateRequest> for (User, Email, String) {
-    type Error = ApplicationError;
-
-    fn try_from(value: UserCreateRequest) -> Result<Self, Self::Error> {
-        value.validate()?;
-        Ok((
+impl From<UserCreateRequest> for (User, Email, String) {
+    fn from(value: UserCreateRequest) -> Self {
+        (
             User::new(
                 value.id,
                 value.name,
@@ -52,7 +46,7 @@ impl TryFrom<UserCreateRequest> for (User, Email, String) {
             ),
             value.email,
             value.password,
-        ))
+        )
     }
 }
 
