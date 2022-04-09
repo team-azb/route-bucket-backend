@@ -1,10 +1,10 @@
-use derive_more::From;
+use derive_more::{From, Into};
 use serde::Deserialize;
 use validator::{Validate, ValidationError};
 
 use route_bucket_domain::model::{
     permission::PermissionType,
-    route::{Coordinate, DrawingMode},
+    route::{Coordinate, DrawingMode, RouteId},
     user::UserId,
 };
 
@@ -13,6 +13,13 @@ pub struct RouteCreateRequest {
     #[validate(length(min = 1, max = 50))]
     pub(super) name: String,
     pub(super) is_public: bool,
+}
+
+#[derive(From, Into, Deserialize, Validate)]
+pub struct RoutePositionParams {
+    #[validate]
+    pub(super) id: RouteId,
+    pub(super) pos: usize,
 }
 
 #[derive(From, Deserialize, Validate)]
