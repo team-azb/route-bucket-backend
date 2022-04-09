@@ -1,16 +1,18 @@
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::model::user::UserId;
 
 use super::RouteId;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Validate)]
 #[cfg_attr(any(test, feature = "fixtures"), derive(PartialEq))]
 pub struct RouteSearchQuery {
     #[serde(skip_deserializing)]
     pub ids: Option<Vec<RouteId>>,
     #[serde(skip_deserializing)]
     pub caller_id: Option<UserId>,
+    #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owner_id: Option<UserId>,
     #[serde(default)]
