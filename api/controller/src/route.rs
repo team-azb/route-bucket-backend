@@ -1,17 +1,18 @@
 use actix_web::{http, web, HttpResponse, Result};
 
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use actix_web_validator::{Json, Path, Query};
 use route_bucket_domain::model::route::{RouteId, RouteSearchQuery};
 use route_bucket_usecase::route::{
     DeletePermissionRequest, NewPointRequest, RemovePointRequest, RouteCreateRequest,
-    RouteRenameRequest, RouteUseCase, UpdatePermissionRequest,
+    RoutePositionParams, RouteRenameRequest, RouteUseCase, UpdatePermissionRequest,
 };
 
 use crate::AddService;
 
 async fn get<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
     auth: Option<BearerAuth>,
 ) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(
@@ -28,7 +29,7 @@ async fn get_all<U: 'static + RouteUseCase>(usecase: web::Data<U>) -> Result<Htt
 async fn get_search<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     auth: Option<BearerAuth>,
-    query: web::Query<RouteSearchQuery>,
+    query: Query<RouteSearchQuery>,
 ) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(
         usecase
@@ -42,7 +43,7 @@ async fn get_search<U: 'static + RouteUseCase>(
 
 async fn get_gpx<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
 ) -> Result<HttpResponse> {
     let gpx_resp = usecase.find_gpx(id.as_ref()).await?;
 
@@ -58,89 +59,77 @@ async fn get_gpx<U: 'static + RouteUseCase>(
 async fn post<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     auth: BearerAuth,
-    req: web::Json<RouteCreateRequest>,
+    req: Json<RouteCreateRequest>,
 ) -> Result<HttpResponse> {
     Ok(HttpResponse::Created().json(usecase.create(auth.token(), &req).await?))
 }
 
 async fn patch_rename<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
     auth: BearerAuth,
-    req: web::Json<RouteRenameRequest>,
+    req: Json<RouteRenameRequest>,
 ) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(usecase.rename(&id, auth.token(), &req).await?))
 }
 
 async fn patch_add<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    path_params: web::Path<(RouteId, usize)>,
+    path_params: Path<RoutePositionParams>,
     auth: BearerAuth,
-    req: web::Json<NewPointRequest>,
+    req: Json<NewPointRequest>,
 ) -> Result<HttpResponse> {
-    let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(
-        usecase
-            .add_point(&route_id, auth.token(), pos, &req)
-            .await?,
-    ))
+    let (id, pos) = path_params.into_inner().into();
+    Ok(HttpResponse::Ok().json(usecase.add_point(&id, auth.token(), pos, &req).await?))
 }
 
 async fn patch_remove<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    path_params: web::Path<(RouteId, usize)>,
+    path_params: Path<RoutePositionParams>,
     auth: BearerAuth,
-    req: web::Json<RemovePointRequest>,
+    req: Json<RemovePointRequest>,
 ) -> Result<HttpResponse> {
-    let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(
-        usecase
-            .remove_point(&route_id, auth.token(), pos, &req)
-            .await?,
-    ))
+    let (id, pos) = path_params.into_inner().into();
+    Ok(HttpResponse::Ok().json(usecase.remove_point(&id, auth.token(), pos, &req).await?))
 }
 
 async fn patch_move<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    path_params: web::Path<(RouteId, usize)>,
+    path_params: Path<RoutePositionParams>,
     auth: BearerAuth,
-    req: web::Json<NewPointRequest>,
+    req: Json<NewPointRequest>,
 ) -> Result<HttpResponse> {
-    let (route_id, pos) = path_params.into_inner();
-    Ok(HttpResponse::Ok().json(
-        usecase
-            .move_point(&route_id, auth.token(), pos, &req)
-            .await?,
-    ))
+    let (id, pos) = path_params.into_inner().into();
+    Ok(HttpResponse::Ok().json(usecase.move_point(&id, auth.token(), pos, &req).await?))
 }
 
 async fn patch_clear<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     auth: BearerAuth,
-    route_id: web::Path<RouteId>,
+    id: Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.clear_route(&route_id, auth.token()).await?))
+    Ok(HttpResponse::Ok().json(usecase.clear_route(&id, auth.token()).await?))
 }
 
 async fn patch_undo<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     auth: BearerAuth,
-    route_id: web::Path<RouteId>,
+    id: Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.undo_operation(&route_id, auth.token()).await?))
+    Ok(HttpResponse::Ok().json(usecase.undo_operation(&id, auth.token()).await?))
 }
 
 async fn patch_redo<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
     auth: BearerAuth,
-    route_id: web::Path<RouteId>,
+    id: Path<RouteId>,
 ) -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(usecase.redo_operation(&route_id, auth.token()).await?))
+    Ok(HttpResponse::Ok().json(usecase.redo_operation(&id, auth.token()).await?))
 }
 
 async fn delete<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
     auth: BearerAuth,
 ) -> Result<HttpResponse> {
     usecase.delete(&id, auth.token()).await?;
@@ -149,9 +138,9 @@ async fn delete<U: 'static + RouteUseCase>(
 
 async fn put_permission<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
     auth: BearerAuth,
-    req: web::Json<UpdatePermissionRequest>,
+    req: Json<UpdatePermissionRequest>,
 ) -> Result<HttpResponse> {
     usecase.update_permission(&id, auth.token(), &req).await?;
     Ok(HttpResponse::Ok().finish())
@@ -159,9 +148,9 @@ async fn put_permission<U: 'static + RouteUseCase>(
 
 async fn delete_permission<U: 'static + RouteUseCase>(
     usecase: web::Data<U>,
-    id: web::Path<RouteId>,
+    id: Path<RouteId>,
     auth: BearerAuth,
-    req: web::Json<DeletePermissionRequest>,
+    req: Json<DeletePermissionRequest>,
 ) -> Result<HttpResponse> {
     usecase.delete_permission(&id, auth.token(), &req).await?;
     Ok(HttpResponse::Ok().finish())
