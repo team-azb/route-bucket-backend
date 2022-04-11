@@ -99,30 +99,19 @@ impl Route {
         Ok(())
     }
 
-    // methods from SegmentList ( No tests for them! )
+    pub fn calc_route_features_from_seg_list(&mut self) -> ApplicationResult<()> {
+        self.seg_list.attach_distance_from_start();
 
-    pub fn calc_elevation_gain(&self) -> (Elevation, Elevation) {
-        self.seg_list.calc_elevation_gain()
-    }
+        let (asc_gain, desc_gain) = self.seg_list.calc_elevation_gain();
+        self.info.ascent_elevation_gain = asc_gain;
+        self.info.descent_elevation_gain = desc_gain;
+        self.info.total_distance = self.seg_list.get_total_distance()?;
 
-    pub fn attach_distance_from_start(&mut self) {
-        self.seg_list.attach_distance_from_start()
-    }
-
-    pub fn get_total_distance(&self) -> ApplicationResult<Distance> {
-        self.seg_list.get_total_distance()
-    }
-
-    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
-        self.seg_list.gather_waypoints()
+        Ok(())
     }
 
     pub fn iter_seg_mut(&mut self) -> IterMut<Segment> {
         self.seg_list.iter_mut()
-    }
-
-    pub fn into_segments_in_between(self) -> Vec<Segment> {
-        self.seg_list.into_segments_in_between()
     }
 }
 
@@ -145,6 +134,19 @@ pub(crate) mod tests {
     #[fixture]
     fn full_route() -> Route {
         Route::yokohama_to_chiba_via_tokyo()
+    }
+
+    #[fixture]
+    fn full_route_filled() -> Route {
+        Route {
+            info: RouteInfo::yokohama_to_chiba_via_tokyo(),
+            ..Route::yokohama_to_chiba_via_tokyo_filled(true, true)
+        }
+    }
+
+    #[fixture]
+    fn full_route_filled_but_yet_to_calc_features() -> Route {
+        Route::yokohama_to_chiba_via_tokyo_filled(true, false)
     }
 
     #[fixture]
@@ -238,10 +240,19 @@ pub(crate) mod tests {
         ))
     }
 
-    macro_rules! init_route {
+    #[rstest]
+    fn can_calc_route_features_from_seg_list(
+        #[from(full_route_filled_but_yet_to_calc_features)] mut route: Route,
+        #[from(full_route_filled)] expected: Route,
+    ) {
+        route.calc_route_features_from_seg_list().unwrap();
+        assert_eq!(route, expected)
+    }
+
+    macro_rules! init_empty_route {
         ($op_num:expr, $op_list_name:ident, $seg_list_name:ident) => {
             Route {
-                info: RouteInfo::route0($op_num),
+                info: RouteInfo::empty_route0($op_num),
                 op_list: Operation::$op_list_name(),
                 seg_list: SegmentList::$seg_list_name(false, false, true),
             }
@@ -251,57 +262,69 @@ pub(crate) mod tests {
     pub trait RouteFixtures {
         fn empty() -> Route {
             Route {
-                info: RouteInfo::route0(0),
+                info: RouteInfo::empty_route0(0),
                 op_list: Vec::new(),
                 seg_list: SegmentList::empty(),
             }
         }
 
         fn yokohama() -> Route {
-            init_route!(1, after_add_yokohama_op_list, yokohama)
+            init_empty_route!(1, after_add_yokohama_op_list, yokohama)
         }
 
         fn yokohama_to_chiba() -> Route {
-            init_route!(2, after_add_chiba_op_list, yokohama_to_chiba)
+            init_empty_route!(2, after_add_chiba_op_list, yokohama_to_chiba)
         }
 
         fn yokohama_to_chiba_via_tokyo() -> Route {
-            init_route!(3, after_add_tokyo_op_list, yokohama_to_chiba_via_tokyo)
+            init_empty_route!(3, after_add_tokyo_op_list, yokohama_to_chiba_via_tokyo)
         }
 
         fn yokohama_to_chiba_after_remove() -> Route {
-            init_route!(4, after_remove_tokyo_op_list, yokohama_to_chiba)
+            init_empty_route!(4, after_remove_tokyo_op_list, yokohama_to_chiba)
         }
 
         fn yokohama_to_chiba_after_undo() -> Route {
-            init_route!(2, after_add_tokyo_op_list, yokohama_to_chiba)
+            init_empty_route!(2, after_add_tokyo_op_list, yokohama_to_chiba)
         }
 
         fn yokohama_to_tokyo() -> Route {
-            init_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
+            init_empty_route!(3, after_move_chiba_op_list, yokohama_to_tokyo)
         }
 
-        fn yokohama_to_chiba_filled(set_ele: bool, set_dist: bool) -> Route {
+        fn yokohama_to_chiba_filled(set_ele: bool, set_features: bool) -> Route {
             Route::new(
-                RouteInfo::route0(2),
+                if set_features {
+                    RouteInfo::yokohama_to_chiba()
+                } else {
+                    RouteInfo::empty_route0(2)
+                },
                 Operation::after_add_tokyo_op_list(),
-                SegmentList::yokohama_to_chiba(set_ele, set_dist, false),
+                SegmentList::yokohama_to_chiba(set_ele, set_features, false),
             )
         }
 
-        fn yokohama_to_chiba_via_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+        fn yokohama_to_chiba_via_tokyo_filled(set_ele: bool, set_features: bool) -> Route {
             Route::new(
-                RouteInfo::route0(3),
+                if set_features {
+                    RouteInfo::yokohama_to_chiba_via_tokyo()
+                } else {
+                    RouteInfo::empty_route0(3)
+                },
                 Operation::after_add_tokyo_op_list(),
-                SegmentList::yokohama_to_chiba_via_tokyo(set_ele, set_dist, false),
+                SegmentList::yokohama_to_chiba_via_tokyo(set_ele, set_features, false),
             )
         }
 
-        fn yokohama_to_tokyo_filled(set_ele: bool, set_dist: bool) -> Route {
+        fn yokohama_to_tokyo_filled(set_ele: bool, set_features: bool) -> Route {
             Route::new(
-                RouteInfo::route0(3),
+                if set_features {
+                    RouteInfo::yokohama_to_tokyo()
+                } else {
+                    RouteInfo::empty_route0(3)
+                },
                 Operation::after_move_chiba_op_list(),
-                SegmentList::yokohama_to_tokyo(set_ele, set_dist, false),
+                SegmentList::yokohama_to_tokyo(set_ele, set_features, false),
             )
         }
     }

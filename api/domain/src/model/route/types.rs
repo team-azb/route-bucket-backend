@@ -25,6 +25,7 @@ pub type Distance = NumericValueObject<OrderedFloat<f64>, 0>;
 
 /// Value Object for BigDecimal type
 #[derive(
+    Default,
     Add,
     AddAssign,
     Sub,
@@ -39,7 +40,7 @@ pub type Distance = NumericValueObject<OrderedFloat<f64>, 0>;
     Serialize,
     Deserialize,
 )]
-pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
+pub struct NumericValueObject<T: Default, const MAX_ABS: u32>(T);
 
 impl<const MAX_ABS: u32> NumericValueObject<i32, MAX_ABS> {
     pub fn value(&self) -> i32 {
@@ -53,7 +54,9 @@ impl<const MAX_ABS: u32> NumericValueObject<OrderedFloat<f64>, MAX_ABS> {
     }
 }
 
-impl<T: Copy + FromPrimitive + Bounded, const MAX_ABS: u32> NumericValueObject<T, MAX_ABS> {
+impl<T: Copy + Default + FromPrimitive + Bounded, const MAX_ABS: u32>
+    NumericValueObject<T, MAX_ABS>
+{
     pub fn max_value() -> Self {
         Self(if MAX_ABS == 0 {
             T::max_value()

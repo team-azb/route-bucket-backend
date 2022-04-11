@@ -1,9 +1,12 @@
 CREATE TABLE routes
 (
-    `id`            VARCHAR(11)      NOT NULL,
-    `name`          VARCHAR(50)      NOT NULL,
-    `owner_id`      VARCHAR(40)      NOT NULL,
-    `operation_pos` INTEGER UNSIGNED NOT NULL,
+    `id`                     VARCHAR(11)      NOT NULL,
+    `name`                   VARCHAR(50)      NOT NULL,
+    `owner_id`               VARCHAR(40)      NOT NULL,
+    `operation_pos`          INTEGER UNSIGNED NOT NULL,
+    `ascent_elevation_gain`  INTEGER UNSIGNED NOT NULL,
+    `descent_elevation_gain` INTEGER UNSIGNED NOT NULL,
+    `total_distance`         DOUBLE           NOT NULL,
     `created_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX updated_idx (`updated_at`),
