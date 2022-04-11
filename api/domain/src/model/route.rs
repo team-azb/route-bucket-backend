@@ -110,16 +110,8 @@ impl Route {
         Ok(())
     }
 
-    pub fn gather_waypoints(&self) -> Vec<Coordinate> {
-        self.seg_list.gather_waypoints()
-    }
-
     pub fn iter_seg_mut(&mut self) -> IterMut<Segment> {
         self.seg_list.iter_mut()
-    }
-
-    pub fn into_segments_in_between(self) -> Vec<Segment> {
-        self.seg_list.into_segments_in_between()
     }
 }
 
