@@ -25,7 +25,7 @@ pub struct RoutePositionParams {
 #[derive(From, Deserialize, Validate)]
 pub struct NewPointRequest {
     pub(super) mode: DrawingMode,
-    // TODO: Validate coordinate range.
+    #[validate]
     pub(super) coord: Coordinate,
 }
 
