@@ -12,13 +12,17 @@ use route_bucket_utils::{ApplicationError, ApplicationResult};
 use super::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 /// Value Object for Coordinates
-#[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize, Validate)]
 #[get = "pub"]
 pub struct Coordinate {
+    #[validate]
     pub(super) latitude: Latitude,
+    #[validate]
     pub(super) longitude: Longitude,
+    #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) elevation: Option<Elevation>,
+    #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) distance_from_start: Option<Distance>,
 }
