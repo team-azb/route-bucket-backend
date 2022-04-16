@@ -146,6 +146,7 @@ impl HaversineDistance<Distance> for Coordinate {
 
 #[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
+    use num_traits::Zero;
     use rstest::{fixture, rstest};
 
     use super::*;

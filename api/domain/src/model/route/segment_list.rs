@@ -2,6 +2,7 @@ use std::cmp::max;
 use std::slice::{Iter, IterMut};
 
 use getset::Getters;
+use num_traits::Zero;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::Serialize;
 

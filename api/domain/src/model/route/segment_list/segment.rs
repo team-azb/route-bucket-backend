@@ -5,6 +5,7 @@ use std::str::FromStr;
 use derive_more::IntoIterator;
 use geo::prelude::HaversineDistance;
 use getset::Getters;
+use num_traits::Zero;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
