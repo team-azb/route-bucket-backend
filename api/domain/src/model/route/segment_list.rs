@@ -99,7 +99,7 @@ impl SegmentList {
     }
 
     pub fn calc_bounding_box(&self) -> ApplicationResult<BoundingBox> {
-        let mut coord_iter = self.iter().map(|seg| seg.iter()).flatten();
+        let mut coord_iter = self.iter().flat_map(|seg| seg.iter());
 
         if let Some(first_coord) = coord_iter.next() {
             let mut min_coord = first_coord.clone();

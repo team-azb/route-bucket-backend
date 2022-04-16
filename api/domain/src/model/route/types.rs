@@ -40,7 +40,7 @@ pub type Distance = NumericValueObject<OrderedFloat<f64>, 0>;
     Serialize,
     Deserialize,
 )]
-pub struct NumericValueObject<T: Default, const MAX_ABS: u32>(T);
+pub struct NumericValueObject<T, const MAX_ABS: u32>(T);
 
 impl<const MAX_ABS: u32> NumericValueObject<i32, MAX_ABS> {
     pub fn value(&self) -> i32 {

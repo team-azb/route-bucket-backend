@@ -75,8 +75,7 @@ impl Segment {
     pub(super) fn get_distance_offset(&self) -> Distance {
         self.points
             .first()
-            .map(|coord| *coord.distance_from_start())
-            .flatten()
+            .and_then(|coord| *coord.distance_from_start())
             .unwrap_or_else(Distance::zero)
     }
 
@@ -94,16 +93,14 @@ impl Segment {
     pub(super) fn has_distance(&self) -> bool {
         self.points
             .first()
-            .map(|coord| *coord.distance_from_start())
-            .flatten()
+            .and_then(|coord| *coord.distance_from_start())
             .is_some()
     }
 
     pub fn get_distance(&self) -> Distance {
         self.points
             .last()
-            .map(|coord| *coord.distance_from_start())
-            .flatten()
+            .and_then(|coord| *coord.distance_from_start())
             .unwrap_or_else(Distance::zero)
     }
 

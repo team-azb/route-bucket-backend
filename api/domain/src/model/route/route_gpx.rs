@@ -21,8 +21,7 @@ impl From<Coordinate> for gpx::Waypoint {
         let elevation = coord
             .elevation
             .map(|elev| elev.value())
-            .map(f64::from_i32)
-            .flatten();
+            .and_then(f64::from_i32);
 
         let mut waypoint = Self::new(<(f64, f64)>::from(coord).into());
         waypoint.elevation = elevation;
@@ -53,8 +52,7 @@ impl From<SegmentList> for gpx::Track {
         trk.segments[0].points = seg_list
             .segments
             .into_iter()
-            .map(|seg| seg.into_iter())
-            .flatten()
+            .flat_map(|seg| seg.into_iter())
             .map(gpx::Waypoint::from)
             .collect_vec();
         trk

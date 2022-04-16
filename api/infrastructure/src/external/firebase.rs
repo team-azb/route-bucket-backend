@@ -253,8 +253,7 @@ impl UserAuthApi for FirebaseAuthApi {
             .json::<Value>()
             .await?
             .pointer("/users/0/emailVerified")
-            .map(Value::as_bool)
-            .flatten()
+            .and_then(Value::as_bool)
             .ok_or_else(|| {
                 ApplicationError::ExternalError(
                     "Conflicting account status at FirebaseAuthApi::authenticate!".to_string(),
@@ -285,8 +284,7 @@ impl UserAuthApi for FirebaseAuthApi {
             .json::<Value>()
             .await?
             .get("users")
-            .map(Value::as_array)
-            .flatten()
+            .and_then(Value::as_array)
             .map_or(false, |arr| !arr.is_empty()))
     }
 }
