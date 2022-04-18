@@ -36,9 +36,6 @@ pub enum ApplicationError {
 
     #[display(fmt = "ValidationError: {}", _0)]
     ValidationError(String),
-
-    #[display(fmt = "ValueObjectError: {}", _0)]
-    ValueObjectError(String),
 }
 
 impl ResponseError for ApplicationError {
@@ -53,8 +50,7 @@ impl ResponseError for ApplicationError {
             ApplicationError::DataBaseError(..)
             | ApplicationError::DomainError(..)
             | ApplicationError::ExternalError(..)
-            | ApplicationError::UseCaseError { .. }
-            | ApplicationError::ValueObjectError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            | ApplicationError::UseCaseError { .. } => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
     fn error_response(&self) -> HttpResponse {
