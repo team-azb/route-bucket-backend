@@ -1,0 +1,2 @@
+./target
+./adapters/infrastructure/resources/srtm_data/*.tif

@@ -2,8 +2,8 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, Error, HttpServer, Result};
 
-use route_bucket_backend::server::Server;
 use route_bucket_controller::{BuildRouteService, BuildUserService};
+use route_bucket_server::server::Server;
 
 #[actix_web::main]
 async fn main() -> Result<(), Error> {

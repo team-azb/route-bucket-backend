@@ -8,8 +8,8 @@ RUN apt update && \
 WORKDIR app
 
 # SRTM elevation data
-COPY resources/scripts resources/scripts
-RUN resources/scripts/download_srtm_datas.sh
+COPY adapters/infrastructure/resources/scripts adapters/infrastructure/resources/scripts
+RUN adapters/infrastructure/resources/scripts/download_srtm_datas.sh
 
 COPY . .
 
