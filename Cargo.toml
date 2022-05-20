@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "app/server",
+    "adapters/controller",
+    "adapters/infrastructure",
+    "usecase",
+    "domain",
+    "utils",
+]
+default-members = ["app/server"]
