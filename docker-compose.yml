@@ -28,15 +28,17 @@ services:
   api:
     ports:
       - "8080:8080"
-    build: api
+    build:
+      context: .
+      dockerfile: app/server/Dockerfile
     environment:
       DATABASE_URL: db://root:password@db:3306/route_bucket_db
       RUST_LOG: info
       OSRM_ROOT: http://osrm:5000
     command: >
       bash -c "
-        resources/scripts/wait_for_db.sh &&
-        /app/target/release/route-bucket-backend"
+        /work/app/server/wait_for_db.sh &&
+        /work/target/release/route-bucket-server"
     depends_on:
       - db
       - osrm

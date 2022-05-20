@@ -5,11 +5,11 @@ RUN apt update && \
     apt install -y default-mysql-client && \
     apt search caching-sha2-password
 
-WORKDIR app
+WORKDIR work
 
 # SRTM elevation data
-COPY adapters/infrastructure/resources/scripts adapters/infrastructure/resources/scripts
-RUN adapters/infrastructure/resources/scripts/download_srtm_datas.sh
+COPY adapters/infrastructure/resources/download_srtm_datas.sh adapters/infrastructure/resources/download_srtm_datas.sh
+RUN adapters/infrastructure/resources/download_srtm_datas.sh
 
 COPY . .
 
