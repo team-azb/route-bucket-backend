@@ -12,6 +12,6 @@ actix-web = "4.0.1"
 actix-web-httpauth = "0.6.0"
 actix-web-validator = "3.0.0"
 derive_more = "0.99.16"
-route-bucket-domain = { path = "../domain" }
-route-bucket-usecase = { path = "../usecase" }
-route-bucket-utils = { version = "0.1.0", path = "../utils" }
+route-bucket-domain = { path = "../../domain" }
+route-bucket-usecase = { path = "../../usecase" }
+route-bucket-utils = { version = "0.1.0", path = "../../utils" }
