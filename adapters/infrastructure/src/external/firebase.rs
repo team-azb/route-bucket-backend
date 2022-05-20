@@ -22,7 +22,8 @@ use tokio::sync::RwLock;
 
 use self::token::verify_and_get_user_id;
 
-const CREDENTIAL_PATH: &str = "resources/credentials/firebase-adminsdk.json";
+const CREDENTIAL_PATH: &str =
+    "adapters/infrastructure/resources/credentials/firebase-adminsdk.json";
 const API_SCOPE: &str = "https://www.googleapis.com/auth/identitytoolkit";
 static JWT_EXP_DURATION: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 static API_TOKEN_EXP_OFFSET: Lazy<Duration> = Lazy::new(|| Duration::seconds(10));

@@ -8,7 +8,7 @@ use route_bucket_domain::{external::ReservedUserIdCheckerApi, model::user::UserI
 use route_bucket_utils::{ApplicationError, ApplicationResult};
 use tokio::sync::RwLock;
 
-const TEXT_PATH: &str = "resources/reserved_uids.txt";
+const TEXT_PATH: &str = "adapters/infrastructure/resources/reserved_uids.txt";
 static UPDATE_INTERVAL: Lazy<Duration> = Lazy::new(|| Duration::days(1));
 
 #[derive(Derivative)]

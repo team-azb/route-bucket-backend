@@ -294,7 +294,9 @@ impl SrtmReader {
     pub fn new() -> ApplicationResult<Self> {
         // TODO: 複数ファイル対応
         Ok(Self {
-            files: vec![SrtmFile::open(Path::new("resources/srtm_data/srtm.tif"))?],
+            files: vec![SrtmFile::open(Path::new(
+                "adapters/infrastructure/resources/srtm_data/srtm.tif",
+            ))?],
         })
     }
 }
