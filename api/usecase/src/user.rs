@@ -317,25 +317,25 @@ mod tests {
                 auth_api: MockUserAuthApi::new(),
                 uid_check_api: MockReservedUserIdCheckerApi::new(),
             };
-            expect_at_repository!(usecase, get_connection, MockConnection {});
+            expect_at_repository!(usecase.repository, get_connection, MockConnection {});
 
             usecase
         }
 
         fn expect_find_at_user_repository(&mut self, param_id: UserId, return_user: User) {
-            expect_at_repository!(self, find, param_id, return_user);
+            expect_at_repository!(self.repository, find, param_id, return_user);
         }
 
         fn expect_insert_at_user_repository(&mut self, param_user: User) {
-            expect_at_repository!(self, insert, param_user, ());
+            expect_at_repository!(self.repository, insert, param_user, ());
         }
 
         fn expect_update_at_user_repository(&mut self, param_user: User) {
-            expect_at_repository!(self, update, param_user, ());
+            expect_at_repository!(self.repository, update, param_user, ());
         }
 
         fn expect_delete_at_user_repository(&mut self, param_id: UserId) {
-            expect_at_repository!(self, delete, param_id, ());
+            expect_at_repository!(self.repository, delete, param_id, ());
         }
 
         fn expect_create_account_at_auth_api(

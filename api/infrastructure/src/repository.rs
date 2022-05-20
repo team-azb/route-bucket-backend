@@ -9,13 +9,19 @@ use sqlx::pool::PoolConnection;
 use sqlx::{MySql, TransactionManager};
 use tokio::sync::Mutex;
 
+use self::permission::PermissionRepositoryMySql;
 use self::route::RouteRepositoryMySql;
 use self::user::UserRepositoryMySql;
 
+pub mod permission;
 pub mod route;
 pub mod user;
 
-pub async fn init_repositories() -> (RouteRepositoryMySql, UserRepositoryMySql) {
+pub async fn init_repositories() -> (
+    RouteRepositoryMySql,
+    UserRepositoryMySql,
+    PermissionRepositoryMySql,
+) {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL NOT FOUND");
     let pool = Arc::new(
         MySqlPoolOptions::new()
@@ -26,7 +32,8 @@ pub async fn init_repositories() -> (RouteRepositoryMySql, UserRepositoryMySql) 
     );
     (
         RouteRepositoryMySql(pool.clone()),
-        UserRepositoryMySql(pool),
+        UserRepositoryMySql(pool.clone()),
+        PermissionRepositoryMySql(pool),
     )
 }
 

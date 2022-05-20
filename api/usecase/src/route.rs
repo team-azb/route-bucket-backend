@@ -9,9 +9,11 @@ use route_bucket_domain::external::{
     CallElevationApi, CallRouteInterpolationApi, CallUserAuthApi, ElevationApi,
     RouteInterpolationApi, UserAuthApi,
 };
+use route_bucket_domain::model::permission::PermissionType;
 use route_bucket_domain::model::route::{Operation, Route, RouteId, RouteInfo, RouteSearchQuery};
 use route_bucket_domain::repository::{
-    CallRouteRepository, Connection, Repository, RouteRepository,
+    CallPermissionRepository, CallRouteRepository, Connection, PermissionRepository, Repository,
+    RouteRepository,
 };
 use route_bucket_utils::ApplicationResult;
 
@@ -89,7 +91,12 @@ pub trait RouteUseCase {
 #[async_trait]
 impl<T> RouteUseCase for T
 where
-    T: CallRouteRepository + CallRouteInterpolationApi + CallElevationApi + CallUserAuthApi + Sync,
+    T: CallRouteRepository
+        + CallPermissionRepository
+        + CallRouteInterpolationApi
+        + CallElevationApi
+        + CallUserAuthApi
+        + Sync,
 {
     async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
@@ -172,8 +179,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route_info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route_info.owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route_info.rename(&req.name);
@@ -199,8 +209,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_add(
@@ -239,8 +252,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
@@ -272,8 +288,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 let op = Operation::new_move(
@@ -310,8 +329,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(info.owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 info.clear_route();
@@ -335,8 +357,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route.redo_operation()?;
@@ -365,8 +390,11 @@ where
         conn.transaction(|conn| {
             async move {
                 let mut route = self.route_repository().find(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(route.info().owner_id(), user_access_token)
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 route.undo_operation()?;
@@ -390,9 +418,12 @@ where
         let conn = self.route_repository().get_connection().await?;
         conn.transaction(|conn| {
             async move {
-                let info = self.route_repository().find_info(route_id, conn).await?;
-                self.user_auth_api()
-                    .authorize(info.owner_id(), user_access_token)
+                let route_info = self.route_repository().find_info(route_id, conn).await?;
+                let user_id = self.user_auth_api().authenticate(user_access_token).await?;
+
+                let perm_conn = self.permission_repository().get_connection().await?;
+                self.permission_repository()
+                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
                     .await?;
 
                 self.route_repository().delete(route_id, conn).await
@@ -416,10 +447,11 @@ mod tests {
                 },
                 user::UserIdFixtures,
             },
+            permission::Permission,
             route::{Coordinate, DrawingMode, RouteGpx, Segment},
             user::UserId,
         },
-        repository::{MockConnection, MockRouteRepository},
+        repository::{MockConnection, MockPermissionRepository, MockRouteRepository},
     };
     use rstest::rstest;
 
@@ -565,8 +597,13 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(0));
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(0),
+            UserId::doncic(),
+            PermissionType::Editor,
+        );
         usecase.expect_update_info_at_route_repository(RouteInfo::empty_route1(0));
 
         assert_eq!(
@@ -584,10 +621,15 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(2),
+            UserId::doncic(),
+            PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
             tokyo_before_correction(),
@@ -622,10 +664,15 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(3),
+            UserId::doncic(),
+            PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
             yokohama_to_chiba_before_interpolation(false),
@@ -654,10 +701,15 @@ mod tests {
         };
 
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(2),
+            UserId::doncic(),
+            PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
             tokyo_before_correction(),
@@ -686,8 +738,13 @@ mod tests {
     #[tokio::test]
     async fn can_clear_route() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(3));
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(3),
+            UserId::doncic(),
+            PermissionType::Editor,
+        );
         usecase.expect_update_at_route_repository(Route::empty());
 
         assert_eq!(
@@ -700,10 +757,15 @@ mod tests {
     #[tokio::test]
     async fn can_redo_operation() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(2),
+            UserId::doncic(),
+            PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
             yokohama_to_chiba_via_tokyo_before_interpolation(),
@@ -727,10 +789,15 @@ mod tests {
     #[tokio::test]
     async fn can_undo_operation() {
         let mut usecase = TestRouteUseCase::new();
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_via_tokyo_filled(false, false),
+        );
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(3),
+            UserId::doncic(),
+            PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
             yokohama_to_chiba_before_interpolation(true),
@@ -753,13 +820,19 @@ mod tests {
     async fn can_delete() {
         let mut usecase = TestRouteUseCase::new();
         usecase.expect_find_info_at_route_repository(route_id(), RouteInfo::empty_route0(0));
-        usecase.expect_authorize_at_auth_api(UserId::doncic(), doncic_token());
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(0),
+            UserId::doncic(),
+            PermissionType::Editor,
+        );
         usecase.expect_delete_at_route_repository(route_id());
         assert_eq!(usecase.delete(&route_id(), &doncic_token()).await, Ok(()));
     }
 
     struct TestRouteUseCase {
-        repository: MockRouteRepository,
+        route_repository: MockRouteRepository,
+        permission_repository: MockPermissionRepository,
         interpolation_api: MockRouteInterpolationApi,
         elevation_api: MockElevationApi,
         auth_api: MockUserAuthApi,
@@ -769,18 +842,19 @@ mod tests {
     impl TestRouteUseCase {
         fn new() -> Self {
             let mut usecase = TestRouteUseCase {
-                repository: MockRouteRepository::new(),
+                route_repository: MockRouteRepository::new(),
+                permission_repository: MockPermissionRepository::new(),
                 interpolation_api: MockRouteInterpolationApi::new(),
                 elevation_api: MockElevationApi::new(),
                 auth_api: MockUserAuthApi::new(),
             };
-            expect_at_repository!(usecase, get_connection, MockConnection {});
+            expect_at_repository!(usecase.route_repository, get_connection, MockConnection {});
 
             usecase
         }
 
         fn expect_find_at_route_repository(&mut self, param_id: RouteId, return_route: Route) {
-            expect_at_repository!(self, find, param_id, return_route);
+            expect_at_repository!(self.route_repository, find, param_id, return_route);
         }
 
         fn expect_find_info_at_route_repository(
@@ -788,7 +862,7 @@ mod tests {
             param_id: RouteId,
             return_info: RouteInfo,
         ) {
-            expect_at_repository!(self, find_info, param_id, return_info);
+            expect_at_repository!(self.route_repository, find_info, param_id, return_info);
         }
 
         fn expect_search_infos_at_route_repository(
@@ -796,7 +870,7 @@ mod tests {
             query: RouteSearchQuery,
             return_infos: Vec<RouteInfo>,
         ) {
-            expect_at_repository!(self, search_infos, query, return_infos);
+            expect_at_repository!(self.route_repository, search_infos, query, return_infos);
         }
 
         fn expect_count_infos_at_route_repository(
@@ -804,23 +878,96 @@ mod tests {
             query: RouteSearchQuery,
             return_count: usize,
         ) {
-            expect_at_repository!(self, count_infos, query, return_count);
+            expect_at_repository!(self.route_repository, count_infos, query, return_count);
         }
 
         fn expect_insert_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            expect_at_repository!(self, insert_info, param_info, ());
+            expect_at_repository!(self.route_repository, insert_info, param_info, ());
         }
 
         fn expect_update_at_route_repository(&mut self, param_route: Route) {
-            expect_at_repository!(self, update, param_route, ());
+            expect_at_repository!(self.route_repository, update, param_route, ());
         }
 
         fn expect_update_info_at_route_repository(&mut self, param_info: RouteInfo) {
-            expect_at_repository!(self, update_info, param_info, ());
+            expect_at_repository!(self.route_repository, update_info, param_info, ());
         }
 
         fn expect_delete_at_route_repository(&mut self, param_id: RouteId) {
-            expect_at_repository!(self, delete, param_id, ());
+            expect_at_repository!(self.route_repository, delete, param_id, ());
+        }
+
+        #[allow(dead_code)]
+        fn expect_get_connection_at_permission_repository(&mut self) {
+            expect_at_repository!(
+                self.permission_repository,
+                get_connection,
+                MockConnection {}
+            );
+        }
+
+        #[allow(dead_code)]
+        fn expect_find_type_at_permission_repository(
+            &mut self,
+            param_info: RouteInfo,
+            param_user_id: UserId,
+            return_permission_type: PermissionType,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                find_type,
+                param_info,
+                param_user_id,
+                return_permission_type
+            );
+        }
+
+        fn expect_authorize_user_at_permission_repository(
+            &mut self,
+            param_info: RouteInfo,
+            param_user_id: UserId,
+            param_permission_type: PermissionType,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                authorize_user,
+                param_info,
+                param_user_id,
+                param_permission_type,
+                ()
+            );
+        }
+
+        #[allow(dead_code)]
+        fn expect_insert_or_update_at_permission_repository(
+            &mut self,
+            param_permission: Permission,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                insert_or_update,
+                param_permission,
+                ()
+            );
+        }
+
+        #[allow(dead_code)]
+        fn expect_delete_at_permission_repository(
+            &mut self,
+            param_route_id: RouteId,
+            param_user_id: UserId,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                delete,
+                param_route_id,
+                param_user_id,
+                ()
+            );
         }
 
         fn expect_correct_coordinate_at_interpolation_api(
@@ -865,10 +1012,6 @@ mod tests {
         fn expect_authenticate_at_auth_api(&mut self, param_token: String, return_id: UserId) {
             expect_once!(self.auth_api, authenticate, param_token, return_id);
         }
-
-        fn expect_authorize_at_auth_api(&mut self, param_id: UserId, param_token: String) {
-            expect_once!(self.auth_api, authorize, param_id, param_token, ());
-        }
     }
 
     // impls to enable trait RouteUseCase
@@ -876,7 +1019,15 @@ mod tests {
         type RouteRepository = MockRouteRepository;
 
         fn route_repository(&self) -> &Self::RouteRepository {
-            &self.repository
+            &self.route_repository
+        }
+    }
+
+    impl CallPermissionRepository for TestRouteUseCase {
+        type PermissionRepository = MockPermissionRepository;
+
+        fn permission_repository(&self) -> &Self::PermissionRepository {
+            &self.permission_repository
         }
     }
 

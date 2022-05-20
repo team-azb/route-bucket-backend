@@ -58,14 +58,33 @@ mod test_macros {
 
     #[macro_export]
     macro_rules! expect_at_repository {
-        ($usecase:expr, $method_name:ident, $out_exp:expr) => {
-            crate::expect_once!($usecase.repository, $method_name).return_const(Ok($out_exp))
+        ($repo_exp:expr, $method_name:ident, $out_exp:expr) => {
+            crate::expect_once!($repo_exp, $method_name).return_const(Ok($out_exp))
         };
-        ($usecase:expr, $method_name:ident, $in_exp:expr, $out_exp:expr) => {
-            expect_at_repository!($usecase, $method_name, $out_exp).withf(move |input, _| {
+        ($repo_exp:expr, $method_name:ident, $in_exp:expr, $out_exp:expr) => {
+            expect_at_repository!($repo_exp, $method_name, $out_exp).withf(move |input, _| {
                 assert_eq!(*input, $in_exp);
                 true
             })
+        };
+        ($repo_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $out_exp:expr) => {
+            expect_at_repository!($repo_exp, $method_name, $out_exp).withf(
+                move |input0, input1, _| {
+                    assert_eq!(*input0, $in_exp0);
+                    assert_eq!(*input1, $in_exp1);
+                    true
+                },
+            )
+        };
+        ($repo_exp:expr, $method_name:ident, $in_exp0:expr, $in_exp1:expr, $in_exp2:expr, $out_exp:expr) => {
+            expect_at_repository!($repo_exp, $method_name, $out_exp).withf(
+                move |input0, input1, input2, _| {
+                    assert_eq!(*input0, $in_exp0);
+                    assert_eq!(*input1, $in_exp1);
+                    assert_eq!(*input2, $in_exp2);
+                    true
+                },
+            )
         };
     }
 }

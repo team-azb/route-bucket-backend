@@ -46,3 +46,11 @@ CREATE TABLE users
     `icon_url`  TEXT                     ,
     PRIMARY KEY (`id`)
 );
+
+CREATE TABLE permissions
+(
+    `route_id`        VARCHAR(11) NOT NULL,
+    `user_id`         VARCHAR(40) NOT NULL,
+    `permission_type` VARCHAR(6)  NOT NULL,
+    PRIMARY KEY (`user_id`, `route_id`)
+);
