@@ -38,7 +38,13 @@ pub async fn init_repositories() -> (
 }
 
 fn gen_err_mapper(msg: &'static str) -> impl FnOnce(sqlx::Error) -> ApplicationError {
-    move |err| ApplicationError::DataBaseError(format!("{} ({:?})", msg, err))
+    move |err| {
+        let err_str = format!("{} ({:?})", msg, err);
+        match err {
+            sqlx::Error::RowNotFound => ApplicationError::ResourceNotFound(err_str),
+            _ => ApplicationError::DataBaseError(err_str),
+        }
+    }
 }
 
 #[derive(Deref)]
