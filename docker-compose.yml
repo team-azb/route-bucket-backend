@@ -46,7 +46,7 @@ services:
     ports:
       - "4000:8080"
     volumes:
-      - ./swagger/:/swagger/
+      - ./app/swagger/:/swagger/
     environment:
       # yamlなのにjsonに指定するのなぜ
       SWAGGER_JSON: /swagger/openapi.yml
@@ -54,12 +54,12 @@ services:
   osrm:
     ports:
       - "5000:5000"
-    build: osrm
+    build: ./app/osrm
     command: osrm-routed --algorithm mld /data/map.osm.pbf
 
   db_manager:
     build:
-      context: db
+      context: ./app/db
       dockerfile: manager/Dockerfile
     depends_on:
       - db

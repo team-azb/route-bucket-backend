@@ -1,4 +1,4 @@
-db_manager = db/manager/empty_make_target
+db_manager = app/db/manager/empty_make_target
 
 .PHONY = start start-without-api seed migrate migrate-dry-run
 
