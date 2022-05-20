@@ -41,6 +41,7 @@ impl From<RouteInfo> for gpx::Metadata {
             time: None,
             keywords: None,
             bounds: None,
+            ..Default::default()
         }
     }
 }
