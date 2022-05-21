@@ -215,7 +215,6 @@ pub(crate) mod tests {
                       </trkpt>
                     </trkseg>
                   </trk>
-                  <rte />
                 </gpx>
                 "#;
             RouteGpx {
