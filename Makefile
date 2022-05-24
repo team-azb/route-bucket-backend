@@ -34,6 +34,6 @@ migrate-dry-run: $(db_manager)
 		mysqldef --host=db --password=password \
 		--file=mysql/schema.sql --dry-run route_bucket_db
 
-$(db_manager): db/schema.sql
+$(db_manager): app/db/schema.sql
 	docker-compose build db_manager
 	touch $@
