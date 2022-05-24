@@ -27,4 +27,4 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     mkdir -p $TMP_DIR && \
     cp -r ./target/* $TMP_DIR
 # 元の場所に戻す
-RUN mv -f $TMP_DIR/* ./target
+RUN cp -r $TMP_DIR/* ./target
