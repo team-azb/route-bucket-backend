@@ -17,7 +17,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            ./api/target          
+            ./target          
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Setup Toolchain
         uses: actions-rs/toolchain@v1
@@ -30,14 +30,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --manifest-path=./api/Cargo.toml --all -- --check
+          args: --all -- --check
       - name: Check Lints
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path=./api/Cargo.toml -- -D warnings
+          args: -- -D warnings
       - name: Run Tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path=./api/Cargo.toml --all # --release
+          args: --all # --release
