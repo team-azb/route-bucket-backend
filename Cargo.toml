@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "app/server",
+    "app/client",
     "adapters/controller",
     "adapters/infrastructure",
     "usecase",

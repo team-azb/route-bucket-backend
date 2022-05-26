@@ -1,0 +1,9 @@
+[build]
+# The index HTML file to drive the bundling process.
+target = "app/client/index.html"
+# The output dir for all final assets.
+dist = "app/client/dist"
+
+[watch]
+# Paths to watch. The `build.target`'s parent folder is watched by default.
+watch = ["app/client", "usecase", "domain", "utils"]
