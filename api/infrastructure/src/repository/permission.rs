@@ -62,7 +62,13 @@ impl PermissionRepository for PermissionRepositoryMySql {
                 let permission = dto.into_model()?;
                 Ok(*permission.permission_type())
             }
-            Err(sqlx::Error::RowNotFound) => Ok(PermissionType::None),
+            Err(sqlx::Error::RowNotFound) => {
+                if *route_info.is_public() {
+                    Ok(PermissionType::Viewer)
+                } else {
+                    Ok(PermissionType::None)
+                }
+            }
             Err(other_sqlx_err) => Err(gen_err_mapper("failed to find permission")(other_sqlx_err)),
         }
     }

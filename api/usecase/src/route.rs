@@ -168,7 +168,7 @@ where
         conn.transaction(|conn| {
             async move {
                 let owner_id = self.user_auth_api().authenticate(user_access_token).await?;
-                let route_info = RouteInfo::new(&req.name, owner_id);
+                let route_info = RouteInfo::new(&req.name, owner_id, req.is_public);
 
                 self.route_repository()
                     .insert_info(&route_info, conn)
@@ -459,7 +459,7 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
             .await?;
         self.permission_repository()
             .insert_or_update(
@@ -485,7 +485,7 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(&route_info, &user_id, PermissionType::Owner, &perm_conn)
             .await?;
         self.permission_repository()
             .delete(route_info.id(), &req.user_id, &perm_conn)
@@ -638,6 +638,7 @@ mod tests {
     async fn can_create() {
         let req = RouteCreateRequest {
             name: "route0".into(),
+            is_public: false,
         };
 
         let mut usecase = TestRouteUseCase::new();
@@ -903,7 +904,7 @@ mod tests {
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
             UserId::doncic(),
-            PermissionType::Editor,
+            PermissionType::Owner,
         );
         usecase.expect_insert_or_update_at_permission_repository(
             Permission::porzingis_viewer_permission(),
@@ -931,7 +932,7 @@ mod tests {
         usecase.expect_authorize_user_at_permission_repository(
             info.clone(),
             UserId::doncic(),
-            PermissionType::Editor,
+            PermissionType::Owner,
         );
         usecase.expect_delete_at_permission_repository(id.clone(), UserId::porzingis());
         assert_eq!(
