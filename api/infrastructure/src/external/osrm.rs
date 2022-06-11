@@ -21,7 +21,7 @@ impl OsrmApi {
 
     async fn request(&self, service: &str, args: &str) -> ApplicationResult<serde_json::Value> {
         let url_str =
-            format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace("\\", "%5C");
+            format!("{}/{}/v1/bike/{}", self.api_root, service, args).replace('\\', "%5C");
         let url = reqwest::Url::parse(&url_str).map_err(|err| {
             ApplicationError::ExternalError(format!(
                 "Failed to parse OSRM URL: {} ({})",

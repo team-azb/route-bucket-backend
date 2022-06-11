@@ -8,17 +8,22 @@ use polyline::{decode_polyline, encode_coordinates};
 use serde::{Deserialize, Serialize};
 
 use route_bucket_utils::{ApplicationError, ApplicationResult};
+use validator::Validate;
 
 use super::types::{Distance, Elevation, Latitude, Longitude, Polyline};
 
 /// Value Object for Coordinates
-#[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Getters, Deserialize, Serialize, Validate)]
 #[get = "pub"]
 pub struct Coordinate {
+    #[validate]
     pub(super) latitude: Latitude,
+    #[validate]
     pub(super) longitude: Longitude,
+    #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) elevation: Option<Elevation>,
+    #[validate]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) distance_from_start: Option<Distance>,
 }
@@ -146,6 +151,8 @@ impl HaversineDistance<Distance> for Coordinate {
 
 #[cfg(any(test, feature = "fixtures"))]
 pub(crate) mod tests {
+    #[cfg(test)]
+    use num_traits::Zero;
     use rstest::{fixture, rstest};
 
     use super::*;
@@ -169,13 +176,13 @@ pub(crate) mod tests {
     #[case::lower_bound(-90.0, -180.0)]
     #[case::akashi(35.0, 135.0)]
     #[case::upper_bound(90.0, 180.0)]
-    #[should_panic(expected = "ValueObjectError returned.")]
+    #[should_panic(expected = "ValidationError returned.")]
     #[case::lat_too_small(-90.1, -180.0)]
-    #[should_panic(expected = "ValueObjectError returned.")]
+    #[should_panic(expected = "ValidationError returned.")]
     #[case::lon_too_small(-90.0, -180.1)]
-    #[should_panic(expected = "ValueObjectError returned.")]
+    #[should_panic(expected = "ValidationError returned.")]
     #[case::lat_too_big(90.1, 180.0)]
-    #[should_panic(expected = "ValueObjectError returned.")]
+    #[should_panic(expected = "ValidationError returned.")]
     #[case::lon_too_big(90.0, 180.1)]
     fn init_validation(#[case] lat: f64, #[case] lon: f64) {
         let result = Coordinate::new(lat, lon);
@@ -183,8 +190,8 @@ pub(crate) mod tests {
             Ok(coord) => {
                 assert_eq!(coord, init_coord(lat, lon, None, None))
             }
-            Err(ApplicationError::ValueObjectError(_)) => {
-                panic!("ValueObjectError returned.")
+            Err(ApplicationError::ValidationError(_)) => {
+                panic!("ValidationError returned.")
             }
             Err(err) => {
                 panic!("Unexpected error {:?} returned!", err)

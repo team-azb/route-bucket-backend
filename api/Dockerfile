@@ -1,4 +1,4 @@
-FROM rust:1.53.0
+FROM rust:1.60.0
 
 # dbを待つためにmysqlコマンドをインストール
 RUN apt update && \

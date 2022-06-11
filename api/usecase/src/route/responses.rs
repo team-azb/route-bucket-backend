@@ -34,7 +34,7 @@ pub struct RouteCreateResponse {
 }
 
 #[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(test, derive(Default, PartialEq))]
 pub struct RouteOperationResponse {
     pub waypoints: Vec<Coordinate>,
     pub segments: Vec<Segment>,
@@ -108,13 +108,7 @@ mod tests {
     }
 
     fn empty_route_operation_resp() -> RouteOperationResponse {
-        RouteOperationResponse {
-            waypoints: Vec::new(),
-            ascent_elevation_gain: Elevation::zero(),
-            descent_elevation_gain: Elevation::zero(),
-            total_distance: Distance::zero(),
-            segments: Vec::new(),
-        }
+        Default::default()
     }
 
     fn full_route_operation_resp() -> RouteOperationResponse {

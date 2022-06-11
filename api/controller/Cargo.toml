@@ -2,14 +2,15 @@
 name = "route-bucket-controller"
 version = "0.1.0"
 authors = ["shugo256 <shugo256@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-service = "2.0.0"
-actix-web = "4.0.0-beta.10"
-actix-web-httpauth = "0.6.0-beta.3"
+actix-service = "2.0.1"
+actix-web = "4.0.1"
+actix-web-httpauth = "0.6.0"
+actix-web-validator = "3.0.0"
 derive_more = "0.99.16"
 route-bucket-domain = { path = "../domain" }
 route-bucket-usecase = { path = "../usecase" }

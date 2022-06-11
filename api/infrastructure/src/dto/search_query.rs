@@ -1,19 +1,39 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
 use route_bucket_domain::model::route::RouteSearchQuery;
 
 #[derive(Clone, Debug)]
 enum WhereCondition {
-    Eq(String),
+    Eq(&'static str, String),
+    In(&'static str, Vec<String>),
+    And(Vec<WhereCondition>),
+    Or(Vec<WhereCondition>),
 }
 
 impl WhereCondition {
-    fn to_query(&self, field_name: &'static str) -> String {
+    fn to_query(&self) -> String {
         match self {
-            Self::Eq(value) => {
-                format!("{} = \"{}\"", field_name, value)
+            Self::Eq(field_name, value) => {
+                format!("{} = {}", field_name, value)
             }
+            Self::In(field_name, values) => {
+                if values.is_empty() {
+                    "false".to_string()
+                } else {
+                    format!("{} IN ({})", field_name, values.join(","))
+                }
+            }
+            Self::And(values) | Self::Or(values) => match values.len() {
+                0 => String::new(),
+                1 => values[0].to_query(),
+                _ => {
+                    let sep = if matches!(self, Self::And(_)) {
+                        " AND "
+                    } else {
+                        " OR "
+                    };
+                    format!("({})", values.iter().map(Self::to_query).join(sep))
+                }
+            },
         }
     }
 }
@@ -37,7 +57,7 @@ impl OrderBy {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct SearchQuery {
     table_name: &'static str,
-    where_conditions: HashMap<&'static str, WhereCondition>,
+    where_condition: Option<WhereCondition>,
     order_by: Option<OrderBy>,
     limit: Option<usize>,
     offset: Option<usize>,
@@ -51,14 +71,8 @@ impl SearchQuery {
             self.table_name
         );
 
-        if !self.where_conditions.is_empty() {
-            query += &format!(
-                "WHERE {} ",
-                self.where_conditions
-                    .iter()
-                    .map(|(field, cond)| cond.to_query(field))
-                    .join(", "),
-            );
+        if let Some(cond) = self.where_condition.clone() {
+            query += &format!("WHERE {} ", cond.to_query());
         }
 
         if !is_for_counting {
@@ -86,11 +100,30 @@ impl From<RouteSearchQuery> for SearchQuery {
             ..Default::default()
         };
 
-        if let Some(owner_id) = route_search_query.owner_id {
-            search_query
-                .where_conditions
-                .insert("owner_id", WhereCondition::Eq(owner_id.to_string()));
+        let mut visibility_conditions = Vec::new();
+
+        if !route_search_query.is_editable {
+            visibility_conditions.push(WhereCondition::Eq("is_public", "true".into()))
+        };
+
+        if let Some(ids) = route_search_query.ids {
+            visibility_conditions.push(WhereCondition::In(
+                "id",
+                ids.into_iter().map(|id| format!("'{}'", id)).collect(),
+            ));
         }
+
+        if let Some(caller_id) = route_search_query.caller_id {
+            visibility_conditions.push(WhereCondition::Eq("owner_id", format!("'{}'", caller_id)));
+        }
+
+        let mut conditions = vec![WhereCondition::Or(visibility_conditions)];
+
+        if let Some(owner_id) = route_search_query.owner_id {
+            conditions.push(WhereCondition::Eq("owner_id", format!("'{}'", owner_id)));
+        }
+
+        search_query.where_condition = Some(WhereCondition::And(conditions));
 
         // TODO: ここを指定できるようにする
         search_query.order_by = Some(OrderBy {

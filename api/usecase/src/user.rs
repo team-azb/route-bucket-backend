@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use async_trait::async_trait;
 use futures::FutureExt;
 use route_bucket_domain::{
@@ -48,7 +46,7 @@ where
     }
 
     async fn create(&self, req: UserCreateRequest) -> ApplicationResult<UserCreateResponse> {
-        let (user, email, password) = req.try_into()?;
+        let (user, email, password) = req.into();
 
         let conn = self.user_repository().get_connection().await?;
         conn.transaction(|conn| {

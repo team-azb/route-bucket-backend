@@ -24,6 +24,7 @@ pub struct RouteInfo {
     pub(super) ascent_elevation_gain: Elevation,
     pub(super) descent_elevation_gain: Elevation,
     pub(super) total_distance: Distance,
+    pub(super) is_public: bool,
     #[derivative(Default(value = "chrono::MIN_DATETIME"))]
     pub(super) created_at: DateTime<Utc>,
     #[derivative(Default(value = "chrono::MIN_DATETIME"))]
@@ -31,10 +32,11 @@ pub struct RouteInfo {
 }
 
 impl RouteInfo {
-    pub fn new(name: &str, owner_id: UserId) -> RouteInfo {
+    pub fn new(name: &str, owner_id: UserId, is_public: bool) -> RouteInfo {
         RouteInfo {
             name: name.to_string(),
             owner_id,
+            is_public,
             ..Default::default()
         }
     }
@@ -121,6 +123,13 @@ pub(crate) mod tests {
 
         fn yokohama_to_tokyo() -> RouteInfo {
             RouteInfo::filled_route0(3, 0, 26936.42633640023, 3)
+        }
+
+        fn public_route0() -> RouteInfo {
+            RouteInfo {
+                is_public: true,
+                ..Self::empty_route0(0)
+            }
         }
     }
 
