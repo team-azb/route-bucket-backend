@@ -10,14 +10,19 @@ use route_bucket_usecase::user::UserCreateRequest;
 use yew::prelude::*;
 
 mod styles {
-    use stylist::{css, StyleSource};
+    use stylist::{style, Style};
+    use yew::{classes, Classes};
 
-    pub(super) fn h1() -> StyleSource<'static> {
-        css!("color: navy;")
+    pub(super) fn h1() -> Style {
+        style!(r"color: navy;").unwrap()
     }
 
-    pub(super) fn div() -> StyleSource<'static> {
-        css!("white-space: pre-wrap;")
+    pub(super) fn div() -> Style {
+        style!("white-space: pre-wrap;").unwrap()
+    }
+
+    pub(super) fn button() -> Classes {
+        classes![h1(), div(), "button",]
     }
 }
 
@@ -38,6 +43,9 @@ fn app() -> Html {
             <h1 class={styles::h1()}>
                 { format!("Hello {} ({:?})!", user.name(), email) }
             </h1>
+            <div class={styles::button()}>
+                {"button"}
+            </div>
             <div class={styles::div()}>
                 { format!("User: {:#?}!", user) }
             </div>
