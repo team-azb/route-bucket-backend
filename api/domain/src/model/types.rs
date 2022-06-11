@@ -6,10 +6,11 @@ use route_bucket_utils::ApplicationError;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Default, Debug, Clone, Display, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Display, Serialize, Deserialize, PartialEq, Eq, Validate)]
 #[display(fmt = "{}", id)]
 #[serde(transparent)]
 pub struct NanoId<T, const LEN: usize> {
+    #[validate(length(min = "LEN", max = "LEN"))]
     id: String,
     #[serde(skip)]
     _phantom: PhantomData<T>,

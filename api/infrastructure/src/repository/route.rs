@@ -327,9 +327,9 @@ impl RouteRepository for RouteRepositoryMySql {
             r"
             INSERT INTO routes (
                 `id`, `name`, `owner_id`, `operation_pos`, `ascent_elevation_gain`, 
-                `descent_elevation_gain`, `total_distance`       
+                `descent_elevation_gain`, `total_distance`, `is_public`
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ",
         )
         .bind(dto.id())
@@ -339,6 +339,7 @@ impl RouteRepository for RouteRepositoryMySql {
         .bind(dto.ascent_elevation_gain())
         .bind(dto.descent_elevation_gain())
         .bind(dto.total_distance())
+        .bind(dto.is_public())
         .execute(&mut *conn)
         .await
         .map_err(gen_err_mapper("failed to insert RouteInfo"))?;

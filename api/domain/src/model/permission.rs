@@ -46,6 +46,22 @@ pub(crate) mod tests {
     use super::*;
 
     pub trait PermissionFixtures {
+        fn doncic_owner_permission() -> Permission {
+            Permission {
+                route_id: RouteId::new(),
+                user_id: UserId::doncic(),
+                permission_type: PermissionType::Owner,
+            }
+        }
+
+        fn doncic_viewer_permission() -> Permission {
+            Permission {
+                route_id: RouteId::new(),
+                user_id: UserId::doncic(),
+                permission_type: PermissionType::Viewer,
+            }
+        }
+
         fn porzingis_viewer_permission() -> Permission {
             Permission {
                 route_id: RouteId::new(),
