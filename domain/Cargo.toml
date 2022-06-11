@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 
 async-trait = "0.1.50"
-chrono = "0.4.19"
+chrono = { version = "0.4.19", features = ["serde"] }
 derivative = "2.2.0"
 derive_more = "0.99.16"
 futures = "0.3.16"
@@ -39,3 +39,4 @@ rstest = "0.11.0"
 fixtures = ["rstest"]
 mocking = ["mockall"]
 testing = ["fixtures", "mocking"]
+wasm = ["chrono/wasmbind"]

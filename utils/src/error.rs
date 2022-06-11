@@ -1,8 +1,10 @@
-use actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError};
 use derive_more::Display;
 use thiserror::Error;
-
-use crate::hashmap;
+#[cfg(feature = "actix")]
+use {
+    crate::hashmap,
+    actix_web::{http, HttpResponse, HttpResponseBuilder, ResponseError},
+};
 
 /// ApplicationErrorを持つResult用のエイリアス
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
@@ -38,6 +40,7 @@ pub enum ApplicationError {
     ValidationError(String),
 }
 
+#[cfg(feature = "actix")]
 impl ResponseError for ApplicationError {
     fn status_code(&self) -> http::StatusCode {
         match *self {
