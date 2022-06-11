@@ -7,20 +7,17 @@ use route_bucket_domain::model::{
     user::{Gender, UserId},
 };
 use route_bucket_usecase::user::UserCreateRequest;
-use stylist::style;
 use yew::prelude::*;
 
-struct MyStyle;
-impl MyStyle {
-    fn h1() -> String {
-        style!("color: navy;").unwrap().get_class_name().into()
+mod styles {
+    use stylist::{css, StyleSource};
+
+    pub(super) fn h1() -> StyleSource<'static> {
+        css!("color: navy;")
     }
 
-    fn div() -> String {
-        style!("white-space: pre-wrap;")
-            .unwrap()
-            .get_class_name()
-            .into()
+    pub(super) fn div() -> StyleSource<'static> {
+        css!("white-space: pre-wrap;")
     }
 }
 
@@ -38,14 +35,14 @@ fn app() -> Html {
     let (user, email, _) = req.into();
     html! {
         <>
-            <h1 class={MyStyle::h1()}>
+            <h1 class={styles::h1()}>
                 { format!("Hello {} ({:?})!", user.name(), email) }
             </h1>
-            <div class={MyStyle::div()}>
+            <div class={styles::div()}>
                 { format!("User: {:#?}!", user) }
             </div>
             <br/>
-            <div style={MyStyle::div()}>
+            <div class={styles::div()}>
                 { format!("Route: {:#?}", RouteInfo::default()) }
             </div>
         </>

@@ -9,5 +9,5 @@ edition = "2021"
 chrono = { version = "0.4.19", features = ["wasmbind"] }
 route-bucket-domain = { version = "0.1.0", path = "../../domain", features = ["wasm"] }
 route-bucket-usecase = { version = "0.1.0", path = "../../usecase", features = ["wasm"] }
-stylist = "0.10.0"
+stylist = { version = "0.10.0", features = ["yew"] }
 yew = "0.19.3"
