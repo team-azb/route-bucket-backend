@@ -6,6 +6,7 @@ pub mod user;
 #[cfg(feature = "fixtures")]
 pub mod fixtures {
     pub mod route {
+        pub use crate::model::permission::tests::PermissionFixtures;
         pub use crate::model::route::bounding_box::tests::BoundingBoxFixture;
         pub use crate::model::route::coordinate::tests::CoordinateFixtures;
         pub use crate::model::route::route_gpx::tests::RouteGpxFixtures;
