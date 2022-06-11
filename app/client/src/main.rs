@@ -7,7 +7,22 @@ use route_bucket_domain::model::{
     user::{Gender, UserId},
 };
 use route_bucket_usecase::user::UserCreateRequest;
+use stylist::style;
 use yew::prelude::*;
+
+struct MyStyle;
+impl MyStyle {
+    fn h1() -> String {
+        style!("color: navy;").unwrap().get_class_name().into()
+    }
+
+    fn div() -> String {
+        style!("white-space: pre-wrap;")
+            .unwrap()
+            .get_class_name()
+            .into()
+    }
+}
 
 #[function_component(App)]
 fn app() -> Html {
@@ -23,12 +38,14 @@ fn app() -> Html {
     let (user, email, _) = req.into();
     html! {
         <>
-            <h1>{ format!("Hello {} ({:?})!", user.name(), email) }</h1>
-            <div style="white-space: pre-wrap;">
+            <h1 class={MyStyle::h1()}>
+                { format!("Hello {} ({:?})!", user.name(), email) }
+            </h1>
+            <div class={MyStyle::div()}>
                 { format!("User: {:#?}!", user) }
             </div>
             <br/>
-            <div style="white-space: pre-wrap;">
+            <div style={MyStyle::div()}>
                 { format!("Route: {:#?}", RouteInfo::default()) }
             </div>
         </>
