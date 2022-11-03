@@ -38,33 +38,65 @@ impl PermissionRepository for PermissionRepositoryMySql {
     async fn find_type(
         &self,
         route_info: &RouteInfo,
-        user_id: &UserId,
+        user_id: Option<UserId>,
         conn: &<Self as Repository>::Connection,
     ) -> ApplicationResult<PermissionType> {
-        if *user_id == *route_info.owner_id() {
-            return Ok(PermissionType::Owner);
-        }
+        let sqlx_result = if let Some(id) = user_id {
+            if id == *route_info.owner_id() {
+                return Ok(PermissionType::Owner);
+            }
 
-        let mut conn = conn.lock().await;
+            let mut conn = conn.lock().await;
 
-        let sqlx_result = sqlx::query_as::<_, PermissionDto>(
-            r"
-            SELECT * FROM permissions WHERE `route_id` = ? AND `user_id` = ?
-            ",
-        )
-        .bind(route_info.id().to_string())
-        .bind(user_id.to_string())
-        .fetch_one(&mut *conn)
-        .await;
+            sqlx::query_as::<_, PermissionDto>(
+                r"
+                SELECT * FROM permissions WHERE `route_id` = ? AND `user_id` = ?
+                ",
+            )
+            .bind(route_info.id().to_string())
+            .bind(id.to_string())
+            .fetch_one(&mut *conn)
+            .await
+        } else {
+            // user_idを指定しない場合は、何も権限がない人と同じ扱いとなる
+            Err(sqlx::Error::RowNotFound)
+        };
 
         match sqlx_result {
             Ok(dto) => {
                 let permission = dto.into_model()?;
                 Ok(*permission.permission_type())
             }
-            Err(sqlx::Error::RowNotFound) => Ok(PermissionType::None),
+            Err(sqlx::Error::RowNotFound) => {
+                if *route_info.is_public() {
+                    Ok(PermissionType::Viewer)
+                } else {
+                    Ok(PermissionType::None)
+                }
+            }
             Err(other_sqlx_err) => Err(gen_err_mapper("failed to find permission")(other_sqlx_err)),
         }
+    }
+
+    async fn find_by_user_id(
+        &self,
+        user_id: &UserId,
+        conn: &<Self as Repository>::Connection,
+    ) -> ApplicationResult<Vec<Permission>> {
+        let mut conn = conn.lock().await;
+
+        sqlx::query_as::<_, PermissionDto>(
+            r"
+                SELECT * FROM permissions WHERE `user_id` = ?
+                ",
+        )
+        .bind(user_id.to_string())
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(gen_err_mapper("failed to find infos"))?
+        .into_iter()
+        .map(PermissionDto::into_model)
+        .collect::<ApplicationResult<Vec<_>>>()
     }
 
     async fn insert_or_update(

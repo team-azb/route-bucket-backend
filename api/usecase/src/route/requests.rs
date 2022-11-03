@@ -10,6 +10,7 @@ use route_bucket_domain::model::{
 #[derive(From, Deserialize)]
 pub struct RouteCreateRequest {
     pub(super) name: String,
+    pub(super) is_public: bool,
 }
 
 #[derive(From, Deserialize)]

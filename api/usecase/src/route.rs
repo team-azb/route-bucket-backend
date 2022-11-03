@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use futures::FutureExt;
 
+use itertools::Itertools;
 pub use requests::*;
 pub use responses::*;
 use route_bucket_domain::external::{
@@ -22,11 +23,19 @@ mod responses;
 
 #[async_trait]
 pub trait RouteUseCase {
-    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse>;
+    async fn find(
+        &self,
+        route_id: &RouteId,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteGetResponse>;
 
     async fn find_all(&self) -> ApplicationResult<RouteSearchResponse>;
 
-    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse>;
+    async fn search(
+        &self,
+        query: RouteSearchQuery,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteSearchResponse>;
 
     async fn find_gpx(&self, route_id: &RouteId) -> ApplicationResult<RouteGetGpxResponse>;
 
@@ -112,10 +121,26 @@ where
         + CallUserAuthApi
         + Sync,
 {
-    async fn find(&self, route_id: &RouteId) -> ApplicationResult<RouteGetResponse> {
+    async fn find(
+        &self,
+        route_id: &RouteId,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteGetResponse> {
         let conn = self.route_repository().get_connection().await?;
 
+        let user_id = if let Some(token) = user_access_token {
+            Some(self.user_auth_api().authenticate(&token).await?)
+        } else {
+            None
+        };
+
         let mut route = self.route_repository().find(route_id, &conn).await?;
+
+        let perm_conn = self.permission_repository().get_connection().await?;
+        self.permission_repository()
+            .authorize_user(route.info(), user_id, PermissionType::Viewer, &perm_conn)
+            .await?;
+
         self.elevation_api().attach_elevations(&mut route)?;
         route.calc_route_features_from_seg_list()?;
 
@@ -137,8 +162,29 @@ where
         })
     }
 
-    async fn search(&self, query: RouteSearchQuery) -> ApplicationResult<RouteSearchResponse> {
+    async fn search(
+        &self,
+        mut query: RouteSearchQuery,
+        user_access_token: Option<String>,
+    ) -> ApplicationResult<RouteSearchResponse> {
         let conn = self.route_repository().get_connection().await?;
+
+        if let Some(token) = user_access_token {
+            let user_id = self.user_auth_api().authenticate(&token).await?;
+
+            let perm_conn = self.permission_repository().get_connection().await?;
+            let visible_route_ids = self
+                .permission_repository()
+                .find_by_user_id(&user_id, &perm_conn)
+                .await?
+                .into_iter()
+                .map(|perm| perm.route_id().clone())
+                .collect_vec();
+
+            // TODO: query.idsが指定されていた場合は、ここはmergeしなきゃいけない
+            query.ids = Some(visible_route_ids);
+            query.caller_id = Some(user_id);
+        }
 
         Ok(RouteSearchResponse {
             route_infos: self
@@ -168,7 +214,7 @@ where
         conn.transaction(|conn| {
             async move {
                 let owner_id = self.user_auth_api().authenticate(user_access_token).await?;
-                let route_info = RouteInfo::new(&req.name, owner_id);
+                let route_info = RouteInfo::new(&req.name, owner_id, req.is_public);
 
                 self.route_repository()
                     .insert_info(&route_info, conn)
@@ -197,7 +243,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        &route_info,
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route_info.rename(&req.name);
@@ -227,7 +278,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_add(
@@ -270,7 +326,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_remove(pos, route.seg_list(), req.mode)?;
@@ -306,7 +367,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 let op = Operation::new_move(
@@ -347,7 +413,7 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(&info, Some(user_id), PermissionType::Editor, &perm_conn)
                     .await?;
 
                 info.clear_route();
@@ -375,7 +441,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route.redo_operation()?;
@@ -408,7 +479,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(route.info(), &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        route.info(),
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 route.undo_operation()?;
@@ -437,7 +513,12 @@ where
 
                 let perm_conn = self.permission_repository().get_connection().await?;
                 self.permission_repository()
-                    .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+                    .authorize_user(
+                        &route_info,
+                        Some(user_id),
+                        PermissionType::Editor,
+                        &perm_conn,
+                    )
                     .await?;
 
                 self.route_repository().delete(route_id, conn).await
@@ -459,7 +540,12 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(
+                &route_info,
+                Some(user_id),
+                PermissionType::Owner,
+                &perm_conn,
+            )
             .await?;
         self.permission_repository()
             .insert_or_update(
@@ -485,7 +571,12 @@ where
 
         let perm_conn = self.permission_repository().get_connection().await?;
         self.permission_repository()
-            .authorize_user(&route_info, &user_id, PermissionType::Editor, &perm_conn)
+            .authorize_user(
+                &route_info,
+                Some(user_id),
+                PermissionType::Owner,
+                &perm_conn,
+            )
             .await?;
         self.permission_repository()
             .delete(route_info.id(), &req.user_id, &perm_conn)
@@ -565,9 +656,15 @@ mod tests {
     #[tokio::test]
     async fn can_find() {
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_find_at_route_repository(
             route_id(),
             Route::yokohama_to_chiba_filled(false, false),
+        );
+        usecase.expect_authorize_user_at_permission_repository(
+            RouteInfo::empty_route0(2),
+            Some(UserId::doncic()),
+            PermissionType::Viewer,
         );
         usecase.expect_attach_elevations_at_elevation_api(
             Route::yokohama_to_chiba_filled(false, false),
@@ -575,7 +672,7 @@ mod tests {
         );
 
         assert_eq!(
-            usecase.find(&route_id()).await,
+            usecase.find(&route_id(), Some(doncic_token())).await,
             Route::yokohama_to_chiba_filled(true, true).try_into()
         );
     }
@@ -601,15 +698,32 @@ mod tests {
     #[rstest]
     #[tokio::test]
     async fn can_search() {
+        let editted_query =
+            RouteSearchQuery::search_guest(Some(vec![route_id()]), Some(UserId::doncic()));
+
         let mut usecase = TestRouteUseCase::new();
+        usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
+        usecase.expect_find_by_id_at_permission_repository(
+            UserId::doncic(),
+            vec![Permission::from((
+                route_id(),
+                UserId::doncic(),
+                PermissionType::Viewer,
+            ))],
+        );
         usecase.expect_search_infos_at_route_repository(
-            RouteSearchQuery::search_guest(),
+            editted_query.clone(),
             vec![RouteInfo::empty_route0(0)],
         );
-        usecase.expect_count_infos_at_route_repository(RouteSearchQuery::search_guest(), 1);
+        usecase.expect_count_infos_at_route_repository(editted_query, 1);
 
         assert_eq!(
-            usecase.search(RouteSearchQuery::search_guest()).await,
+            usecase
+                .search(
+                    RouteSearchQuery::search_guest(None, None),
+                    Some(doncic_token())
+                )
+                .await,
             Ok(RouteSearchResponse {
                 route_infos: vec![RouteInfo::empty_route0(0)],
                 result_num: 1
@@ -638,6 +752,7 @@ mod tests {
     async fn can_create() {
         let req = RouteCreateRequest {
             name: "route0".into(),
+            is_public: false,
         };
 
         let mut usecase = TestRouteUseCase::new();
@@ -660,7 +775,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_update_info_at_route_repository(RouteInfo::empty_route1(0));
@@ -687,7 +802,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
@@ -730,7 +845,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -767,7 +882,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_correct_coordinate_at_interpolation_api(
@@ -801,7 +916,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_update_at_route_repository(Route::empty());
@@ -823,7 +938,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(2),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -855,7 +970,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(3),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_interpolate_empty_segments_at_interpolation_api(
@@ -882,7 +997,7 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
+            Some(UserId::doncic()),
             PermissionType::Editor,
         );
         usecase.expect_delete_at_route_repository(route_id());
@@ -902,8 +1017,8 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             RouteInfo::empty_route0(0),
-            UserId::doncic(),
-            PermissionType::Editor,
+            Some(UserId::doncic()),
+            PermissionType::Owner,
         );
         usecase.expect_insert_or_update_at_permission_repository(
             Permission::porzingis_viewer_permission(),
@@ -930,8 +1045,8 @@ mod tests {
         usecase.expect_authenticate_at_auth_api(doncic_token(), UserId::doncic());
         usecase.expect_authorize_user_at_permission_repository(
             info.clone(),
-            UserId::doncic(),
-            PermissionType::Editor,
+            Some(UserId::doncic()),
+            PermissionType::Owner,
         );
         usecase.expect_delete_at_permission_repository(id.clone(), UserId::porzingis());
         assert_eq!(
@@ -1020,7 +1135,7 @@ mod tests {
         fn expect_find_type_at_permission_repository(
             &mut self,
             param_info: RouteInfo,
-            param_user_id: UserId,
+            param_user_id: Option<UserId>,
             return_permission_type: PermissionType,
         ) {
             self.expect_get_connection_at_permission_repository();
@@ -1033,10 +1148,25 @@ mod tests {
             );
         }
 
+        #[allow(dead_code)]
+        fn expect_find_by_id_at_permission_repository(
+            &mut self,
+            param_user_id: UserId,
+            return_permissions: Vec<Permission>,
+        ) {
+            self.expect_get_connection_at_permission_repository();
+            expect_at_repository!(
+                self.permission_repository,
+                find_by_user_id,
+                param_user_id,
+                return_permissions
+            );
+        }
+
         fn expect_authorize_user_at_permission_repository(
             &mut self,
             param_info: RouteInfo,
-            param_user_id: UserId,
+            param_user_id: Option<UserId>,
             param_permission_type: PermissionType,
         ) {
             self.expect_get_connection_at_permission_repository();
